@@ -187,6 +187,9 @@ class TuyaLamp(val lamp: Lamp) {
     @Volatile private var running = true
     @Volatile private var queryWanted = false
     @Volatile private var statusResult: JSONObject? = null
+    /** Oudere lampen/ledstrips (colour_data zonder _v2) willen de kleur als rrggbb + hhhh + ss + vv. */
+    @Volatile private var colourV1 = false
+    private var askedFormat = false
     private var sock: Socket? = null
     private var out: OutputStream? = null
     private var inp: DataInputStream? = null
@@ -196,6 +199,17 @@ class TuyaLamp(val lamp: Lamp) {
 
     fun send(dps: Map<String, Any>) {
         synchronized(lock) { pending.putAll(dps); lock.notifyAll() }
+    }
+
+    /** Zet een kleur in het formaat dat deze lamp verwacht (v2: hhhhssssvvvv met 0..1000, v1: rrggbbhhhhssvv). */
+    private fun adapt(dps: Map<String, Any>): Map<String, Any> {
+        val c = dps["24"] as? String ?: return dps
+        if (!colourV1 || c.length != 12) return dps
+        val h = c.substring(0, 4).toInt(16); val s = c.substring(4, 8).toInt(16); val v = c.substring(8, 12).toInt(16)
+        val rgb = android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), s / 1000f, v / 1000f))
+        val v1 = "%02x%02x%02x%04x%02x%02x".format((rgb shr 16) and 0xff, (rgb shr 8) and 0xff, rgb and 0xff,
+            h, (s * 255 / 1000).coerceIn(0, 255), (v * 255 / 1000).coerceIn(0, 255))
+        return LinkedHashMap(dps).apply { put("24", v1) }
     }
 
     /** Vraagt de huidige stand op (aan/uit, modus, kleur), om die na afloop terug te zetten. */
@@ -269,6 +283,8 @@ class TuyaLamp(val lamp: Lamp) {
                     lastBeat = SystemClock.elapsedRealtime()
                 }
                 drain()
+                // Eén keer de stand opvragen om het kleurformaat te herkennen
+                if (!askedFormat) { askedFormat = true; queryWanted = true }
                 if (queryWanted) {
                     queryWanted = false
                     if (modern) write(TuyaCodec.DP_QUERY_NEW, "{}", header = false)
@@ -283,7 +299,7 @@ class TuyaLamp(val lamp: Lamp) {
                 if (batch != null) {
                     val wait = MIN_GAP_MS - (now - lastSend)
                     if (wait > 0) Thread.sleep(wait)
-                    sendControl(batch)
+                    sendControl(adapt(batch))
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
                 } else if (now - lastBeat > 8000) {
                     write(TuyaCodec.HEART_BEAT, "{}", header = false)
@@ -335,6 +351,7 @@ class TuyaLamp(val lamp: Lamp) {
             val f = TuyaCodec.readFrame(i, ver, key)
             if (f.cmd == TuyaCodec.DP_QUERY || f.cmd == TuyaCodec.DP_QUERY_NEW || f.cmd == TuyaCodec.STATUS) {
                 val dps = TuyaCodec.jsonOf(f.plain)?.let { TuyaCodec.dpsOf(it) } ?: continue
+                (dps.opt("24") as? String)?.let { colourV1 = it.length == 14 }
                 if (dps.has("20") && dps.has("21")) statusResult = dps
             }
         }
