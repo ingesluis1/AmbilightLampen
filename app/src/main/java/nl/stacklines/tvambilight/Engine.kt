@@ -160,17 +160,6 @@ object Engine {
         if (lampOn[l.id] != true) { worker.send(mapOf("20" to true, "21" to "colour")); lampOn[l.id] = true }
         val cols = Mixer.layers(Store.layout, l, sample, l.layers)
         var shown = 0
-        // Grote verandering: eerst meteen de gemiddelde kleur voor de hele lamp (snel), daarna de lagen
-        val wholeCut = cols.withIndex().any { (i, c) -> smooth[l.id + "#" + i]?.let { rgbDist(it, c) > CUT_DIST } ?: false }
-        if (wholeCut) {
-            val avg = DoubleArray(3) { k -> cols.sumOf { it[k] } / cols.size }
-            val hv = FloatArray(3)
-            Color.RGBToHSV(avg[0].roundToInt().coerceIn(0, 255), avg[1].roundToInt().coerceIn(0, 255), avg[2].roundToInt().coerceIn(0, 255), hv)
-            var sat = hv[1].toDouble(); if (sat > 0.08) sat = min(1.0, sat * s.saturation + 0.1)
-            val raw = ((hv[2] - BLACK) / (1 - BLACK)).coerceAtLeast(0.0)
-            worker.sendWhole(hv[0].roundToInt() % 360, (sat * 1000).roundToInt().coerceIn(0, 1000),
-                max(10, (max(s.minLight, min(1.0, raw * s.brightness)) * 1000).roundToInt().coerceIn(0, 1000)))
-        }
         for ((i, target) in cols.withIndex()) {
             val key = l.id + "#" + i
             val cut = smooth[key]?.let { o -> rgbDist(o, target) > CUT_DIST } ?: true
