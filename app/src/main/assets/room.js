@@ -321,7 +321,7 @@ const Room = (() => {
       g.fillStyle = '#2a1a2e'; g.fillRect(x - 2, y - 3, 5, 7); g.fillRect(x - 3, y - 2, 7, 5);
       g.fillStyle = '#d8d2c4'; g.fillRect(x - 2, y - 2, 5, 5);
       g.fillStyle = color; g.fillRect(x - 1, y - 1, 3, 3);
-    } else if (l.height === 'table') {
+    } else if (l.height === 'table' || l.height === 'sill') {
       g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(x - 2, y - 1, 6, 5);
       g.fillStyle = '#2a1a2e'; g.fillRect(x - 3, y - 4, 7, 6);
       g.fillStyle = '#efe0c0'; g.fillRect(x - 2, y - 3, 5, 4);

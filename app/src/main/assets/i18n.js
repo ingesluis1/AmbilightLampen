@@ -43,7 +43,7 @@ const I18N = (() => {
     'Tik waar de tv staat. "Draai" wisselt de kant waar het scherm naartoe kijkt.': 'Tap where the TV is. "Rotate" changes the direction the screen faces.',
     'Kies een meubel en tik op de kaart. Tik op een meubel om het te kiezen, sleep om te verschuiven.': 'Pick a piece of furniture and tap the map. Tap furniture to select it, drag to move it.',
     'Naam': 'Name', 'Knipper': 'Blink', 'Test': 'Test', 'Lamp of spot': 'Lamp or spot', 'Staaflamp': 'Rod lamp',
-    'Plafond': 'Ceiling', 'Tafel': 'Table', 'Van kaart': 'Off the map', 'Doet mee met sync': 'Takes part in sync',
+    'Plafond': 'Ceiling', 'Vensterbank': 'Window sill', 'Tafel': 'Table', 'Van kaart': 'Off the map', 'Doet mee met sync': 'Takes part in sync',
     'Ip-adres': 'IP address', 'wordt vanzelf gevonden': 'found automatically', 'geen ip': 'no IP',
     'Kies een lamp en tik op de kaart om hem op te hangen. Sleep om te verschuiven.': 'Pick a lamp and tap the map to place it. Drag to move it.',
     'Je lampen': 'Your lamps', 'Alle lampen na elkaar testen': 'Test all lamps one by one',

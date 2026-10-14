@@ -93,7 +93,7 @@ label.s span{float:right;opacity:.8}
         <button class="btn" data-s="bulb">Lamp of spot</button><button class="btn" data-s="rod">Staaflamp</button>
       </div>
       <div class="seg" id="heightSeg" style="margin-top:6px">
-        <button class="btn" data-h="ceiling">Plafond</button><button class="btn" data-h="table">Tafel</button><button class="btn" data-h="floor">Vloer</button>
+        <button class="btn" data-h="ceiling">Plafond</button><button class="btn" data-h="sill">Vensterbank</button><button class="btn" data-h="table">Tafel</button><button class="btn" data-h="floor">Vloer</button>
       </div>
       <div class="row" style="margin-top:8px"><span class="grow" id="follows"></span><button class="btn" id="unplaceBtn">Van kaart</button></div>
       <div class="row" style="margin-top:8px"><label class="grow"><input type="checkbox" id="lampEnabled"> Doet mee met sync</label><span id="lampIp" style="font-size:13px"></span></div>
@@ -339,7 +339,7 @@ function follows(l){
   if(xs<-1.15)return t('Volgt de linkerkant van het beeld');
   if(xs>1.15)return t('Volgt de rechterkant van het beeld');
   const side=xs<-.35?'linkerdeel':xs>.35?'rechterdeel':'midden';
-  return t('Volgt {e}, {s}',{e:t(l.height==='ceiling'?'de bovenrand':l.height==='table'?'de zijkanten':'de onderkant'),s:t(side)});
+  return t('Volgt {e}, {s}',{e:t(l.height==='ceiling'?'de bovenrand':(l.height==='table'||l.height==='sill')?'de zijkanten':'de onderkant'),s:t(side)});
 }
 function showLamp(){
   const l=lamps.find(l=>l.id===selLamp);$('lampDetail').classList.toggle('hidden',!l);if(!l)return;

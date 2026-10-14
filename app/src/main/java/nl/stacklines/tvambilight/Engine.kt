@@ -33,7 +33,7 @@ object Mixer {
         val lateral = dx * rx + dy * ry
         val depth = max(0.0, dx * fx + dy * fy)
         val xs = (lateral / (w / 2)).coerceIn(-1.8, 1.8)
-        val ys = when (lamp.height) { "ceiling" -> 1.0; "table" -> 0.1; else -> -0.7 }
+        val ys = when (lamp.height) { "ceiling" -> 1.0; "sill" -> 0.4; "table" -> 0.1; else -> -0.7 }
         return doubleArrayOf(xs, ys, depth)
     }
 
@@ -137,12 +137,14 @@ object Engine {
         var weights = HashMap<String, Mixer.Weights>()
         var zoneCount = Triple(0, 0, 0)
 
-        val active = Store.lampsSnapshot().filter { it.enabled && workers.containsKey(it.id) }
-        for (l in active) {
+        val startLamps = Store.lampsSnapshot().filter { it.enabled && workers.containsKey(it.id) }
+        val touched = LinkedHashSet<String>()
+        for (l in startLamps) {
             val w = workers[l.id] ?: continue
             saved[l.id] = if (Store.settings.after == "restore") w.queryStatus() else null
             w.send(mapOf("20" to true, "21" to "colour"))
             lampOn[l.id] = true
+            touched += l.id
         }
 
         try {
@@ -162,10 +164,12 @@ object Engine {
                     weights = HashMap()
                     for (l in Store.lampsSnapshot()) weights[l.id] = Mixer.weights(Store.layout, l, s.spread, zc.first, zc.second, zc.third)
                 }
-                for (id in active.map { it.id }) {
-                    val l = current(id) ?: continue
+                // Elke ronde opnieuw: lampen die tijdens de sync zijn toegevoegd doen meteen mee
+                for (l in Store.lampsSnapshot()) {
+                    val id = l.id
                     val worker = workers[id] ?: continue
                     if (!l.enabled) continue
+                    if (touched.add(id)) syncWorkers()
                     val target = Mixer.mix(weights[id] ?: continue, sample)
                     val sm = smooth[id]?.let { o -> DoubleArray(3) { o[it] + s.smooth * (target[it] - o[it]) } } ?: target
                     smooth[id] = sm
@@ -198,12 +202,12 @@ object Engine {
             }
         } catch (_: InterruptedException) {
         } finally {
-            for (l in active) {
-                val w = workers[l.id] ?: continue
+            for (id in touched) {
+                val w = workers[id] ?: continue
                 val restore: Map<String, Any> = when (Store.settings.after) {
                     "off" -> mapOf("20" to false)
                     "white" -> mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500)
-                    else -> saved[l.id]?.let { st ->
+                    else -> saved[id]?.let { st ->
                         val m = LinkedHashMap<String, Any>()
                         for (k in listOf("20", "21", "22", "23", "24")) if (st.has(k)) m[k] = st.get(k)
                         m
