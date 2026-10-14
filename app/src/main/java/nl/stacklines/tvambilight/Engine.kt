@@ -160,6 +160,17 @@ object Engine {
         if (lampOn[l.id] != true) { worker.send(mapOf("20" to true, "21" to "colour")); lampOn[l.id] = true }
         val cols = Mixer.layers(Store.layout, l, sample, l.layers)
         var shown = 0
+        // Grote verandering: eerst meteen de gemiddelde kleur voor de hele lamp (snel), daarna de lagen
+        val wholeCut = cols.withIndex().any { (i, c) -> smooth[l.id + "#" + i]?.let { rgbDist(it, c) > CUT_DIST } ?: false }
+        if (wholeCut) {
+            val avg = DoubleArray(3) { k -> cols.sumOf { it[k] } / cols.size }
+            val hv = FloatArray(3)
+            Color.RGBToHSV(avg[0].roundToInt().coerceIn(0, 255), avg[1].roundToInt().coerceIn(0, 255), avg[2].roundToInt().coerceIn(0, 255), hv)
+            var sat = hv[1].toDouble(); if (sat > 0.08) sat = min(1.0, sat * s.saturation + 0.1)
+            val raw = ((hv[2] - BLACK) / (1 - BLACK)).coerceAtLeast(0.0)
+            worker.sendWhole(hv[0].roundToInt() % 360, (sat * 1000).roundToInt().coerceIn(0, 1000),
+                max(10, (max(s.minLight, min(1.0, raw * s.brightness)) * 1000).roundToInt().coerceIn(0, 1000)))
+        }
         for ((i, target) in cols.withIndex()) {
             val key = l.id + "#" + i
             val cut = smooth[key]?.let { o -> rgbDist(o, target) > CUT_DIST } ?: true
@@ -179,9 +190,11 @@ object Engine {
             val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
             // Kleine drempel: liever veel kleine stapjes, dan lijkt het op overvloeien
             val fine = s.fade
-            if (prev != null && dh < (if (fine) 2 else 5) && abs(sv - prev[1]) < (if (fine) 12 else 40) && abs(vv - prev[2]) < (if (fine) 10 else 35)) continue
+            // Lagen zijn duur (één bericht per laag, ±150 ms): iets grovere drempel dan bij gewone lampen
+            if (prev != null && dh < (if (fine) 3 else 5) && abs(sv - prev[1]) < (if (fine) 25 else 40) && abs(vv - prev[2]) < (if (fine) 20 else 35)) continue
+            val prio = if (prev == null) 999 else dh + abs(sv - prev[1]) / 10 + abs(vv - prev[2]) / 10
             last[key] = intArrayOf(h, sv, vv)
-            worker.sendLayer(i + 1, h, sv, vv)
+            worker.sendLayer(i + 1, h, sv, vv, prio)
         }
         if (shown != 0) worker.shownColor = shown
     }

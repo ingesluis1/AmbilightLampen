@@ -207,8 +207,16 @@ class TuyaLamp(val lamp: Lamp) {
     }
 
     /** Eén laag een kleur geven (h 0..360, s en v 0..1000). Alleen de nieuwste kleur per laag wordt verstuurd. */
-    fun sendLayer(segment: Int, h: Int, s: Int, v: Int) {
-        synchronized(lock) { layerPending[segment] = intArrayOf(h, s, v); lock.notifyAll() }
+    fun sendLayer(segment: Int, h: Int, s: Int, v: Int, priority: Int = 0) {
+        synchronized(lock) {
+            val old = layerPending[segment]
+            layerPending[segment] = intArrayOf(h, s, v, maxOf(priority, old?.getOrNull(3) ?: 0)); lock.notifyAll()
+        }
+    }
+
+    /** Scènewissel bij een lamp met lagen: eerst één kleur voor de hele lamp (één bericht), oude laag-opdrachten vervallen. */
+    fun sendWhole(h: Int, s: Int, v: Int) {
+        synchronized(lock) { layerPending.clear(); pending["24"] = hsvHex(h, s, v); lock.notifyAll() }
     }
 
     /** Zet een kleur in het formaat dat deze lamp verwacht (v2: hhhhssssvvvv met 0..1000, v1: rrggbbhhhhssvv). */
@@ -305,7 +313,7 @@ class TuyaLamp(val lamp: Lamp) {
                 var isLayer = false
                 val batch: Map<String, Any>? = synchronized(lock) {
                     if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() }
-                    else layerPending.entries.firstOrNull()?.let { e ->
+                    else layerPending.entries.maxByOrNull { it.value.getOrElse(3) { 0 } }?.let { e ->
                         // Lagen met (bijna) dezelfde kleur in één bericht: scheelt berichten bij egaal beeld en scènewissels
                         val segs = layerPending.filter { (_, c) -> similar(c, e.value) }.keys.toList()
                         segs.forEach { layerPending.remove(it) }; isLayer = true
