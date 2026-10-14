@@ -209,6 +209,7 @@ class WebServer(private val ctx: Context) {
                     l.height = j.optString("height", l.height)
                     l.shape = j.optString("shape", l.shape)
                     l.follow = j.optString("follow", l.follow)
+                    l.layers = j.optInt("layers", l.layers).coerceIn(0, 5)
                     l.enabled = j.optBoolean("enabled", l.enabled)
                     j.optString("ip").takeIf { it.isNotBlank() }?.let { l.ip = it }
                 }
@@ -263,6 +264,7 @@ class WebServer(private val ctx: Context) {
             "/" to "text/html; charset=utf-8", "/index.html" to "text/html; charset=utf-8",
             "/tv.html" to "text/html; charset=utf-8", "/room.js" to "application/javascript; charset=utf-8",
             "/i18n.js" to "application/javascript; charset=utf-8",
+            "/calib.html" to "text/html; charset=utf-8",
             "/ui.css" to "text/css; charset=utf-8"
         )
 

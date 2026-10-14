@@ -61,9 +61,10 @@ object Mixer {
             val dx = xs - zx; val dy = (h - zy) * hh
             exp(-(dx * dx + dy * dy) / (2 * sigma * sigma))
         }
+        // Philips nummert met de klok mee: links van onder naar boven, boven van links naar rechts, rechts van boven naar onder
         val top = DoubleArray(nTop) { i -> gs(-1 + (2.0 * i + 1) / nTop, 1.0) }
         val left = DoubleArray(nLeft) { j -> gs(-1.0, -1 + (2.0 * j + 1) / nLeft) }
-        val right = DoubleArray(nRight) { j -> gs(1.0, -1 + (2.0 * j + 1) / nRight) }
+        val right = DoubleArray(nRight) { j -> gs(1.0, 1 - (2.0 * j + 1) / nRight) }
         return Weights(left, top, right).normalized()
     }
 
@@ -71,6 +72,22 @@ object Mixer {
         val s = left.sum() + top.sum() + right.sum()
         if (s <= 0) return this
         return Weights(left.map { it / s }.toDoubleArray(), top.map { it / s }.toDoubleArray(), right.map { it / s }.toDoubleArray())
+    }
+
+    /** Kleur per laag (index 0 = onderste laag) van de kant van het beeld waar de lamp staat. */
+    fun layers(layout: JSONObject, lamp: Lamp, z: ZoneSample, n: Int): List<DoubleArray> {
+        val p = project(layout, lamp)
+        val left = p == null || p[0] < 0
+        // Zones van onder naar boven zetten
+        val side = if (left) z.left else z.right.reversed()
+        if (side.isEmpty()) return List(n) { DoubleArray(3) }
+        val m = side.size
+        return List(n) { i ->
+            val pos = ((i + 0.5) / n) * m - 0.5            // plek tussen de zones, 0 = onderste
+            val a = pos.toInt().coerceIn(0, m - 1); val b = (a + 1).coerceAtMost(m - 1)
+            val f = (pos - a).coerceIn(0.0, 1.0)
+            DoubleArray(3) { k -> side[a][k] * (1 - f) + side[b][k] * f }
+        }
     }
 
     fun mix(w: Weights, z: ZoneSample): DoubleArray {
@@ -137,6 +154,32 @@ object Engine {
         thread = null
     }
 
+    /** Lamp met aparte lagen: per laag gladstrijken, opvoeren en alleen versturen als hij genoeg veranderd is. */
+    private fun syncLayers(l: Lamp, worker: TuyaLamp, sample: ZoneSample, s: Settings,
+                           smooth: HashMap<String, DoubleArray>, last: HashMap<String, IntArray>, lampOn: HashMap<String, Boolean>) {
+        if (lampOn[l.id] != true) { worker.send(mapOf("20" to true, "21" to "colour")); lampOn[l.id] = true }
+        val cols = Mixer.layers(Store.layout, l, sample, l.layers)
+        var shown = 0
+        for ((i, target) in cols.withIndex()) {
+            val key = l.id + "#" + i
+            val sm = smooth[key]?.let { o -> DoubleArray(3) { o[it] + s.smooth * (target[it] - o[it]) } } ?: target
+            smooth[key] = sm
+            val hsv = FloatArray(3)
+            Color.RGBToHSV(sm[0].roundToInt().coerceIn(0, 255), sm[1].roundToInt().coerceIn(0, 255), sm[2].roundToInt().coerceIn(0, 255), hsv)
+            var sat = hsv[1].toDouble(); if (sat > 0.08) sat = min(1.0, sat * s.saturation + 0.1)
+            val v = max(s.minLight, min(1.0, hsv[2] * s.brightness))
+            val h = hsv[0].roundToInt() % 360
+            val sv = (sat * 1000).roundToInt().coerceIn(0, 1000); val vv = max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
+            if (i == cols.size / 2) shown = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
+            val prev = last[key]
+            val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
+            if (prev != null && dh < 5 && abs(sv - prev[1]) < 40 && abs(vv - prev[2]) < 35) continue
+            last[key] = intArrayOf(h, sv, vv)
+            worker.sendLayer(i + 1, h, sv, vv)
+        }
+        if (shown != 0) worker.shownColor = shown
+    }
+
     private fun loop() {
         val saved = HashMap<String, JSONObject?>()
         val smooth = HashMap<String, DoubleArray>()
@@ -179,6 +222,7 @@ object Engine {
                     val worker = workers[id] ?: continue
                     if (!l.enabled) continue
                     if (touched.add(id)) syncWorkers()
+                    if (l.layers > 0) { syncLayers(l, worker, sample, s, smooth, last, lampOn); continue }
                     val target = Mixer.mix(weights[id] ?: continue, sample)
                     val sm = smooth[id]?.let { o -> DoubleArray(3) { o[it] + s.smooth * (target[it] - o[it]) } } ?: target
                     smooth[id] = sm

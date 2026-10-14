@@ -35,7 +35,9 @@ class MainActivity : Activity() {
     private fun waitForServer(tries: Int) {
         val port = SyncService.serverPort
         if (port > 0) {
-            web.loadUrl("http://127.0.0.1:$port/tv.html")
+            // Testpagina's (bijvoorbeeld calib.html voor de zonevolgorde) via adb: --es page calib.html
+            val page = intent?.getStringExtra("page")?.takeIf { it.matches(Regex("""[a-z]+\.html""")) } ?: "tv.html"
+            web.loadUrl("http://127.0.0.1:$port/$page")
             web.requestFocus()
         } else if (tries < 50) {
             ui.postDelayed({ waitForServer(tries + 1) }, 100)

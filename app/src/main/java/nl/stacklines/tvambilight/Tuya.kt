@@ -183,6 +183,8 @@ class TuyaLamp(val lamp: Lamp) {
     private var key = localKey
     private val ip = lamp.ip
     private val pending = LinkedHashMap<String, Any>()
+    /** Lagen die nog verstuurd moeten worden (segmentnummer naar h, s, v); de lamp neemt één laag per bericht. */
+    private val layerPending = LinkedHashMap<Int, IntArray>()
     private val lock = Object()
     @Volatile private var running = true
     @Volatile private var queryWanted = false
@@ -199,6 +201,11 @@ class TuyaLamp(val lamp: Lamp) {
 
     fun send(dps: Map<String, Any>) {
         synchronized(lock) { pending.putAll(dps); lock.notifyAll() }
+    }
+
+    /** Eén laag een kleur geven (h 0..360, s en v 0..1000). Alleen de nieuwste kleur per laag wordt verstuurd. */
+    fun sendLayer(segment: Int, h: Int, s: Int, v: Int) {
+        synchronized(lock) { layerPending[segment] = intArrayOf(h, s, v); lock.notifyAll() }
     }
 
     /** Zet een kleur in het formaat dat deze lamp verwacht (v2: hhhhssssvvvv met 0..1000, v1: rrggbbhhhhssvv). */
@@ -293,7 +300,11 @@ class TuyaLamp(val lamp: Lamp) {
                     continue
                 }
                 val batch: Map<String, Any>? = synchronized(lock) {
-                    if (pending.isEmpty()) null else LinkedHashMap(pending).also { pending.clear() }
+                    if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() }
+                    else layerPending.entries.firstOrNull()?.let { e ->
+                        layerPending.remove(e.key)
+                        mapOf<String, Any>("61" to layerValue(e.key, e.value))
+                    }
                 }
                 val now = SystemClock.elapsedRealtime()
                 if (batch != null) {
@@ -305,7 +316,7 @@ class TuyaLamp(val lamp: Lamp) {
                     write(TuyaCodec.HEART_BEAT, "{}", header = false)
                     lastBeat = now
                 } else {
-                    synchronized(lock) { if (pending.isEmpty() && !queryWanted) lock.wait(40) }
+                    synchronized(lock) { if (pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(40) }
                 }
             } catch (e: Exception) {
                 lastError = e.message
@@ -400,6 +411,14 @@ class TuyaLamp(val lamp: Lamp) {
     private fun sleepQuiet(ms: Long) { try { Thread.sleep(ms) } catch (_: InterruptedException) { } }
 
     companion object {
+        /** Functie 61 "schilderen": 00 02 00 14 01, dan h s v (elk 2 bytes), dan 0x80|aantal segmenten en de segmentnummers. */
+        fun layerValue(segment: Int, c: IntArray): String {
+            val b = java.nio.ByteBuffer.allocate(13)
+            b.put(byteArrayOf(0, 2, 0, 0x14, 1)); b.putShort(c[0].toShort()); b.putShort(c[1].toShort()); b.putShort(c[2].toShort())
+            b.put(0x81.toByte()); b.put(segment.toByte())
+            return android.util.Base64.encodeToString(b.array(), android.util.Base64.NO_WRAP)
+        }
+
         /** Minimale tijd tussen twee opdrachten; sneller verslikken de lampen zich. */
         const val MIN_GAP_MS = 70L
 

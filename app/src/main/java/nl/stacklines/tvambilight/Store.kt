@@ -17,14 +17,15 @@ class Lamp(
     var height: String = "ceiling",   // ceiling | table | floor
     var enabled: Boolean = true,
     var shape: String = "bulb",       // bulb (lamp/spot) | rod (staaflamp)
-    var follow: String = "auto"       // auto (op plek) | side (hele zijkant) | all (hele beeld)
+    var follow: String = "auto",      // auto (op plek) | side (hele zijkant) | all (hele beeld)
+    var layers: Int = 0               // 0 = één kleur; 2..5 = lagen apart (Tuya functie 61, segment 1 = onder)
 ) {
     val placed get() = x >= 0 && y >= 0
     val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5")
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
         put("id", id); put("name", name); put("ip", ip); put("version", version)
-        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow)
+        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers)
         if (withKey) put("key", key)
     }
 
@@ -34,7 +35,7 @@ class Lamp(
             o.optString("ip"), o.optString("version", "3.3"),
             o.optDouble("x", -1.0), o.optDouble("y", -1.0),
             o.optString("height", "ceiling"), o.optBoolean("enabled", true), o.optString("shape", "bulb"),
-            o.optString("follow", "auto")
+            o.optString("follow", "auto"), o.optInt("layers", 0)
         )
     }
 }
