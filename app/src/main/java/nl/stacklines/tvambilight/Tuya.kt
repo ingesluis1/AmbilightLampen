@@ -192,6 +192,9 @@ class TuyaLamp(val lamp: Lamp) {
     /** Oudere lampen/ledstrips (colour_data zonder _v2) willen de kleur als rrggbb + hhhh + ss + vv. */
     @Volatile private var colourV1 = false
     private var askedFormat = false
+    /** Opdrachten die nog niet bevestigd zijn; zo krijgt elke lamp het tempo dat hij aankan. */
+    @Volatile private var inflight = 0
+    @Volatile private var lastRx = 0L
     private var sock: Socket? = null
     private var out: OutputStream? = null
     private var inp: DataInputStream? = null
@@ -309,11 +312,16 @@ class TuyaLamp(val lamp: Lamp) {
                 }
                 val now = SystemClock.elapsedRealtime()
                 if (batch != null) {
+                    // Wachten tot de lamp eerdere opdrachten heeft bevestigd (anders loopt de wachtrij vol)
+                    val until = SystemClock.elapsedRealtime() + 400
+                    while (inflight >= MAX_INFLIGHT && SystemClock.elapsedRealtime() < until) { drain(); Thread.sleep(5) }
+                    if (inflight >= MAX_INFLIGHT && SystemClock.elapsedRealtime() - lastRx > 4000) throw IOException("lamp reageert niet meer")
+                    if (inflight >= MAX_INFLIGHT) inflight = MAX_INFLIGHT - 1   // antwoorden kunnen wegvallen; niet eeuwig blijven wachten
                     // Laag-berichten zijn klein: die mogen sneller achter elkaar (getest op de Wall Washer)
                     val gap = when { !Store.settings.fade -> MIN_GAP_MS; isLayer -> LAYER_GAP_MS; else -> FADE_GAP_MS }
                     val wait = gap - (now - lastSend)
                     if (wait > 0) Thread.sleep(wait)
-                    sendControl(adapt(batch))
+                    sendControl(adapt(batch)); inflight++
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
                 } else if (now - lastBeat > 8000) {
                     write(TuyaCodec.HEART_BEAT, "{}", header = false)
@@ -335,8 +343,10 @@ class TuyaLamp(val lamp: Lamp) {
         close()
         val s = Socket()
         s.tcpNoDelay = true
+        s.sendBufferSize = 4096   // geen grote achterstand met oude kleuren opbouwen
         s.connect(InetSocketAddress(ip, 6668), 2500)
         s.soTimeout = 1500
+        inflight = 0; lastRx = SystemClock.elapsedRealtime()
         sock = s; out = s.getOutputStream(); inp = DataInputStream(s.getInputStream().buffered())
         key = localKey
         if (modern) negotiate()
@@ -363,6 +373,8 @@ class TuyaLamp(val lamp: Lamp) {
         val raw = sock?.getInputStream() ?: return
         while (raw.available() > 0 || i.available() >= 16) {
             val f = TuyaCodec.readFrame(i, ver, key)
+            lastRx = SystemClock.elapsedRealtime()
+            if (f.cmd == TuyaCodec.CONTROL || f.cmd == TuyaCodec.CONTROL_NEW || f.cmd == TuyaCodec.STATUS) inflight = (inflight - 1).coerceAtLeast(0)
             if (f.cmd == TuyaCodec.DP_QUERY || f.cmd == TuyaCodec.DP_QUERY_NEW || f.cmd == TuyaCodec.STATUS) {
                 val dps = TuyaCodec.jsonOf(f.plain)?.let { TuyaCodec.dpsOf(it) } ?: continue
                 (dps.opt("24") as? String)?.let { colourV1 = it.length == 14 }
@@ -427,6 +439,8 @@ class TuyaLamp(val lamp: Lamp) {
         const val LAYER_GAP_MS = 18L
         /** Met vloeiende overgangen: gewone lampen vaker bijwerken (ongeveer 25 keer per seconde). */
         const val FADE_GAP_MS = 40L
+        /** Hoeveel opdrachten er tegelijk onbevestigd onderweg mogen zijn. */
+        const val MAX_INFLIGHT = 2
 
         fun hsvHex(h: Int, s: Int, v: Int) = "%04x%04x%04x".format(h, s, v)
     }
