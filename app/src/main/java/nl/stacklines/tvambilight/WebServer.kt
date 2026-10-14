@@ -210,6 +210,7 @@ class WebServer(private val ctx: Context) {
                     l.shape = j.optString("shape", l.shape)
                     l.follow = j.optString("follow", l.follow)
                     l.layers = j.optInt("layers", l.layers).coerceIn(0, 5)
+                    if (j.has("satBoost")) l.satBoost = j.optDouble("satBoost", l.satBoost)
                     l.enabled = j.optBoolean("enabled", l.enabled)
                     j.optString("ip").takeIf { it.isNotBlank() }?.let { l.ip = it }
                 }

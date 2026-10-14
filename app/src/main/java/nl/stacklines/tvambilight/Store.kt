@@ -19,14 +19,17 @@ class Lamp(
     var shape: String = "bulb",       // bulb (lamp/spot) | rod (staaflamp)
     var follow: String = "auto",      // auto (op plek) | top (bovenrand, op volgorde) | side (hele zijkant) | all (hele beeld)
     var layers: Int = 0,              // 0 = één kleur; 2..5 = lagen apart (Tuya functie 61, segment 1 = onder)
-    var category: String = ""         // Tuya-categorie uit de cloud: dj = lamp, dd = ledstrip
+    var category: String = "",        // Tuya-categorie uit de cloud: dj = lamp, dd = ledstrip
+    var satBoost: Double = -1.0       // kleur per lamp: <0 = standaard (ledstrip 1.4, lamp 1.0)
 ) {
+    /** Ledstrips tonen kleuren witter dan lampen; die standaard iets voller. */
+    val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
     val placed get() = x >= 0 && y >= 0
     val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5")
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
         put("id", id); put("name", name); put("ip", ip); put("version", version)
-        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers); put("category", category)
+        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers); put("category", category); put("satBoost", satBoost); put("satFactor", satFactor)
         if (withKey) put("key", key)
     }
 
@@ -36,7 +39,8 @@ class Lamp(
             o.optString("ip"), o.optString("version", "3.3"),
             o.optDouble("x", -1.0), o.optDouble("y", -1.0),
             o.optString("height", "ceiling"), o.optBoolean("enabled", true), o.optString("shape", "bulb"),
-            o.optString("follow", "auto"), o.optInt("layers", 0), o.optString("category")
+            o.optString("follow", "auto"), o.optInt("layers", 0), o.optString("category"),
+            o.optDouble("satBoost", -1.0)
         )
     }
 }
