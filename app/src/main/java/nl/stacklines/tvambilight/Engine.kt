@@ -260,8 +260,7 @@ object Engine {
                 val t0 = SystemClock.elapsedRealtime()
                 val s = Store.settings
                 // Met vloeiende overgangen vaker meten; de gladheid per meting omrekenen zodat het even snel aanvoelt
-                val hzEff = if (s.fade) maxOf(s.hz, 25) else s.hz
-                val alpha = 1 - Math.pow(1 - s.smooth.coerceIn(0.01, 1.0), 15.0 / hzEff)
+                val hzEff = if (s.fade || Store.groups.any { it.settings.fade }) maxOf(s.hz, 25) else s.hz
                 val sample = PhilipsTv.measured()
                 // Tv uit of standby: de API van sommige tv's meldt Ambilight altijd uit, dus we kijken naar het beeld zelf.
                 // Langer dan 20 seconden volledig zwart = tv uit: lampen terug naar hun gewone stand, tot er weer beeld is.
@@ -288,46 +287,54 @@ object Engine {
                     val topLamps = Store.lampsSnapshot().filter { it.follow == "top" && it.placed }
                         .sortedBy { Mixer.project(Store.layout, it)?.get(0) ?: 0.0 }
                     val topX = topLamps.withIndex().associate { (k, l) -> l.id to (-1 + (2.0 * k + 1) / topLamps.size) }
-                    for (l in Store.lampsSnapshot()) weights[l.id] = Mixer.weights(Store.layout, l, s.spread, zc.first, zc.second, zc.third, topX[l.id])
+                    for (l in Store.lampsSnapshot()) weights[l.id] = Mixer.weights(Store.layout, l, Store.settingsFor(l).spread, zc.first, zc.second, zc.third, topX[l.id])
                 }
                 // Elke ronde opnieuw: lampen die tijdens de sync zijn toegevoegd doen meteen mee
                 for (l in Store.lampsSnapshot()) {
                     val id = l.id
                     val worker = workers[id] ?: continue
                     if (!l.enabled) continue
+                    val ls = Store.settingsFor(l)
+                    val la = 1 - Math.pow(1 - ls.smooth.coerceIn(0.01, 1.0), 15.0 / hzEff)
                     if (touched.add(id)) syncWorkers()
-                    if (l.layers > 0) { syncLayers(l, worker, sample, s, alpha, smooth, last, lampOn); continue }
+                    if (l.layers > 0) { syncLayers(l, worker, sample, ls, la, smooth, last, lampOn); continue }
                     val target = Mixer.mix(weights[id] ?: continue, sample)
                     // Grote, plotselinge verandering (scènewissel): direct springen; kleine: gladstrijken en overvloeien
-                    val cut = smooth[id]?.let { o -> (s.cuts && rgbDist(o, target) > CUT_DIST) } ?: true
-                    val sm = if (cut) target else smooth[id]?.let { o -> DoubleArray(3) { o[it] + alpha * (target[it] - o[it]) } } ?: target
+                    val cut = smooth[id]?.let { o -> (ls.cuts && rgbDist(o, target) > CUT_DIST) } ?: true
+                    val sm = if (cut) target else smooth[id]?.let { o -> DoubleArray(3) { o[it] + la * (target[it] - o[it]) } } ?: target
                     smooth[id] = sm
                     val hsv = FloatArray(3)
                     Color.RGBToHSV(sm[0].roundToInt().coerceIn(0, 255), sm[1].roundToInt().coerceIn(0, 255), sm[2].roundToInt().coerceIn(0, 255), hsv)
                     var sat = hsv[1].toDouble()
-                    if (sat > 0.08) sat = min(1.0, sat * satF(s) + satAdd(s))
+                    if (sat > 0.08) sat = min(1.0, sat * satF(ls) + satAdd(ls))
                     // Zwartgrens zoals Ambilight: bijna-zwart telt als zwart, de rest wordt opnieuw verdeeld
-                    val rawV = ((hsv[2] - black(s)) / (1 - black(s))).coerceAtLeast(0.0)
-                    val v = max(s.minLight, min(1.0, rawV * s.brightness))
-                    if (s.minLight <= 0.001 && rawV * s.brightness < 0.02) {
+                    val rawV = ((hsv[2] - black(ls)) / (1 - black(ls))).coerceAtLeast(0.0)
+                    val v = max(ls.minLight, min(1.0, rawV * ls.brightness))
+                    if (ls.minLight <= 0.001 && rawV * ls.brightness < 0.02) {
                         if (lampOn[id] != false) { worker.send(mapOf("20" to false)); lampOn[id] = false }
                         worker.shownColor = Color.BLACK
                         continue
                     }
-                    val dk = darkMix(s, rawV)
+                    val dk = darkMix(ls, rawV)
                     val h = if (dk > 0.5) DARK_H else hsv[0].roundToInt() % 360
                     val sv = (min(1.0, (sat * (1 - dk) + DARK_S * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
                     val vv = max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
                     val prev = last[id]
                     val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
-                    val fine = s.fade
+                    val fine = ls.fade
                     if (prev != null && lampOn[id] == true && dh < (if (fine) 2 else 4) && abs(sv - prev[1]) < (if (fine) 12 else 30) && abs(vv - prev[2]) < (if (fine) 10 else 25)) continue
                     last[id] = intArrayOf(h, sv, vv)
                     val dps = LinkedHashMap<String, Any>()
                     if (lampOn[id] != true) { dps["20"] = true; dps["21"] = "colour"; lampOn[id] = true }
-                    // Altijd functie 24: met vloeiende overgangen sturen we zelf vaker en in kleinere stapjes
-                    dps["24"] = TuyaLamp.hsvHex(h, sv, vv)
-                    worker.send(dps)
+                    if (l.category == "dd") {
+                        // Ledstrips (zoals de Wall Washer) faden zelf bij functie 24; het schilderbericht wisselt direct
+                        if (dps.isNotEmpty()) worker.send(dps)
+                        worker.sendAllSegments(h, sv, vv)
+                    } else {
+                        // Gewone lampen: functie 24; met vloeiende overgangen sturen we zelf vaker en in kleinere stapjes
+                        dps["24"] = TuyaLamp.hsvHex(h, sv, vv)
+                        worker.send(dps)
+                    }
                     worker.shownColor = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
                 }
                 val wait = 1000L / hzEff - (SystemClock.elapsedRealtime() - t0)

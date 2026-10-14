@@ -20,7 +20,8 @@ class Lamp(
     var follow: String = "auto",      // auto (op plek) | top (bovenrand, op volgorde) | side (hele zijkant) | all (hele beeld)
     var layers: Int = 0,              // 0 = één kleur; 2..5 = lagen apart (Tuya functie 61, segment 1 = onder)
     var category: String = "",        // Tuya-categorie uit de cloud: dj = lamp, dd = ledstrip
-    var satBoost: Double = -1.0       // kleur per lamp: <0 = standaard (ledstrip 1.4, lamp 1.0)
+    var satBoost: Double = -1.0,      // kleur per lamp: <0 = standaard (ledstrip 1.4, lamp 1.0)
+    var group: String = ""            // id van het groepje; leeg = algemene instellingen
 ) {
     /** Ledstrips tonen kleuren witter dan lampen; die standaard iets voller. */
     val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
@@ -29,7 +30,7 @@ class Lamp(
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
         put("id", id); put("name", name); put("ip", ip); put("version", version)
-        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers); put("category", category); put("satBoost", satBoost); put("satFactor", satFactor)
+        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers); put("category", category); put("satBoost", satBoost); put("satFactor", satFactor); put("group", group)
         if (withKey) put("key", key)
     }
 
@@ -40,7 +41,7 @@ class Lamp(
             o.optDouble("x", -1.0), o.optDouble("y", -1.0),
             o.optString("height", "ceiling"), o.optBoolean("enabled", true), o.optString("shape", "bulb"),
             o.optString("follow", "auto"), o.optInt("layers", 0), o.optString("category"),
-            o.optDouble("satBoost", -1.0)
+            o.optDouble("satBoost", -1.0), o.optString("group")
         )
     }
 }
@@ -83,6 +84,14 @@ class Settings {
     }
 }
 
+/** Groepje lampen met eigen instellingen (reactiesnelheid, helderheid enz.). */
+class Group(val id: String, var name: String, val settings: Settings = Settings()) {
+    fun toJson() = JSONObject().put("id", id).put("name", name).put("settings", settings.toJson())
+    companion object {
+        fun fromJson(o: JSONObject) = Group(o.getString("id"), o.optString("name", "Groepje"), Settings().apply { o.optJSONObject("settings")?.let { apply(it) } })
+    }
+}
+
 /** Tekst in de gekozen taal (Nederlands of Engels). */
 fun tr(nl: String, en: String) = if (Store.settings.lang == "en") en else nl
 
@@ -94,6 +103,11 @@ object Store {
     @Volatile var layout: JSONObject = defaultLayout()
     val lamps = mutableListOf<Lamp>()
     val settings = Settings()
+    @Volatile var groups: List<Group> = emptyList()
+
+    /** Instellingen die voor deze lamp gelden: die van zijn groepje, anders de algemene. */
+    fun settingsFor(l: Lamp): Settings = groups.firstOrNull { it.id == l.group }?.settings ?: settings
+    fun settingsForId(id: String): Settings = lamps.firstOrNull { it.id == id }?.let { settingsFor(it) } ?: settings
     @Volatile var tvHost = "127.0.0.1"
     @Volatile var tvUser: String? = null
     @Volatile var tvPass: String? = null
@@ -118,6 +132,7 @@ object Store {
             lamps.clear()
             o.optJSONArray("lamps")?.let { a -> for (i in 0 until a.length()) lamps += Lamp.fromJson(a.getJSONObject(i)) }
             o.optJSONObject("settings")?.let { settings.apply(it) }
+            groups = o.optJSONArray("groups")?.let { a -> (0 until a.length()).map { Group.fromJson(a.getJSONObject(it)) } } ?: emptyList()
             tvHost = o.optString("tvHost", tvHost)
             tvUser = o.optString("tvUser").ifBlank { null }
             tvPass = o.optString("tvPass").ifBlank { null }
@@ -138,6 +153,7 @@ object Store {
             put("layout", layout)
             put("lamps", JSONArray().apply { lamps.forEach { put(it.toJson(true)) } })
             put("settings", settings.toJson())
+            put("groups", JSONArray().apply { groups.forEach { put(it.toJson()) } })
             put("tvHost", tvHost)
             put("tvUser", tvUser ?: ""); put("tvPass", tvPass ?: "")
             put("syncWanted", syncWanted)

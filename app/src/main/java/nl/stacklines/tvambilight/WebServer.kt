@@ -185,6 +185,7 @@ class WebServer(private val ctx: Context) {
             put("layout", Store.layout)
             put("lamps", lamps)
             put("settings", Store.settings.toJson())
+            put("groups", JSONArray().apply { Store.groups.forEach { put(it.toJson()) } })
             put("tv", JSONObject().put("paired", Store.tvPaired).put("host", Store.tvHost).put("status", Engine.tvStatus))
             put("sync", Engine.running)
             put("update", JSONObject().put("current", Updater.current(ctx)).put("latest", Updater.latest ?: "")
@@ -199,6 +200,19 @@ class WebServer(private val ctx: Context) {
     private fun save(o: JSONObject) {
         o.optJSONObject("layout")?.let { Store.layout = it }
         o.optJSONObject("settings")?.let { Store.settings.apply(it) }
+        // Groepjes: volledige lijst (nieuw, hernoemd, verwijderd); bestaande houden hun instellingen tenzij meegestuurd
+        o.optJSONArray("groups")?.let { a ->
+            val old = Store.groups.associateBy { it.id }
+            Store.groups = (0 until a.length()).map { i ->
+                val g = a.getJSONObject(i); val id = g.getString("id")
+                val grp = old[id] ?: Group(id, g.optString("name", "Groepje"), Settings().apply { apply(Store.settings.toJson()) })
+                grp.name = g.optString("name", grp.name).ifBlank { grp.name }
+                g.optJSONObject("settings")?.let { grp.settings.apply(it) }
+                grp
+            }
+            val ids = Store.groups.map { it.id }.toSet()
+            synchronized(Store) { Store.lamps.forEach { if (it.group.isNotEmpty() && it.group !in ids) it.group = "" } }
+        }
         o.optJSONArray("lamps")?.let { a ->
             synchronized(Store) {
                 for (i in 0 until a.length()) {
@@ -211,6 +225,7 @@ class WebServer(private val ctx: Context) {
                     l.follow = j.optString("follow", l.follow)
                     l.layers = j.optInt("layers", l.layers).coerceIn(0, 5)
                     if (j.has("satBoost")) l.satBoost = j.optDouble("satBoost", l.satBoost)
+                    if (j.has("group")) l.group = j.optString("group")
                     l.enabled = j.optBoolean("enabled", l.enabled)
                     j.optString("ip").takeIf { it.isNotBlank() }?.let { l.ip = it }
                 }

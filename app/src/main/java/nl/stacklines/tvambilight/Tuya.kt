@@ -214,6 +214,11 @@ class TuyaLamp(val lamp: Lamp) {
         }
     }
 
+    /** Ledstrip: hele lamp één kleur via het schilderbericht (functie 24 laat deze lampen traag overvloeien). */
+    fun sendAllSegments(h: Int, s: Int, v: Int) {
+        synchronized(lock) { layerPending.clear(); layerPending[0] = intArrayOf(h, s, v, 0); lock.notifyAll() }
+    }
+
     /** Scènewissel bij een lamp met lagen: eerst één kleur voor de hele lamp (één bericht), oude laag-opdrachten vervallen. */
     fun sendWhole(h: Int, s: Int, v: Int) {
         synchronized(lock) { layerPending.clear(); pending["24"] = hsvHex(h, s, v); lock.notifyAll() }
@@ -315,8 +320,10 @@ class TuyaLamp(val lamp: Lamp) {
                     if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() }
                     else layerPending.entries.maxByOrNull { it.value.getOrElse(3) { 0 } }?.let { e ->
                         // Lagen met (bijna) dezelfde kleur in één bericht: scheelt berichten bij egaal beeld en scènewissels
-                        val segs = layerPending.filter { (_, c) -> similar(c, e.value) }.keys.toList()
-                        segs.forEach { layerPending.remove(it) }; isLayer = true
+                        val keys = layerPending.filter { (_, c) -> similar(c, e.value) }.keys.toList()
+                        keys.forEach { layerPending.remove(it) }; isLayer = true
+                        // Sleutel 0 = alle segmenten (niet-bestaande segmenten negeert de lamp)
+                        val segs = if (0 in keys) (1..10).toList() else keys
                         mapOf<String, Any>("61" to layerValue(segs, e.value))
                     }
                 }
@@ -329,7 +336,7 @@ class TuyaLamp(val lamp: Lamp) {
                     if (inflight >= cap && SystemClock.elapsedRealtime() - lastRx > 4000) throw IOException("lamp reageert niet meer")
                     if (inflight >= cap) inflight = cap - 1   // antwoorden kunnen wegvallen; niet eeuwig blijven wachten
                     // Laag-berichten zijn klein: die mogen sneller achter elkaar (getest op de Wall Washer)
-                    val gap = when { !Store.settings.fade -> MIN_GAP_MS; isLayer -> LAYER_GAP_MS; else -> FADE_GAP_MS }
+                    val gap = when { !Store.settingsForId(lamp.id).fade -> MIN_GAP_MS; isLayer -> LAYER_GAP_MS; else -> FADE_GAP_MS }
                     val wait = gap - (now - lastSend)
                     if (wait > 0) Thread.sleep(wait)
                     sendControl(adapt(batch)); inflight++
