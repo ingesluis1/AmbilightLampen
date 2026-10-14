@@ -42,6 +42,12 @@ class MainActivity : Activity() {
         }
     }
 
+    override fun onResume() {
+        super.onResume()
+        // Bij openen van de app meteen kijken of er een nieuwe versie is
+        Thread { Updater.check(force = true) }.start()
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             // Eerst de pagina laten beslissen (bijvoorbeeld het instellingenpaneel sluiten)
