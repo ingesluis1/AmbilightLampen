@@ -27,6 +27,24 @@ h1{margin:0;font-size:3.2vh;font-weight:700}
 .qr{display:flex;gap:1.2vw;align-items:center}
 .qr img{width:15vh;height:15vh;image-rendering:pixelated;border:3px solid var(--ink);background:#fff;padding:4px}
 .qr p{font-size:1.9vh;margin:0}
+#rainbow{position:fixed;inset:0;overflow:hidden;z-index:9;background:#000}
+#rainbow .spin{position:absolute;left:50%;top:50%;width:260vmax;height:260vmax;margin:-130vmax 0 0 -130vmax;
+  background:conic-gradient(#ff0000,#ff8800,#ffee00,#33ff00,#00ffcc,#0066ff,#8800ff,#ff00aa,#ff0000);animation:spin var(--speed,8s) linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+#rainbow .inner{position:absolute;inset:18vh 18vw;background:#1d1124;border:4px solid #120a16;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2vh;color:var(--cream);text-align:center}
+#rainbow .inner h2{font-size:3.4vh;margin:0}
+#rainbow .inner p{font-size:2.1vh;margin:0;opacity:.85;max-width:44vw}
+#settings{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:center;justify-content:center;z-index:8}
+#settings .panel{width:58vw;margin:0}
+#settings h2{font-size:3vh;margin:0 0 1.4vh}
+.srow{padding:1vh 1.2vw;margin-bottom:.8vh;border:3px solid transparent}
+.srow.focus{background:var(--gold);border-color:var(--ink)}
+.srow .top{display:flex;justify-content:space-between;font-size:2.2vh;font-weight:600}
+.srow .bar{display:flex;gap:3px;margin-top:.7vh;height:1.3vh}
+.srow .bar i{flex:1;background:var(--parch-dk);border:2px solid var(--ink)}
+.srow .bar i.on{background:var(--wood-dk)}
+.srow .arrows{opacity:.6;font-size:1.8vh}
+.shint{font-size:1.7vh;opacity:.75;margin-top:1vh}
 .qr small{display:block;margin-top:.6vh;font-size:1.6vh;opacity:.75;word-break:break-all}
 </style>
 </head>
@@ -42,6 +60,10 @@ h1{margin:0;font-size:3.2vh;font-weight:700}
       <div class="btns">
         <button class="btn gold" id="syncBtn">Sync starten</button>
         <button class="btn" id="testBtn">Kleurtest (alle lampen na elkaar)</button>
+        <button class="btn" id="rainbowBtn">Testbeeld (regenboog)</button>
+        <button class="btn" id="setBtn">Instellingen</button>
+        <button class="btn gold hidden" id="updBtn">Update</button>
+        <div class="shint" id="ver"></div>
       </div>
       <div class="legend" id="legend"></div>
     </section>
@@ -50,6 +72,23 @@ h1{margin:0;font-size:3.2vh;font-weight:700}
     </section>
   </div>
 </div>
+<div id="rainbow" class="hidden"><div class="spin"></div><div class="inner">
+  <h2>Testbeeld</h2>
+  <p>De regenboog draait langs de randen van het beeld. Kijk of de kleur in dezelfde richting langs je lampen gaat.</p>
+  <p>Links en rechts: sneller of langzamer. Terug: stoppen.</p>
+  <p id="rbSpeed"></p>
+</div></div>
+<div id="settings" class="hidden"><section class="panel">
+  <h2>Instellingen</h2>
+  <div id="srows"></div>
+  <div class="shint">Omhoog en omlaag: kiezen. Links en rechts: aanpassen. OK: aan of uit. Terug: sluiten.</div>
+</section></div>
+<div id="upd" class="hidden" style="position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:center;justify-content:center;z-index:10">
+<section class="panel" style="width:48vw;margin:0">
+  <h2 id="updTitle" style="font-size:3vh;margin:0 0 1.2vh"></h2>
+  <div id="updNotes" style="font-size:2.1vh;max-height:46vh;overflow:auto"></div>
+  <div class="row" style="margin-top:2vh;gap:1vw"><button class="btn gold" id="updGo" style="font-size:2.3vh">Nu updaten</button><button class="btn" id="updLater" style="font-size:2.3vh">Later</button></div>
+</section></div>
 <div id="toast"></div>
 <script src="/room.js"></script>
 <script>
@@ -86,6 +125,8 @@ function status(){
     });
   }
   for(const b of $('legend').querySelectorAll('.lamp')){const l=s.lamps.find(x=>x.id===b.dataset.id);if(l)b.querySelector('.sq').style.background=l.online?(l.color&&l.color!=='#555555'?l.color:'#ffd696'):'#6a6070'}
+  if(s.update){const u=s.update;$('updBtn').classList.toggle('hidden',!u.available);$('updBtn').textContent='Update naar '+u.latest;
+    $('ver').textContent='Versie '+u.current+(u.status?' | '+u.status:'')}
   if(s.link&&$('url').textContent!==s.link){$('url').textContent=s.link;$('qr').src='/qr.png?'+encodeURIComponent(s.link)}
 }
 async function poll(){
@@ -95,8 +136,85 @@ async function poll(){
 $('syncBtn').onclick=async()=>{if(busy)return;busy=true;const on=!(S&&S.sync);toast(on?'Sync start...':'Sync stopt...');await api('/api/sync',{on});busy=false};
 $('testBtn').onclick=async()=>toast((await api('/api/test',{})).message);
 
+// Instellingen met de afstandsbediening
+const ROWS=[
+  {k:'smooth',label:'Reactiesnelheid',min:0.08,max:1,step:0.04,fmt:v=>Math.round(v*100)+'%'},
+  {k:'saturation',label:'Kleurintensiteit',min:0.8,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
+  {k:'brightness',label:'Helderheid',min:0.5,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
+  {k:'minLight',label:'Licht bij zwart beeld',min:0,max:0.3,step:0.01,fmt:v=>v<0.005?'uit':Math.round(v*100)+'%'},
+  {k:'spread',label:'Hoe breed lampen meekijken',min:0.4,max:2.5,step:0.1,fmt:v=>v.toFixed(1)+'x'},
+  {k:'after',label:'Na stoppen',options:[['restore','Terug naar hoe ze stonden'],['white','Warm wit'],['off','Uit']]},
+  {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
+];
+let setOpen=false,setIdx=0,setVals=null,setTimer=null;
+function openSettings(){if(!S)return;setVals={...S.settings};setOpen=true;setIdx=0;$('settings').classList.remove('hidden');renderSettings()}
+function closeSettings(){setOpen=false;$('settings').classList.add('hidden');$('setBtn').focus()}
+let rbOpen=false,rbStartedSync=false,rbSpeed=8;
+async function openRainbow(){
+  rbOpen=true;$('rainbow').classList.remove('hidden');speedRb(0);
+  if(S&&!S.sync){rbStartedSync=true;await api('/api/sync',{on:true})}else rbStartedSync=false;
+}
+async function closeRainbow(){
+  rbOpen=false;$('rainbow').classList.add('hidden');$('rainbowBtn').focus();
+  if(rbStartedSync){rbStartedSync=false;await api('/api/sync',{on:false})}
+}
+function speedRb(d){rbSpeed=Math.min(30,Math.max(2,rbSpeed+d));$('rainbow').style.setProperty('--speed',rbSpeed+'s');$('rbSpeed').textContent='Eén rondje per '+rbSpeed+' seconden'}
+$('rainbowBtn').onclick=openRainbow;
+document.addEventListener('keydown',e=>{
+  if(!rbOpen)return;
+  if(e.key==='ArrowLeft')speedRb(1);else if(e.key==='ArrowRight')speedRb(-1);
+  else if(e.key==='Escape'||e.key==='Backspace')closeRainbow();
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+window.onBack=()=>{if(rbOpen){closeRainbow();return true}if(setOpen){closeSettings();return true}return false};
+function renderSettings(){
+  $('srows').innerHTML=ROWS.map((r,i)=>{
+    const v=setVals[r.k];let val,bar='';
+    if(r.bool)val=v?'aan':'uit';
+    else if(r.options)val=(r.options.find(o=>o[0]===v)||r.options[0])[1];
+    else{val=r.fmt(+v);const n=20,f=Math.round((v-r.min)/(r.max-r.min)*n);bar='<div class="bar">'+Array.from({length:n},(_,j)=>`<i class="${j<f?'on':''}"></i>`).join('')+'</div>'}
+    return `<div class="srow${i===setIdx?' focus':''}"><div class="top"><span>${r.label}</span><span><span class="arrows">${r.bool?'OK ':'&lt; '}</span>${val}<span class="arrows">${r.bool?'':' &gt;'}</span></span></div>${bar}</div>`}).join('');
+}
+function changeSetting(dir){
+  const r=ROWS[setIdx];
+  if(r.bool)setVals[r.k]=!setVals[r.k];
+  else if(r.options){const i=r.options.findIndex(o=>o[0]===setVals[r.k]);setVals[r.k]=r.options[(i+dir+r.options.length)%r.options.length][0]}
+  else setVals[r.k]=Math.round(Math.min(r.max,Math.max(r.min,+setVals[r.k]+dir*r.step))*100)/100;
+  renderSettings();clearTimeout(setTimer);
+  setTimer=setTimeout(async()=>{const res=await api('/api/save',{settings:setVals});if(!res.ok)toast(res.message)},350);
+}
+$('setBtn').onclick=openSettings;
+$('updBtn').onclick=openUpd;
+let updOpen=false;
+function openUpd(){if(!S||!S.update)return;updOpen=true;const u=S.update;
+  $('updTitle').textContent='Wat is er nieuw in '+u.latest;
+  const lines=(u.notes||'').split(/\r?\n/).map(l=>l.replace(/^[-*]\s*/,'').trim()).filter(Boolean);
+  $('updNotes').innerHTML=lines.length?'<ul>'+lines.map(l=>'<li></li>').join('')+'</ul>':'<p>Geen beschrijving.</p>';
+  $('updNotes').querySelectorAll('li').forEach((li,i)=>li.textContent=lines[i]);
+  $('upd').classList.remove('hidden');$('updGo').focus()}
+function closeUpd(){updOpen=false;$('upd').classList.add('hidden');$('updBtn').focus()}
+$('updGo').onclick=async()=>{toast((await api('/api/update',{})).message);closeUpd()};
+$('updLater').onclick=closeUpd;
+document.addEventListener('keydown',e=>{
+  if(!updOpen)return;
+  if(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown'){(document.activeElement===$('updGo')?$('updLater'):$('updGo')).focus();e.preventDefault();e.stopImmediatePropagation()}
+  else if(e.key==='Escape'||e.key==='Backspace'){closeUpd();e.preventDefault();e.stopImmediatePropagation()}
+},true);
+const _ob=window.onBack;window.onBack=()=>{if(updOpen){closeUpd();return true}return _ob?_ob():false};
+document.addEventListener('keydown',e=>{
+  if(!setOpen)return;
+  if(e.key==='ArrowDown'){setIdx=(setIdx+1)%ROWS.length;renderSettings()}
+  else if(e.key==='ArrowUp'){setIdx=(setIdx-1+ROWS.length)%ROWS.length;renderSettings()}
+  else if(e.key==='ArrowRight')changeSetting(1);
+  else if(e.key==='ArrowLeft')changeSetting(-1);
+  else if(e.key==='Enter'){const r=ROWS[setIdx];if(r.bool||r.options)changeSetting(1)}
+  else if(e.key==='Escape'||e.key==='Backspace')closeSettings();
+  else return;
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+
 // Afstandsbediening: pijltjes wisselen tussen de knoppen, OK drukt
-const btns=()=>[...document.querySelectorAll('.btns .btn, .legend .btn')];
+const btns=()=>[...document.querySelectorAll('.btns .btn:not(.hidden), .legend .btn')];
 document.addEventListener('keydown',e=>{
   const b=btns(),i=b.indexOf(document.activeElement);
   if(e.key==='ArrowDown'||e.key==='ArrowRight'){b[(i+1+b.length)%b.length].focus();e.preventDefault()}

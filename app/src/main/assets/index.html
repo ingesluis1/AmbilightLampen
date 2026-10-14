@@ -43,6 +43,7 @@ label.s span{float:right;opacity:.8}
 <header>
   <h1>Ambilight Lampen</h1>
   <span id="saved"></span>
+  <button id="updBtn" class="btn hidden">Update</button>
   <button id="syncBtn" class="btn gold">Sync starten</button>
 </header>
 <main>
@@ -356,6 +357,7 @@ async function save(){
   const r=await api('/api/save',{layout:L,settings,lamps:lamps.map(l=>({id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,enabled:l.enabled,ip:l.ip}))});
   dirty=false;$('saved').textContent=r.ok?'opgeslagen':'niet opgeslagen';
 }
+$('updBtn').onclick=async()=>{const u=S.update;if(!confirm('Wat is er nieuw in '+u.latest+':\n\n'+(u.notes||'Geen beschrijving.')+'\n\nNu updaten?'))return;toast((await api('/api/update',{})).message+'. Kijk op de tv.')};
 $('syncBtn').onclick=async()=>{const on=!(S&&S.sync);$('syncBtn').disabled=true;const r=await api('/api/sync',{on});toast(r.message);setTimeout(()=>{$('syncBtn').disabled=false;poll()},on?2500:3500)};
 $('pairBtn').onclick=async()=>{const r=await api('/api/pair/request',{host:$('tvHost').value.trim()});toast(r.message);if(r.ok){$('pinRow').classList.remove('hidden');$('pin').focus()}};
 $('grantBtn').onclick=async()=>{const r=await api('/api/pair/grant',{pin:$('pin').value});toast(r.message);if(r.ok)poll()};
@@ -371,6 +373,7 @@ $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;const 
 function liveFrom(s){
   live={};for(const l of s.lamps)live[l.id]=l;
   $('syncBtn').textContent=s.sync?'Sync stoppen':'Sync starten';
+  if(s.update){$('updBtn').classList.toggle('hidden',!s.update.available);$('updBtn').textContent='Update '+s.update.latest}
   $('pairCard').classList.toggle('hidden',s.tv.paired);
   if(s.cloud&&!cloudShown){cloudShown=true;$('cloudOn').classList.toggle('hidden',!s.cloud.configured);$('cloudSetup').classList.toggle('hidden',s.cloud.configured);$('cloudRegion').value=s.cloud.region}
   if(!$('tvHost').value)$('tvHost').value=s.tv.host;

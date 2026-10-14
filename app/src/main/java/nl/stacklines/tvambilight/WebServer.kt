@@ -141,6 +141,11 @@ class WebServer(private val ctx: Context) {
                     path == "/api/cloud/refresh" && method == "POST" -> {
                         try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, "Ophalen mislukt: ${e.message}") }
                     }
+                    path == "/api/update" && method == "POST" -> {
+                        Updater.check(force = true)
+                        if (Updater.available(ctx)) msg(true, Updater.install(ctx))
+                        else msg(false, "Je hebt al de nieuwste versie (${Updater.current(ctx)})")
+                    }
                     path == "/api/lamp/delete" && method == "POST" -> {
                         val id = JSONObject(req).getString("id")
                         synchronized(Store) { Store.lamps.removeAll { it.id == id } }
@@ -171,6 +176,8 @@ class WebServer(private val ctx: Context) {
             put("settings", Store.settings.toJson())
             put("tv", JSONObject().put("paired", Store.tvPaired).put("host", Store.tvHost).put("status", Engine.tvStatus))
             put("sync", Engine.running)
+            put("update", JSONObject().put("current", Updater.current(ctx)).put("latest", Updater.latest ?: "")
+                .put("available", Updater.available(ctx)).put("status", Updater.status).put("notes", Updater.notes))
             put("cloud", JSONObject().put("configured", Store.cloudId != null && Store.cloudSecret != null).put("region", Store.cloudRegion))
             phoneLink()?.let { put("link", it) }
             if (sample != null) put("top", JSONArray().apply { sample.top.forEach { put("#%02x%02x%02x".format(it[0], it[1], it[2])) } })

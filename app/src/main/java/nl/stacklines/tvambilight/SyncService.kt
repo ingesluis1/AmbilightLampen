@@ -57,6 +57,10 @@ class SyncService : Service() {
         if (Build.VERSION.SDK_INT >= 34) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         else startForeground(1, n)
         if (App.server == null) App.server = WebServer(applicationContext).also { it.start() }
+        // Elke paar uur kijken of er een nieuwe versie op GitHub staat
+        Thread {
+            while (true) { Updater.check(); try { Thread.sleep(6 * 3_600_000L) } catch (_: InterruptedException) { break } }
+        }.apply { isDaemon = true }.start()
         // Nieuwe lampen of gewijzigde sleutels ophalen als de cloud is ingesteld
         if (Store.cloudId != null && Store.cloudSecret != null) Thread { try { TuyaCloud.refresh() } catch (_: Exception) { } }.start()
         registerReceiver(screen, IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) })

@@ -43,7 +43,11 @@ class MainActivity : Activity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
-        if (keyCode == KeyEvent.KEYCODE_BACK) { finish(); return true }
+        if (keyCode == KeyEvent.KEYCODE_BACK) {
+            // Eerst de pagina laten beslissen (bijvoorbeeld het instellingenpaneel sluiten)
+            web.evaluateJavascript("window.onBack ? window.onBack() : false") { r -> if (r != "true") finish() }
+            return true
+        }
         return super.onKeyDown(keyCode, event)
     }
 }
