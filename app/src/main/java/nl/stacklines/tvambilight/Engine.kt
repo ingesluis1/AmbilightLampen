@@ -155,14 +155,14 @@ object Engine {
     }
 
     /** Lamp met aparte lagen: per laag gladstrijken, opvoeren en alleen versturen als hij genoeg veranderd is. */
-    private fun syncLayers(l: Lamp, worker: TuyaLamp, sample: ZoneSample, s: Settings,
+    private fun syncLayers(l: Lamp, worker: TuyaLamp, sample: ZoneSample, s: Settings, alpha: Double,
                            smooth: HashMap<String, DoubleArray>, last: HashMap<String, IntArray>, lampOn: HashMap<String, Boolean>) {
         if (lampOn[l.id] != true) { worker.send(mapOf("20" to true, "21" to "colour")); lampOn[l.id] = true }
         val cols = Mixer.layers(Store.layout, l, sample, l.layers)
         var shown = 0
         for ((i, target) in cols.withIndex()) {
             val key = l.id + "#" + i
-            val sm = smooth[key]?.let { o -> DoubleArray(3) { o[it] + s.smooth * (target[it] - o[it]) } } ?: target
+            val sm = smooth[key]?.let { o -> DoubleArray(3) { o[it] + alpha * (target[it] - o[it]) } } ?: target
             smooth[key] = sm
             val hsv = FloatArray(3)
             Color.RGBToHSV(sm[0].roundToInt().coerceIn(0, 255), sm[1].roundToInt().coerceIn(0, 255), sm[2].roundToInt().coerceIn(0, 255), hsv)
@@ -205,6 +205,9 @@ object Engine {
             while (running) {
                 val t0 = SystemClock.elapsedRealtime()
                 val s = Store.settings
+                // Met vloeiende overgangen vaker meten; de gladheid per meting omrekenen zodat het even snel aanvoelt
+                val hzEff = if (s.fade) maxOf(s.hz, 25) else s.hz
+                val alpha = 1 - Math.pow(1 - s.smooth.coerceIn(0.01, 1.0), 15.0 / hzEff)
                 val sample = PhilipsTv.measured()
                 if (sample == null) {
                     tvStatus = if (Store.tvPaired) "Tv niet bereikbaar" else "Tv nog niet gekoppeld"
@@ -224,9 +227,9 @@ object Engine {
                     val worker = workers[id] ?: continue
                     if (!l.enabled) continue
                     if (touched.add(id)) syncWorkers()
-                    if (l.layers > 0) { syncLayers(l, worker, sample, s, smooth, last, lampOn); continue }
+                    if (l.layers > 0) { syncLayers(l, worker, sample, s, alpha, smooth, last, lampOn); continue }
                     val target = Mixer.mix(weights[id] ?: continue, sample)
-                    val sm = smooth[id]?.let { o -> DoubleArray(3) { o[it] + s.smooth * (target[it] - o[it]) } } ?: target
+                    val sm = smooth[id]?.let { o -> DoubleArray(3) { o[it] + alpha * (target[it] - o[it]) } } ?: target
                     smooth[id] = sm
                     val hsv = FloatArray(3)
                     Color.RGBToHSV(sm[0].roundToInt().coerceIn(0, 255), sm[1].roundToInt().coerceIn(0, 255), sm[2].roundToInt().coerceIn(0, 255), hsv)
@@ -254,7 +257,7 @@ object Engine {
                     worker.send(dps)
                     worker.shownColor = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
                 }
-                val wait = 1000L / s.hz - (SystemClock.elapsedRealtime() - t0)
+                val wait = 1000L / hzEff - (SystemClock.elapsedRealtime() - t0)
                 if (wait > 0) Thread.sleep(wait)
             }
         } catch (_: InterruptedException) {

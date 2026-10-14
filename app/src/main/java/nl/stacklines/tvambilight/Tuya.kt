@@ -423,7 +423,7 @@ class TuyaLamp(val lamp: Lamp) {
 
         /** Minimale tijd tussen twee opdrachten; sneller verslikken de lampen zich. */
         const val MIN_GAP_MS = 70L
-        const val LAYER_GAP_MS = 35L
+        const val LAYER_GAP_MS = 18L
 
         fun hsvHex(h: Int, s: Int, v: Int) = "%04x%04x%04x".format(h, s, v)
     }
