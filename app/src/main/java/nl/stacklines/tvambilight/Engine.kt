@@ -174,7 +174,8 @@ object Engine {
             val prev = last[key]
             val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
             // Kleine drempel: liever veel kleine stapjes, dan lijkt het op overvloeien
-            if (prev != null && dh < 2 && abs(sv - prev[1]) < 12 && abs(vv - prev[2]) < 10) continue
+            val fine = s.fade
+            if (prev != null && dh < (if (fine) 2 else 5) && abs(sv - prev[1]) < (if (fine) 12 else 40) && abs(vv - prev[2]) < (if (fine) 10 else 35)) continue
             last[key] = intArrayOf(h, sv, vv)
             worker.sendLayer(i + 1, h, sv, vv)
         }

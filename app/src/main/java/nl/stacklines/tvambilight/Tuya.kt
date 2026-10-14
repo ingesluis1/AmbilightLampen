@@ -310,7 +310,7 @@ class TuyaLamp(val lamp: Lamp) {
                 val now = SystemClock.elapsedRealtime()
                 if (batch != null) {
                     // Laag-berichten zijn klein: die mogen sneller achter elkaar (getest op de Wall Washer)
-                    val wait = (if (isLayer) LAYER_GAP_MS else MIN_GAP_MS) - (now - lastSend)
+                    val wait = (if (isLayer && Store.settings.fade) LAYER_GAP_MS else MIN_GAP_MS) - (now - lastSend)
                     if (wait > 0) Thread.sleep(wait)
                     sendControl(adapt(batch))
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
