@@ -176,10 +176,11 @@ object Engine {
             var sat = hsv[1].toDouble(); if (sat > 0.08) sat = min(1.0, sat * satF(s) + satAdd(s))
             val raw = ((hsv[2] - black(s)) / (1 - black(s))).coerceAtLeast(0.0)
             val v = max(s.minLight, min(1.0, raw * s.brightness))
-            val h = hsv[0].roundToInt() % 360
+            val dk = darkMix(s, raw)
+            val h = if (dk > 0.5) DARK_H else hsv[0].roundToInt() % 360
             // Laag zwart: helderheid 0 (de lamp blijft aan, alleen die laag gaat uit)
             val vv = if (s.minLight <= 0.001 && raw * s.brightness < 0.02) 0 else max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
-            val sv = (sat * 1000).roundToInt().coerceIn(0, 1000)
+            val sv = ((sat * (1 - dk) + DARK_S * dk) * 1000).roundToInt().coerceIn(0, 1000)
             if (i == cols.size / 2) shown = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
             val prev = last[key]
             val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
@@ -204,6 +205,16 @@ object Engine {
     private fun satF(s: Settings) = if (amb(s)) 1.0 else s.saturation
     private fun satAdd(s: Settings) = if (amb(s)) 0.0 else 0.1
     private fun black(s: Settings) = if (amb(s)) 0.0 else BLACK
+
+    /** Bij (bijna) zwart beeld krijgen alle lampen dezelfde zacht warme tint in plaats van restjes kleur uit het beeld. */
+    private const val DARK_H = 30
+    private const val DARK_S = 0.3
+    /** 1 = volledig donker (lamp op "Licht bij zwart beeld"), 0 = gewoon beeld; daartussen geleidelijk. */
+    private fun darkMix(s: Settings, raw: Double): Double {
+        if (s.minLight <= 0.001) return 0.0
+        val level = raw * s.brightness
+        return (1 - (level - s.minLight) / s.minLight).coerceIn(0.0, 1.0)
+    }
 
 
     /** Lampen terugzetten volgens "Na stoppen" (bij stoppen en bij pauze omdat Ambilight uit staat). */
@@ -303,8 +314,9 @@ object Engine {
                         worker.shownColor = Color.BLACK
                         continue
                     }
-                    val h = hsv[0].roundToInt() % 360
-                    val sv = (sat * 1000).roundToInt().coerceIn(0, 1000)
+                    val dk = darkMix(s, rawV)
+                    val h = if (dk > 0.5) DARK_H else hsv[0].roundToInt() % 360
+                    val sv = ((sat * (1 - dk) + DARK_S * dk) * 1000).roundToInt().coerceIn(0, 1000)
                     val vv = max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
                     val prev = last[id]
                     val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
