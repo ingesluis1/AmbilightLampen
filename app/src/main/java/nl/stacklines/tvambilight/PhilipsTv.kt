@@ -73,7 +73,8 @@ object PhilipsTv {
         val u = Store.tvUser ?: return null
         val p = Store.tvPass ?: return null
         return try {
-            val r = call("GET", "/ambilight/measured", user = u, pass = p)
+            // Bron: de randen van het beeld (measured) of wat Ambilight zelf uitstraalt (processed)
+            val r = call("GET", if (Store.settings.source == "ambilight") "/ambilight/processed" else "/ambilight/measured", user = u, pass = p)
             if (r.code != 200) return null
             val l = JSONObject(r.body).getJSONObject("layer1")
             fun side(name: String): List<IntArray> {

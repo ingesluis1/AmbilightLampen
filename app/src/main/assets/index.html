@@ -120,6 +120,8 @@ label.s span{float:right;opacity:.8}
 
 <section class="panel">
   <h2>Instellingen</h2>
+  <label class="s">Kleuren van</label>
+  <select id="source"><option value="screen">Het beeld (randen van het scherm)</option><option value="ambilight">De Ambilight-leds achter de tv</option></select>
   <label class="s">Reactiesnelheid <span id="v_smooth"></span></label><input type="range" id="smooth" min="0.08" max="1" step="0.01">
   <label class="s">Kleurintensiteit <span id="v_saturation"></span></label><input type="range" id="saturation" min="0.8" max="2.6" step="0.05">
   <label class="s">Helderheid <span id="v_brightness"></span></label><input type="range" id="brightness" min="0.5" max="2.6" step="0.05">
@@ -384,12 +386,13 @@ $('blinkBtn').onclick=async()=>{if(selLamp)toast((await api('/api/identify',{id:
 /* ---------- instellingen ---------- */
 const SL=['smooth','saturation','brightness','minLight','spread'];
 const fmt={smooth:v=>Math.round(v*100)+'%',saturation:v=>v.toFixed(2)+'x',brightness:v=>v.toFixed(2)+'x',minLight:v=>v==0?t('uit'):Math.round(v*100)+'%',spread:v=>v.toFixed(2)+'x'};
-function showSettings(){for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
+function showSettings(){for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('source').value=settings.source||'screen';$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
 $('lang').onchange=async e=>{settings.lang=e.target.value;await api('/api/save',{settings});location.reload()};
 for(const k of SL)$(k).oninput=e=>{settings[k]=+e.target.value;$('v_'+k).textContent=fmt[k](settings[k]);changed(true)};
 $('after').onchange=e=>{settings.after=e.target.value;changed(true)};
 $('autostart').onchange=e=>{settings.autostart=e.target.checked;changed(true)};
 $('fade').onchange=e=>{settings.fade=e.target.checked;changed(true)};
+$('source').onchange=e=>{settings.source=e.target.value;changed(true)};
 $('followAmbi').onchange=e=>{settings.followAmbi=e.target.checked;changed(true)};
 
 /* ---------- opslaan en live ---------- */

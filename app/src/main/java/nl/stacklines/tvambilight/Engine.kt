@@ -173,8 +173,8 @@ object Engine {
             smooth[key] = sm
             val hsv = FloatArray(3)
             Color.RGBToHSV(sm[0].roundToInt().coerceIn(0, 255), sm[1].roundToInt().coerceIn(0, 255), sm[2].roundToInt().coerceIn(0, 255), hsv)
-            var sat = hsv[1].toDouble(); if (sat > 0.08) sat = min(1.0, sat * s.saturation + 0.1)
-            val raw = ((hsv[2] - BLACK) / (1 - BLACK)).coerceAtLeast(0.0)
+            var sat = hsv[1].toDouble(); if (sat > 0.08) sat = min(1.0, sat * satF(s) + satAdd(s))
+            val raw = ((hsv[2] - black(s)) / (1 - black(s))).coerceAtLeast(0.0)
             val v = max(s.minLight, min(1.0, raw * s.brightness))
             val h = hsv[0].roundToInt() % 360
             // Laag zwart: helderheid 0 (de lamp blijft aan, alleen die laag gaat uit)
@@ -199,6 +199,11 @@ object Engine {
     private const val CUT_DIST = 110.0
     /** Onder deze helderheid (0..1) telt een kleur als zwart. */
     private const val BLACK = 0.07
+    // Met Ambilight als bron bewerken we de kleuren niet extra: Ambilight doet dat al
+    private fun amb(s: Settings) = s.source == "ambilight"
+    private fun satF(s: Settings) = if (amb(s)) 1.0 else s.saturation
+    private fun satAdd(s: Settings) = if (amb(s)) 0.0 else 0.1
+    private fun black(s: Settings) = if (amb(s)) 0.0 else BLACK
 
 
     /** Lampen terugzetten volgens "Na stoppen" (bij stoppen en bij pauze omdat Ambilight uit staat). */
@@ -285,9 +290,9 @@ object Engine {
                     val hsv = FloatArray(3)
                     Color.RGBToHSV(sm[0].roundToInt().coerceIn(0, 255), sm[1].roundToInt().coerceIn(0, 255), sm[2].roundToInt().coerceIn(0, 255), hsv)
                     var sat = hsv[1].toDouble()
-                    if (sat > 0.08) sat = min(1.0, sat * s.saturation + 0.1)
+                    if (sat > 0.08) sat = min(1.0, sat * satF(s) + satAdd(s))
                     // Zwartgrens zoals Ambilight: bijna-zwart telt als zwart, de rest wordt opnieuw verdeeld
-                    val rawV = ((hsv[2] - BLACK) / (1 - BLACK)).coerceAtLeast(0.0)
+                    val rawV = ((hsv[2] - black(s)) / (1 - black(s))).coerceAtLeast(0.0)
                     val v = max(s.minLight, min(1.0, rawV * s.brightness))
                     if (s.minLight <= 0.001 && rawV * s.brightness < 0.02) {
                         if (lampOn[id] != false) { worker.send(mapOf("20" to false)); lampOn[id] = false }

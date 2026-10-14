@@ -143,6 +143,7 @@ $('testBtn').onclick=async()=>toast((await api('/api/test',{})).message);
 
 // Instellingen met de afstandsbediening
 const ROWS=[
+  {k:'source',label:'Kleuren van',options:[['screen','Het beeld'],['ambilight','De Ambilight-leds']]},
   {k:'smooth',label:'Reactiesnelheid',min:0.08,max:1,step:0.04,fmt:v=>Math.round(v*100)+'%'},
   {k:'saturation',label:'Kleurintensiteit',min:0.8,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'brightness',label:'Helderheid',min:0.5,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},

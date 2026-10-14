@@ -46,6 +46,8 @@ const I18N = (() => {
     'Lagen apart': 'Separate layers', '(voor lampen met meerdere kleurlagen, zoals een Wall Washer)': '(for lamps with several colour layers, like a wall washer)',
     'Elke laag volgt zijn hoogte aan de linkerkant van het beeld': 'Each layer follows its height on the left side of the picture',
     'Elke laag volgt zijn hoogte aan de rechterkant van het beeld': 'Each layer follows its height on the right side of the picture',
+    'Kleuren van': 'Colours from', 'Het beeld': 'The picture', 'De Ambilight-leds': 'The Ambilight LEDs',
+    'Het beeld (randen van het scherm)': 'The picture (edges of the screen)', 'De Ambilight-leds achter de tv': 'The Ambilight LEDs behind the TV',
     'Bovenrand': 'Top edge', 'Volgt de bovenrand, {s}': 'Follows the top edge, {s}',
     'Vloeiende overgangen': 'Smooth transitions', 'Ambilight van de tv volgen': "Follow the TV's Ambilight",
     'Ambilight van de tv volgen (uit = lampen uit)': "Follow the TV's Ambilight (off = lamps off)", 'Ambilight staat uit': 'Ambilight is off',
