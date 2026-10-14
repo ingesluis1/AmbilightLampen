@@ -37,7 +37,13 @@ object Mixer {
         return doubleArrayOf(xs, ys, depth)
     }
 
-    fun weights(layout: JSONObject, lamp: Lamp, spread: Double, nLeft: Int, nTop: Int, nRight: Int): Weights {
+    fun weights(layout: JSONObject, lamp: Lamp, spread: Double, nLeft: Int, nTop: Int, nRight: Int, topX: Double? = null): Weights {
+        // Bovenrand: alleen de bovenste zones, op de plek die bij de volgorde van links naar rechts hoort
+        if (lamp.follow == "top" && topX != null) {
+            val sig = 0.3 * spread
+            val top = DoubleArray(nTop) { i -> val dx = topX - (-1 + (2.0 * i + 1) / nTop); exp(-dx * dx / (2 * sig * sig)) }
+            return Weights(DoubleArray(nLeft), top, DoubleArray(nRight)).normalized()
+        }
         val p = project(layout, lamp)
         if (p == null) {
             // Niet geplaatst: gemiddelde van het hele beeld
@@ -258,7 +264,11 @@ object Engine {
                 if (Store.version != weightsVersion || zc != zoneCount) {
                     weightsVersion = Store.version; zoneCount = zc
                     weights = HashMap()
-                    for (l in Store.lampsSnapshot()) weights[l.id] = Mixer.weights(Store.layout, l, s.spread, zc.first, zc.second, zc.third)
+                    // Lampen op "Bovenrand" krijgen op volgorde van links naar rechts een gelijk verdeelde plek op de bovenrand
+                    val topLamps = Store.lampsSnapshot().filter { it.follow == "top" && it.placed }
+                        .sortedBy { Mixer.project(Store.layout, it)?.get(0) ?: 0.0 }
+                    val topX = topLamps.withIndex().associate { (k, l) -> l.id to (-1 + (2.0 * k + 1) / topLamps.size) }
+                    for (l in Store.lampsSnapshot()) weights[l.id] = Mixer.weights(Store.layout, l, s.spread, zc.first, zc.second, zc.third, topX[l.id])
                 }
                 // Elke ronde opnieuw: lampen die tijdens de sync zijn toegevoegd doen meteen mee
                 for (l in Store.lampsSnapshot()) {

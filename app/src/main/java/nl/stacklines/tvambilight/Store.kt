@@ -17,7 +17,7 @@ class Lamp(
     var height: String = "ceiling",   // ceiling | table | floor
     var enabled: Boolean = true,
     var shape: String = "bulb",       // bulb (lamp/spot) | rod (staaflamp)
-    var follow: String = "auto",      // auto (op plek) | side (hele zijkant) | all (hele beeld)
+    var follow: String = "auto",      // auto (op plek) | top (bovenrand, op volgorde) | side (hele zijkant) | all (hele beeld)
     var layers: Int = 0,              // 0 = één kleur; 2..5 = lagen apart (Tuya functie 61, segment 1 = onder)
     var category: String = ""         // Tuya-categorie uit de cloud: dj = lamp, dd = ledstrip
 ) {

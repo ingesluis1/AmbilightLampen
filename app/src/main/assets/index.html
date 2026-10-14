@@ -97,7 +97,7 @@ label.s span{float:right;opacity:.8}
       </div>
       <div style="margin-top:8px;font-size:14px">Volgt</div>
       <div class="seg" id="followSeg" style="margin-top:3px">
-        <button class="btn" data-f="auto">Automatisch</button><button class="btn" data-f="side">Hele zijkant</button><button class="btn" data-f="all">Hele beeld</button>
+        <button class="btn" data-f="auto">Automatisch</button><button class="btn" data-f="top">Bovenrand</button><button class="btn" data-f="side">Hele zijkant</button><button class="btn" data-f="all">Hele beeld</button>
       </div>
       <div style="margin-top:8px;font-size:14px">Lagen apart <span style="opacity:.7">(voor lampen met meerdere kleurlagen, zoals een Wall Washer)</span></div>
       <div class="seg" id="layerSeg" style="margin-top:3px">
@@ -347,6 +347,9 @@ function follows(l){
   const a=L.tv.dir*Math.PI/180,fx=Math.cos(a),fy=Math.sin(a),xs=((l.x-L.tv.x)*fy+(l.y-L.tv.y)*-fx)/(L.tv.w/2);
   if((l.layers||0)>0)return t(xs<0?'Elke laag volgt zijn hoogte aan de linkerkant van het beeld':'Elke laag volgt zijn hoogte aan de rechterkant van het beeld');
   if(l.follow==='all')return t('Volgt het hele beeld');
+  if(l.follow==='top'){const tl=lamps.filter(x=>x.follow==='top'&&x.x>=0).map(x=>({id:x.id,xs:((x.x-L.tv.x)*fy+(x.y-L.tv.y)*-fx)})).sort((p,q)=>p.xs-q.xs);
+    const k=tl.findIndex(x=>x.id===l.id),n=tl.length,pos=n<2?0:(-1+(2*k+1)/n);
+    return t('Volgt de bovenrand, {s}',{s:t(pos<-0.34?'linkerdeel':pos>0.34?'rechterdeel':'midden')})}
   if(l.follow==='side')return t(xs<0?'Volgt de hele linkerkant van het beeld':'Volgt de hele rechterkant van het beeld');
   if(l.shape==='rod')return t(xs<-0.35?'Volgt de linkerkant van het beeld, van onder tot boven':xs>0.35?'Volgt de rechterkant van het beeld, van onder tot boven':'Volgt het midden van het beeld, van onder tot boven');
   if(xs<-1.15)return t('Volgt de linkerkant van het beeld');
