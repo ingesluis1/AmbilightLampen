@@ -149,6 +149,7 @@ const ROWS=[
   {k:'minLight',label:'Licht bij zwart beeld',min:0,max:0.3,step:0.01,fmt:v=>v<0.005?t('uit'):Math.round(v*100)+'%'},
   {k:'spread',label:'Hoe breed lampen meekijken',min:0.4,max:2.5,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'after',label:'Na stoppen',options:[['restore','Terug naar hoe ze stonden'],['white','Warm wit'],['off','Uit']]},
+  {k:'fade',label:'Vloeiende overgangen',bool:true},
   {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
   {k:'lang',label:'Taal',options:[['nl','Nederlands'],['en','English']],reload:true,raw:true},
 ];

@@ -299,16 +299,18 @@ class TuyaLamp(val lamp: Lamp) {
                         .put("t", (System.currentTimeMillis() / 1000).toString()).toString(), header = false)
                     continue
                 }
+                var isLayer = false
                 val batch: Map<String, Any>? = synchronized(lock) {
                     if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() }
                     else layerPending.entries.firstOrNull()?.let { e ->
-                        layerPending.remove(e.key)
+                        layerPending.remove(e.key); isLayer = true
                         mapOf<String, Any>("61" to layerValue(e.key, e.value))
                     }
                 }
                 val now = SystemClock.elapsedRealtime()
                 if (batch != null) {
-                    val wait = MIN_GAP_MS - (now - lastSend)
+                    // Laag-berichten zijn klein: die mogen sneller achter elkaar (getest op de Wall Washer)
+                    val wait = (if (isLayer) LAYER_GAP_MS else MIN_GAP_MS) - (now - lastSend)
                     if (wait > 0) Thread.sleep(wait)
                     sendControl(adapt(batch))
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
@@ -421,6 +423,7 @@ class TuyaLamp(val lamp: Lamp) {
 
         /** Minimale tijd tussen twee opdrachten; sneller verslikken de lampen zich. */
         const val MIN_GAP_MS = 70L
+        const val LAYER_GAP_MS = 35L
 
         fun hsvHex(h: Int, s: Int, v: Int) = "%04x%04x%04x".format(h, s, v)
     }

@@ -173,7 +173,8 @@ object Engine {
             if (i == cols.size / 2) shown = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
             val prev = last[key]
             val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
-            if (prev != null && dh < 5 && abs(sv - prev[1]) < 40 && abs(vv - prev[2]) < 35) continue
+            // Kleine drempel: liever veel kleine stapjes, dan lijkt het op overvloeien
+            if (prev != null && dh < 2 && abs(sv - prev[1]) < 12 && abs(vv - prev[2]) < 10) continue
             last[key] = intArrayOf(h, sv, vv)
             worker.sendLayer(i + 1, h, sv, vv)
         }
@@ -246,7 +247,9 @@ object Engine {
                     last[id] = intArrayOf(h, sv, vv)
                     val dps = LinkedHashMap<String, Any>()
                     if (lampOn[id] != true) { dps["20"] = true; dps["21"] = "colour"; lampOn[id] = true }
-                    dps["24"] = TuyaLamp.hsvHex(h, sv, vv)
+                    // Gewone lampen (dj) kunnen via functie 28 zelf overvloeien: "1" = vloeiend, dan h s v, helderheid, kleurtemperatuur
+                    if (s.fade && l.category == "dj") dps["28"] = "1" + TuyaLamp.hsvHex(h, sv, vv) + "03e8" + "0000"
+                    else dps["24"] = TuyaLamp.hsvHex(h, sv, vv)
                     worker.send(dps)
                     worker.shownColor = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
                 }

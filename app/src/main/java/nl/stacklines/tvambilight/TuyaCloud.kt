@@ -74,8 +74,9 @@ object TuyaCloud {
                 val ex = Store.lamps.firstOrNull { it.id == id }
                 if (ex != null) {
                     if (ex.key != key) { ex.key = key; updated++ }
+                    ex.category = d.optString("category", ex.category)
                 } else if (d.optBoolean("online", true)) {   // offline registraties (oude lampen) overslaan
-                    Store.lamps += Lamp(id, key, d.optString("name", id))
+                    Store.lamps += Lamp(id, key, d.optString("name", id)).apply { category = d.optString("category") }
                     added += d.optString("name", id)
                 }
             }

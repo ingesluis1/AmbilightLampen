@@ -18,14 +18,15 @@ class Lamp(
     var enabled: Boolean = true,
     var shape: String = "bulb",       // bulb (lamp/spot) | rod (staaflamp)
     var follow: String = "auto",      // auto (op plek) | side (hele zijkant) | all (hele beeld)
-    var layers: Int = 0               // 0 = één kleur; 2..5 = lagen apart (Tuya functie 61, segment 1 = onder)
+    var layers: Int = 0,              // 0 = één kleur; 2..5 = lagen apart (Tuya functie 61, segment 1 = onder)
+    var category: String = ""         // Tuya-categorie uit de cloud: dj = lamp, dd = ledstrip
 ) {
     val placed get() = x >= 0 && y >= 0
     val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5")
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
         put("id", id); put("name", name); put("ip", ip); put("version", version)
-        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers)
+        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers); put("category", category)
         if (withKey) put("key", key)
     }
 
@@ -35,7 +36,7 @@ class Lamp(
             o.optString("ip"), o.optString("version", "3.3"),
             o.optDouble("x", -1.0), o.optDouble("y", -1.0),
             o.optString("height", "ceiling"), o.optBoolean("enabled", true), o.optString("shape", "bulb"),
-            o.optString("follow", "auto"), o.optInt("layers", 0)
+            o.optString("follow", "auto"), o.optInt("layers", 0), o.optString("category")
         )
     }
 }
@@ -50,11 +51,12 @@ class Settings {
     var autostart = true
     var after = "restore"    // restore | white | off
     var lang = "nl"          // nl | en
+    var fade = true          // lampen laten overvloeien (Tuya functie 28) in plaats van springen
 
     fun toJson() = JSONObject().apply {
         put("smooth", smooth); put("saturation", saturation); put("brightness", brightness)
         put("minLight", minLight); put("spread", spread); put("hz", hz)
-        put("autostart", autostart); put("after", after); put("lang", lang)
+        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade)
     }
 
     fun apply(o: JSONObject) {
@@ -67,6 +69,7 @@ class Settings {
         autostart = o.optBoolean("autostart", autostart)
         after = o.optString("after", after)
         lang = if (o.optString("lang", lang) == "en") "en" else "nl"
+        fade = o.optBoolean("fade", fade)
     }
 }
 
