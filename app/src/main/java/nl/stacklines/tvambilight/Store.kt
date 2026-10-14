@@ -56,13 +56,14 @@ class Settings {
     var after = "restore"    // restore | white | off
     var lang = "nl"          // nl | en
     var fade = true          // lampen laten overvloeien (Tuya functie 28) in plaats van springen
+    var cuts = true          // scènewissels direct doorgeven (springen) in plaats van vloeien
     var source = "screen"    // screen = randen van het beeld | ambilight = wat de Ambilight-leds uitstralen
     var followAmbi = true    // Ambilight van de tv uit (ook standby) = lampen terug en sync pauzeren
 
     fun toJson() = JSONObject().apply {
         put("smooth", smooth); put("saturation", saturation); put("brightness", brightness)
         put("minLight", minLight); put("spread", spread); put("hz", hz)
-        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("followAmbi", followAmbi); put("source", source)
+        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("source", source)
     }
 
     fun apply(o: JSONObject) {
@@ -76,6 +77,7 @@ class Settings {
         after = o.optString("after", after)
         lang = if (o.optString("lang", lang) == "en") "en" else "nl"
         fade = o.optBoolean("fade", fade)
+        cuts = o.optBoolean("cuts", cuts)
         followAmbi = o.optBoolean("followAmbi", followAmbi)
         source = if (o.optString("source", source) == "ambilight") "ambilight" else "screen"
     }

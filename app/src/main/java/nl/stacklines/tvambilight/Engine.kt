@@ -168,7 +168,7 @@ object Engine {
         var shown = 0
         for ((i, target) in cols.withIndex()) {
             val key = l.id + "#" + i
-            val cut = smooth[key]?.let { o -> rgbDist(o, target) > CUT_DIST } ?: true
+            val cut = smooth[key]?.let { o -> (s.cuts && rgbDist(o, target) > CUT_DIST) } ?: true
             val sm = if (cut) target else smooth[key]?.let { o -> DoubleArray(3) { o[it] + alpha * (target[it] - o[it]) } } ?: target
             smooth[key] = sm
             val hsv = FloatArray(3)
@@ -197,7 +197,7 @@ object Engine {
 
     /** Afstand tussen twee kleuren (0..441); boven CUT_DIST telt het als scènewissel. */
     private fun rgbDist(a: DoubleArray, b: DoubleArray) = Math.sqrt((0..2).sumOf { (a[it] - b[it]) * (a[it] - b[it]) })
-    private const val CUT_DIST = 110.0
+    private const val CUT_DIST = 160.0
     /** Onder deze helderheid (0..1) telt een kleur als zwart. */
     private const val BLACK = 0.07
     // Met Ambilight als bron bewerken we de kleuren niet extra: Ambilight doet dat al
@@ -299,7 +299,7 @@ object Engine {
                     if (l.layers > 0) { syncLayers(l, worker, sample, s, alpha, smooth, last, lampOn); continue }
                     val target = Mixer.mix(weights[id] ?: continue, sample)
                     // Grote, plotselinge verandering (scènewissel): direct springen; kleine: gladstrijken en overvloeien
-                    val cut = smooth[id]?.let { o -> rgbDist(o, target) > CUT_DIST } ?: true
+                    val cut = smooth[id]?.let { o -> (s.cuts && rgbDist(o, target) > CUT_DIST) } ?: true
                     val sm = if (cut) target else smooth[id]?.let { o -> DoubleArray(3) { o[it] + alpha * (target[it] - o[it]) } } ?: target
                     smooth[id] = sm
                     val hsv = FloatArray(3)
