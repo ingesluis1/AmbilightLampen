@@ -4,8 +4,13 @@ Nederlands | [English](README.en.md)
 
 Android TV-app die gewone Tuya-wifilampen (Trust, LSC/Action en andere merken die in Smart Life werken) laat meekleuren met het beeld van een Philips Ambilight-tv, een beetje zoals Philips Hue Sync. De app draait op de tv zelf, dus er hoeft geen pc of extra kastje aan te staan.
 
-![Tv-scherm](docs/tv-scherm.png)
-![Met sync aan](docs/tv-scherm-sync.png)
+<p>
+  <img src="docs/tv-scherm.png" width="49%" alt="Tv-scherm overdag">
+  <img src="docs/tv-scherm-sync.png" width="49%" alt="Met sync aan: de kamer wordt donker en de lampen geven gekleurd licht">
+  <img src="docs/tv-testbeeld.png" width="49%" alt="Testbeeld met regenboog en je kamer">
+  <img src="docs/tv-instellingen.png" width="49%" alt="Instellingen op de tv">
+</p>
+<p align="center"><img src="docs/editor.png" width="320" alt="Editor op de telefoon"></p>
 
 ## Wat de app doet
 

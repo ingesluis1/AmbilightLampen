@@ -4,8 +4,13 @@
 
 Android TV app that makes ordinary Tuya Wi-Fi lamps (Trust, LSC/Action and other brands that work with Smart Life) follow the picture of a Philips Ambilight TV, a bit like Philips Hue Sync. The app runs on the TV itself, so no PC or extra box needs to be on.
 
-![TV screen](docs/tv-scherm.png)
-![With sync on](docs/tv-scherm-sync.png)
+<p>
+  <img src="docs/tv-scherm.png" width="49%" alt="TV screen">
+  <img src="docs/tv-scherm-sync.png" width="49%" alt="With sync on: the room goes dark and the lamps cast coloured light">
+  <img src="docs/tv-testbeeld.png" width="49%" alt="Rainbow test pattern with your room">
+  <img src="docs/tv-instellingen.png" width="49%" alt="Settings on the TV">
+</p>
+<p align="center"><img src="docs/editor.png" width="320" alt="Editor on the phone"></p>
 
 ## What it does
 
