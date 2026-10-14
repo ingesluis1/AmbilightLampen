@@ -31,6 +31,11 @@ main{max-width:640px;margin:0 auto;padding:0 12px}
 label.s{display:block;margin:12px 0 2px;font-size:15px}
 label.s span{float:right;opacity:.8}
 .hint{font-size:13px;opacity:.8;margin-top:8px}
+.lrow{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:2px dashed var(--parch-dk)}
+.lrow:last-child{border-bottom:0}
+.lrow .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lrow .btn{padding:6px 9px;font-size:14px}
+.lrow input[type=color]{width:38px;height:34px;padding:0;border:3px solid var(--ink);background:var(--cream)}
 .ok{color:#2f7a3a}.bad{color:#a8322a}
 </style>
 </head>
@@ -92,6 +97,13 @@ label.s span{float:right;opacity:.8}
     </div>
     <div class="hint">Kies een lamp en tik op de kaart om hem op te hangen. Sleep om te verschuiven.</div>
   </div>
+</section>
+
+<section class="panel">
+  <h2>Je lampen</h2>
+  <p>Knipper laat een lamp aan en uit gaan zodat je hem vindt. Test laat hem rood, groen, blauw en wit zien en zet hem daarna terug. Met het kleurvakje kies je zelf een kleur.</p>
+  <div id="lampList"></div>
+  <button class="btn" id="testAll" style="margin-top:8px">Alle lampen na elkaar testen</button>
 </section>
 
 <section class="panel">
@@ -287,6 +299,26 @@ function chips(){
     const d=document.createElement('span');d.className='dot';const lv=live[l.id];d.style.background=lv&&lv.online?(S&&S.sync?lv.color:'#ffd696'):'#6a6070';
     b.append(d,document.createTextNode(l.name+(l.x<0?' (nog ophangen)':'')));b.onclick=()=>selectLamp(l.id);c.append(b)}
 }
+function lampList(){
+  const box=$('lampList');
+  if(!lamps.length){box.innerHTML='<span>Nog geen lampen.</span>';return}
+  if(box.dataset.ids!==lamps.map(l=>l.id+l.name).join()){
+    box.dataset.ids=lamps.map(l=>l.id+l.name).join();box.innerHTML='';
+    for(const l of lamps){
+      const r=document.createElement('div');r.className='lrow';r.dataset.id=l.id;
+      r.innerHTML=`<span class="dot"></span><span class="name"></span><button class="btn" data-a="blink">Knipper</button><button class="btn" data-a="test">Test</button><input type="color" value="#ffb050">`;
+      r.querySelector('.name').textContent=l.name;
+      r.querySelector('[data-a=blink]').onclick=async()=>toast((await api('/api/identify',{id:l.id})).message);
+      r.querySelector('[data-a=test]').onclick=async()=>toast((await api('/api/test',{id:l.id})).message);
+      r.querySelector('input').onchange=async e=>toast((await api('/api/color',{id:l.id,color:e.target.value})).message);
+      box.append(r);
+    }
+  }
+  for(const r of box.children){const lv=live[r.dataset.id];if(!lv)continue;
+    r.querySelector('.dot').style.background=lv.online?(lv.color&&lv.color!=='#555555'?lv.color:'#ffd696'):'#6a6070';
+    r.querySelector('.name').title=lv.online?'bereikbaar':'niet bereikbaar'}
+}
+$('testAll').onclick=async()=>toast((await api('/api/test',{})).message);
 function selectLamp(id){selLamp=id;chips();showLamp();draw()}
 function follows(l){
   if(l.x<0||!L.tv)return 'Nog niet opgehangen';
@@ -308,7 +340,7 @@ document.querySelectorAll('#heightSeg .btn').forEach(b=>b.onclick=()=>{const l=l
 $('lampIpEdit').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);const v=e.target.value.trim();if(l&&/^\d+\.\d+\.\d+\.\d+$/.test(v)){l.ip=v;changed(true)}};
 $('lampEnabled').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.enabled=e.target.checked;changed()}};
 $('unplaceBtn').onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.x=-1;l.y=-1;changed();showLamp();chips()}};
-$('blinkBtn').onclick=async()=>{if(selLamp){await api('/api/identify',{id:selLamp});toast('Lamp knippert')}};
+$('blinkBtn').onclick=async()=>{if(selLamp)toast((await api('/api/identify',{id:selLamp})).message)};
 
 /* ---------- instellingen ---------- */
 const SL=['smooth','saturation','brightness','minLight','spread'];
@@ -352,12 +384,12 @@ async function load(){
   lamps=lamps.filter(l=>S.lamps.find(n=>n.id===l.id));
   liveFrom(S);
   $('tvSize').value=String(INCH.reduce((a,b)=>Math.abs(b-tvInch())<Math.abs(a-tvInch())?b:a));
-  chips();showLamp();draw();
+  chips();showLamp();lampList();draw();
 }
-async function poll(){try{const s=await api('/api/state');S=s;liveFrom(s);chips();showLamp();draw()}catch(e){}}
+async function poll(){try{const s=await api('/api/state');S=s;liveFrom(s);chips();showLamp();lampList();draw()}catch(e){}}
 buildTools();setTool('floor');load();
 setInterval(()=>{if(S&&S.sync)poll()},500);
-setInterval(()=>{if(!(S&&S.sync))poll()},4000);
+setInterval(()=>{if(!(S&&S.sync))poll()},1500);
 window.addEventListener('resize',draw);
 document.fonts&&document.fonts.ready.then(draw);
 </script>

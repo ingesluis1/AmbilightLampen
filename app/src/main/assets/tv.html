@@ -21,7 +21,8 @@ h1{margin:0;font-size:3.2vh;font-weight:700}
 .btns{display:flex;flex-direction:column;gap:1.2vh;margin-top:1.6vh}
 .btns .btn{font-size:2.3vh;padding:1.1vh 1vw;text-align:left}
 .legend{display:flex;flex-direction:column;gap:.6vh;margin-top:1.2vh;font-size:2vh}
-.legend div{display:flex;align-items:center;gap:.8vw}
+.legend .btn{display:flex;align-items:center;gap:.8vw;font-size:2vh;padding:.7vh .8vw;text-align:left}
+.legend .hint{font-size:1.6vh;opacity:.7}
 .legend span.sq{width:1.8vh;height:1.8vh;border:2px solid var(--ink);display:inline-block}
 .qr{display:flex;gap:1.2vw;align-items:center}
 .qr img{width:15vh;height:15vh;image-rendering:pixelated;border:3px solid var(--ink);background:#fff;padding:4px}
@@ -40,7 +41,7 @@ h1{margin:0;font-size:3.2vh;font-weight:700}
       <div class="stat"><i id="iLamps"></i><span id="tLamps"></span></div>
       <div class="btns">
         <button class="btn gold" id="syncBtn">Sync starten</button>
-        <button class="btn" id="blinkBtn">Lampen laten knipperen</button>
+        <button class="btn" id="testBtn">Kleurtest (alle lampen na elkaar)</button>
       </div>
       <div class="legend" id="legend"></div>
     </section>
@@ -75,18 +76,27 @@ function status(){
   $('iLamps').className=!s.lamps.length?'off':on===s.lamps.length?'on':'warn';
   $('tLamps').textContent=s.lamps.length?`Lampen: ${on} van ${s.lamps.length} bereikbaar`:'Nog geen lampen, voeg ze toe via de telefoon';
   $('syncBtn').textContent=s.sync?'Sync stoppen':'Sync starten';
-  $('legend').innerHTML=s.lamps.map(l=>`<div><span class="sq" style="background:${l.online?(s.sync?l.color:'#ffd696'):'#6a6070'}"></span>${l.name}${l.x<0?' (nog ophangen)':''}</div>`).join('');
+  const ids=s.lamps.map(l=>l.id+l.name+(l.x<0)).join();
+  if($('legend').dataset.ids!==ids){
+    $('legend').dataset.ids=ids;
+    $('legend').innerHTML='<div class="hint">OK op een lamp laat hem knipperen</div>'+s.lamps.map(l=>`<button class="btn lamp" data-id="${l.id}"><span class="sq"></span>${l.name}${l.x<0?' (nog ophangen)':''}</button>`).join('');
+    $('legend').querySelectorAll('.lamp').forEach(b=>{
+      b.onclick=async()=>toast((await api('/api/identify',{id:b.dataset.id})).message);
+      b.addEventListener('focus',()=>b.classList.add('focus'));b.addEventListener('blur',()=>b.classList.remove('focus'));
+    });
+  }
+  for(const b of $('legend').querySelectorAll('.lamp')){const l=s.lamps.find(x=>x.id===b.dataset.id);if(l)b.querySelector('.sq').style.background=l.online?(l.color&&l.color!=='#555555'?l.color:'#ffd696'):'#6a6070'}
   if(s.link&&$('url').textContent!==s.link){$('url').textContent=s.link;$('qr').src='/qr.png?'+encodeURIComponent(s.link)}
 }
 async function poll(){
   try{S=await api('/api/state');status();render()}catch(e){}
-  setTimeout(poll,S&&S.sync?150:1000);
+  setTimeout(poll,S&&S.sync?150:500);
 }
 $('syncBtn').onclick=async()=>{if(busy)return;busy=true;const on=!(S&&S.sync);toast(on?'Sync start...':'Sync stopt...');await api('/api/sync',{on});busy=false};
-$('blinkBtn').onclick=async()=>{for(const l of (S?S.lamps:[]))api('/api/identify',{id:l.id});toast('Lampen knipperen')};
+$('testBtn').onclick=async()=>toast((await api('/api/test',{})).message);
 
 // Afstandsbediening: pijltjes wisselen tussen de knoppen, OK drukt
-const btns=()=>[...document.querySelectorAll('.btns .btn')];
+const btns=()=>[...document.querySelectorAll('.btns .btn, .legend .btn')];
 document.addEventListener('keydown',e=>{
   const b=btns(),i=b.indexOf(document.activeElement);
   if(e.key==='ArrowDown'||e.key==='ArrowRight'){b[(i+1+b.length)%b.length].focus();e.preventDefault()}

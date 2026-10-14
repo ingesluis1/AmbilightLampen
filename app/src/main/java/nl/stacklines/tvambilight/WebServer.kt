@@ -99,7 +99,22 @@ class WebServer(private val ctx: Context) {
                     path == "/api/state" -> json(state())
                     path == "/api/save" && method == "POST" -> { save(JSONObject(req)); msg(true, "Opgeslagen") }
                     path == "/api/import" && method == "POST" -> msg(true, import(req))
-                    path == "/api/identify" && method == "POST" -> { Engine.blink(JSONObject(req).getString("id")); msg(true, "Knippert") }
+                    path == "/api/identify" && method == "POST" -> {
+                        if (Engine.running) msg(false, "Stop eerst de sync") else { Engine.blink(JSONObject(req).getString("id")); msg(true, "Lamp knippert") }
+                    }
+                    path == "/api/test" && method == "POST" -> {
+                        val id = JSONObject(req).optString("id")
+                        when {
+                            Engine.running -> msg(false, "Stop eerst de sync")
+                            id.isBlank() -> { Engine.testAll(); msg(true, "Alle lampen worden na elkaar getest") }
+                            else -> { Engine.test(id); msg(true, "Rood, groen, blauw, wit, en dan terug") }
+                        }
+                    }
+                    path == "/api/color" && method == "POST" -> {
+                        val j = JSONObject(req)
+                        if (Engine.running) msg(false, "Stop eerst de sync")
+                        else { Engine.setColor(j.getString("id"), android.graphics.Color.parseColor(j.getString("color"))); msg(true, "Kleur gezet") }
+                    }
                     path == "/api/sync" && method == "POST" -> {
                         val on = JSONObject(req).optBoolean("on")
                         Store.syncWanted = on; Store.save()

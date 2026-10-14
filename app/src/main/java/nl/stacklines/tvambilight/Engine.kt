@@ -98,6 +98,16 @@ object Engine {
     private fun current(id: String) = Store.lampsSnapshot().firstOrNull { it.id == id }
 
     fun blink(id: String) { syncWorkers(); workers[id]?.blink() }
+    fun test(id: String) { syncWorkers(); workers[id]?.test() }
+    fun setColor(id: String, rgb: Int) { syncWorkers(); workers[id]?.setColor(rgb) }
+
+    /** Alle lampen na elkaar testen, zodat je ziet welke welke is. */
+    fun testAll() {
+        syncWorkers()
+        Thread {
+            for (l in Store.lampsSnapshot()) { workers[l.id]?.test(); Thread.sleep(4200) }
+        }.start()
+    }
 
     @Synchronized
     fun start() {

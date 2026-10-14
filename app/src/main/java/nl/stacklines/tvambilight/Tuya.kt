@@ -117,6 +117,38 @@ class TuyaLamp(val lamp: Lamp) {
         }.start()
     }
 
+    /** Rood, groen, blauw, wit; daarna terug naar de oude stand. */
+    fun test() {
+        Thread {
+            val before = queryStatus()
+            for (h in listOf(0, 120, 240)) {
+                send(mapOf("20" to true, "21" to "colour", "24" to hsvHex(h, 1000, 1000)))
+                shownColor = android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), 1f, 1f))
+                Thread.sleep(900)
+            }
+            send(mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500))
+            shownColor = 0xFFFFE2A8.toInt()
+            Thread.sleep(900)
+            restore(before)
+        }.start()
+    }
+
+    /** Zet een vaste kleur (#rrggbb). */
+    fun setColor(rgb: Int) {
+        val hsv = FloatArray(3)
+        android.graphics.Color.colorToHSV(rgb, hsv)
+        send(mapOf("20" to true, "21" to "colour",
+            "24" to hsvHex(hsv[0].toInt() % 360, (hsv[1] * 1000).toInt(), maxOf(10, (hsv[2] * 1000).toInt()))))
+        shownColor = rgb or 0xFF000000.toInt()
+    }
+
+    fun restore(st: JSONObject?) {
+        val m = LinkedHashMap<String, Any>()
+        if (st != null) for (k in listOf("20", "21", "22", "23", "24")) if (st.has(k)) m[k] = st.get(k)
+        send(if (m.isNotEmpty()) m else mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500))
+        shownColor = 0xFF555555.toInt()
+    }
+
     fun stop() {
         running = false
         synchronized(lock) { lock.notifyAll() }
