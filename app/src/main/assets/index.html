@@ -138,6 +138,7 @@ label.s span{float:right;opacity:.8}
       <option value="us">Western America</option><option value="us-e">Eastern America</option><option value="in">India</option><option value="cn">China</option>
     </select><button class="btn gold" id="cloudSave">Opslaan en zoeken</button></div>
   </div>
+  <div id="hiddenBox" class="hidden" style="margin-top:12px"><b>Verwijderde lampen</b><div id="hiddenList"></div></div>
   <details style="margin-top:12px"><summary>Of: devices.json van tinytuya uploaden</summary>
     <input type="file" id="importFile" accept=".json,application/json" style="margin-top:8px">
   </details>
@@ -310,10 +311,12 @@ function lampList(){
     box.dataset.ids=lamps.map(l=>l.id+l.name).join();box.innerHTML='';
     for(const l of lamps){
       const r=document.createElement('div');r.className='lrow';r.dataset.id=l.id;
-      r.innerHTML=`<span class="dot"></span><span class="name"></span><button class="btn" data-a="blink">Knipper</button><button class="btn" data-a="test">Test</button><input type="color" value="#ffb050">`;
+      r.innerHTML=`<span class="dot"></span><span class="name"></span><button class="btn" data-a="blink">Knipper</button><button class="btn" data-a="test">Test</button><input type="color" value="#ffb050"><button class="btn red" data-a="del">Weg</button>`;
       r.querySelector('.name').textContent=l.name;
       r.querySelector('[data-a=blink]').onclick=async()=>toast((await api('/api/identify',{id:l.id})).message);
       r.querySelector('[data-a=test]').onclick=async()=>toast((await api('/api/test',{id:l.id})).message);
+      r.querySelector('[data-a=del]').onclick=async()=>{if(!confirm('"'+l.name+'" verwijderen? Je kunt hem later terugzetten onder Lampen toevoegen.'))return;
+        const res=await api('/api/lamp/delete',{id:l.id});toast(res.message);if(selLamp===l.id)selLamp=null;load()};
       r.querySelector('input').onchange=async e=>toast((await api('/api/color',{id:l.id,color:e.target.value})).message);
       box.append(r);
     }
@@ -379,7 +382,15 @@ $('cloudChange').onclick=()=>{$('cloudSetup').classList.remove('hidden');$('clou
 $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();
   const r=await fetch('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:t}).then(x=>x.json());toast(r.message);e.target.value='';load()};
 
+function hiddenList(s){
+  const h=s.hidden||[];$('hiddenBox').classList.toggle('hidden',!h.length);
+  const key=h.map(x=>x.id).join();if($('hiddenList').dataset.k===key)return;$('hiddenList').dataset.k=key;$('hiddenList').innerHTML='';
+  for(const x of h){const r=document.createElement('div');r.className='lrow';r.innerHTML='<span class="name"></span><button class="btn">Terugzetten</button>';
+    r.querySelector('.name').textContent=x.name;
+    r.querySelector('.btn').onclick=async()=>{const res=await api('/api/lamp/restore',{id:x.id});toast(res.message);load()};$('hiddenList').append(r)}
+}
 function liveFrom(s){
+  hiddenList(s);
   live={};for(const l of s.lamps)live[l.id]=l;
   $('syncBtn').textContent=s.sync?'Sync stoppen':'Sync starten';
   if(s.update){$('updBtn').classList.toggle('hidden',!s.update.available);$('updBtn').textContent='Update '+s.update.latest}

@@ -148,8 +148,19 @@ class WebServer(private val ctx: Context) {
                     }
                     path == "/api/lamp/delete" && method == "POST" -> {
                         val id = JSONObject(req).getString("id")
-                        synchronized(Store) { Store.lamps.removeAll { it.id == id } }
+                        synchronized(Store) {
+                            Store.lamps.firstOrNull { it.id == id }?.let { Store.hidden[id] = it.name }
+                            Store.lamps.removeAll { it.id == id }
+                        }
                         Store.save(); Engine.syncWorkers(); msg(true, "Lamp verwijderd")
+                    }
+                    path == "/api/lamp/restore" && method == "POST" -> {
+                        val id = JSONObject(req).getString("id")
+                        synchronized(Store) { Store.hidden.remove(id) }
+                        Store.save()
+                        if (Store.cloudId != null && Store.cloudSecret != null) {
+                            try { TuyaCloud.refresh(); msg(true, "Lamp teruggezet") } catch (e: Exception) { msg(false, "Terugzetten mislukt: ${e.message}") }
+                        } else msg(true, "Zoek de lamp opnieuw of upload devices.json")
                     }
                     else -> send("404 Not Found", "text/plain", "Niet gevonden".toByteArray())
                 }
@@ -178,6 +189,7 @@ class WebServer(private val ctx: Context) {
             put("sync", Engine.running)
             put("update", JSONObject().put("current", Updater.current(ctx)).put("latest", Updater.latest ?: "")
                 .put("available", Updater.available(ctx)).put("status", Updater.status).put("notes", Updater.notes))
+            put("hidden", JSONArray().apply { Store.hidden.forEach { (k, n) -> put(JSONObject().put("id", k).put("name", n)) } })
             put("cloud", JSONObject().put("configured", Store.cloudId != null && Store.cloudSecret != null).put("region", Store.cloudRegion))
             phoneLink()?.let { put("link", it) }
             if (sample != null) put("top", JSONArray().apply { sample.top.forEach { put("#%02x%02x%02x".format(it[0], it[1], it[2])) } })
@@ -233,6 +245,7 @@ class WebServer(private val ctx: Context) {
                     updated++
                 } else {
                     Store.lamps += Lamp(id, key, d.optString("name", id), d.optString("ip"), d.optString("version", "3.3").ifBlank { "3.3" })
+                    Store.hidden.remove(id)
                     added++
                 }
             }

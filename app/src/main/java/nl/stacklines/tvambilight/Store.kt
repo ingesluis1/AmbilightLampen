@@ -80,6 +80,8 @@ object Store {
     @Volatile var cloudId: String? = null
     @Volatile var cloudSecret: String? = null
     @Volatile var cloudRegion = "eu"
+    /** Verwijderde lampen (id naar naam): komen bij zoeken in de cloud niet vanzelf terug. */
+    val hidden = LinkedHashMap<String, String>()
     /** Wordt opgehoogd bij elke wijziging, zodat de motor weet dat hij opnieuw moet rekenen. */
     @Volatile var version = 0
 
@@ -102,6 +104,8 @@ object Store {
             cloudId = o.optString("cloudId").ifBlank { null }
             cloudSecret = o.optString("cloudSecret").ifBlank { null }
             cloudRegion = o.optString("cloudRegion", "eu")
+            hidden.clear()
+            o.optJSONObject("hidden")?.let { h -> h.keys().forEach { k -> hidden[k] = h.getString(k) } }
         } catch (_: Exception) { }
         version++
     }
@@ -116,6 +120,7 @@ object Store {
             put("tvHost", tvHost)
             put("tvUser", tvUser ?: ""); put("tvPass", tvPass ?: "")
             put("syncWanted", syncWanted)
+            put("hidden", JSONObject(hidden as Map<*, *>))
             put("cloudId", cloudId ?: ""); put("cloudSecret", cloudSecret ?: ""); put("cloudRegion", cloudRegion)
         }
         val tmp = File(file.parentFile, "config.json.tmp")
