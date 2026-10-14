@@ -103,6 +103,10 @@ label.s span{float:right;opacity:.8}
       <div class="seg" id="layerSeg" style="margin-top:3px">
         <button class="btn" data-n="0">Uit</button><button class="btn" data-n="2">2</button><button class="btn" data-n="3">3</button><button class="btn" data-n="4">4</button><button class="btn" data-n="5">5</button>
       </div>
+      <div style="margin-top:8px;font-size:14px">Kleur</div>
+      <div class="seg" id="satSeg" style="margin-top:3px">
+        <button class="btn" data-k="0.8">Zwakker</button><button class="btn" data-k="1">Normaal</button><button class="btn" data-k="1.4">Sterker</button><button class="btn" data-k="1.8">Veel sterker</button>
+      </div>
       <div class="row" style="margin-top:8px"><span class="grow" id="follows"></span><button class="btn" id="unplaceBtn">Van kaart</button></div>
       <div class="row" style="margin-top:8px"><label class="grow"><input type="checkbox" id="lampEnabled"> Doet mee met sync</label><span id="lampIp" style="font-size:13px"></span></div>
       <div class="row" style="margin-top:6px"><span>Ip-adres</span><input type="text" id="lampIpEdit" class="grow" placeholder="wordt vanzelf gevonden" inputmode="decimal"></div>
@@ -366,6 +370,7 @@ function showLamp(){
   $('heightSeg').classList.toggle('hidden',rod);
   document.querySelectorAll('#followSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.f===(l.follow||'auto')));
   document.querySelectorAll('#layerSeg .btn').forEach(b=>b.classList.toggle('on',+b.dataset.n===(l.layers||0)));
+  const sf=l.satBoost>0?l.satBoost:(l.satFactor||1);document.querySelectorAll('#satSeg .btn').forEach(b=>b.classList.toggle('on',Math.abs(+b.dataset.k-sf)<0.05));
   $('followSeg').classList.toggle('hidden',(l.layers||0)>0);
   $('follows').textContent=follows(l);$('lampEnabled').checked=l.enabled;
   if(document.activeElement!==$('lampIpEdit'))$('lampIpEdit').value=l.ip||'';
@@ -373,6 +378,7 @@ function showLamp(){
 }
 $('lampName').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.name=e.target.value;changed();chips()}};
 document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.shape=b.dataset.s;if(l.shape==='rod')l.height='floor';changed();showLamp()}});
+document.querySelectorAll('#satSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.satBoost=+b.dataset.k;changed();showLamp()}});
 document.querySelectorAll('#layerSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.layers=+b.dataset.n;changed();showLamp()}});
 document.querySelectorAll('#followSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.follow=b.dataset.f;changed();showLamp()}});
 document.querySelectorAll('#heightSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.height=b.dataset.h;changed();showLamp()}});
@@ -395,7 +401,7 @@ $('followAmbi').onchange=e=>{settings.followAmbi=e.target.checked;changed(true)}
 /* ---------- opslaan en live ---------- */
 function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!noDraw)draw();clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
 async function save(){
-  const r=await api('/api/save',{layout:L,settings,lamps:lamps.map(l=>({id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,enabled:l.enabled,ip:l.ip}))});
+  const r=await api('/api/save',{layout:L,settings,lamps:lamps.map(l=>({id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,...(l.satBoost>0?{satBoost:l.satBoost}:{}),enabled:l.enabled,ip:l.ip}))});
   dirty=false;$('saved').textContent=r.ok?t('opgeslagen'):t('niet opgeslagen');
 }
 $('updBtn').onclick=async()=>{const u=S.update,n=I18N.notes(u.notes);if(!confirm(t('Wat is er nieuw in {v}',{v:u.latest})+':\n\n'+(n.length?'- '+n.join('\n- '):t('Geen beschrijving.'))+'\n\n'+t('Nu updaten?')))return;toast((await api('/api/update',{})).message+t('. Kijk op de tv.'))};

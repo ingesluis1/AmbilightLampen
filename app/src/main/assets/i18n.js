@@ -48,6 +48,7 @@ const I18N = (() => {
     'Elke laag volgt zijn hoogte aan de rechterkant van het beeld': 'Each layer follows its height on the right side of the picture',
     'Kleuren van': 'Colours from', 'Het beeld': 'The picture', 'De Ambilight-leds': 'The Ambilight LEDs',
     'Het beeld (randen van het scherm)': 'The picture (edges of the screen)', 'De Ambilight-leds achter de tv': 'The Ambilight LEDs behind the TV',
+    'Kleur': 'Colour', 'Zwakker': 'Weaker', 'Normaal': 'Normal', 'Sterker': 'Stronger', 'Veel sterker': 'Much stronger',
     'Bovenrand': 'Top edge', 'Volgt de bovenrand, {s}': 'Follows the top edge, {s}',
     'Lampen terug als de tv uit staat': 'Lamps back to normal when the TV is off',
     'Lampen terug als de tv uit staat (20 seconden zwart beeld)': 'Lamps back to normal when the TV is off (20 seconds of black picture)',

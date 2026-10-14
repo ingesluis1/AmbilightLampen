@@ -180,7 +180,7 @@ object Engine {
             val h = if (dk > 0.5) DARK_H else hsv[0].roundToInt() % 360
             // Laag zwart: helderheid 0 (de lamp blijft aan, alleen die laag gaat uit)
             val vv = if (s.minLight <= 0.001 && raw * s.brightness < 0.02) 0 else max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
-            val sv = ((sat * (1 - dk) + DARK_S * dk) * 1000).roundToInt().coerceIn(0, 1000)
+            val sv = (min(1.0, (sat * (1 - dk) + DARK_S * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
             if (i == cols.size / 2) shown = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
             val prev = last[key]
             val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
@@ -316,7 +316,7 @@ object Engine {
                     }
                     val dk = darkMix(s, rawV)
                     val h = if (dk > 0.5) DARK_H else hsv[0].roundToInt() % 360
-                    val sv = ((sat * (1 - dk) + DARK_S * dk) * 1000).roundToInt().coerceIn(0, 1000)
+                    val sv = (min(1.0, (sat * (1 - dk) + DARK_S * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
                     val vv = max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
                     val prev = last[id]
                     val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
