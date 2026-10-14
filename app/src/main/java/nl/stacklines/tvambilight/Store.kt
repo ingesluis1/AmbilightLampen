@@ -16,14 +16,15 @@ class Lamp(
     var y: Double = -1.0,
     var height: String = "ceiling",   // ceiling | table | floor
     var enabled: Boolean = true,
-    var shape: String = "bulb"        // bulb (lamp/spot) | rod (staaflamp)
+    var shape: String = "bulb",       // bulb (lamp/spot) | rod (staaflamp)
+    var follow: String = "auto"       // auto (op plek) | side (hele zijkant) | all (hele beeld)
 ) {
     val placed get() = x >= 0 && y >= 0
     val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5")
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
         put("id", id); put("name", name); put("ip", ip); put("version", version)
-        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape)
+        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow)
         if (withKey) put("key", key)
     }
 
@@ -32,7 +33,8 @@ class Lamp(
             o.getString("id"), o.optString("key"), o.optString("name", o.getString("id")),
             o.optString("ip"), o.optString("version", "3.3"),
             o.optDouble("x", -1.0), o.optDouble("y", -1.0),
-            o.optString("height", "ceiling"), o.optBoolean("enabled", true), o.optString("shape", "bulb")
+            o.optString("height", "ceiling"), o.optBoolean("enabled", true), o.optString("shape", "bulb"),
+            o.optString("follow", "auto")
         )
     }
 }

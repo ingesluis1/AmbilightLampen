@@ -44,6 +44,15 @@ object Mixer {
             return Weights(DoubleArray(nLeft) { 1.0 }, DoubleArray(nTop) { 1.0 }, DoubleArray(nRight) { 1.0 }).normalized()
         }
         val (xs, ys, depth) = Triple(p[0], p[1], p[2])
+        // Vaste keuze: hele zijkant (aan de kant waar de lamp staat) of het hele beeld
+        if (lamp.follow == "side") {
+            val left = xs < 0
+            return Weights(DoubleArray(nLeft) { if (left) 1.0 else 0.0 }, DoubleArray(nTop) { 0.0 },
+                DoubleArray(nRight) { if (left) 0.0 else 1.0 }).normalized()
+        }
+        if (lamp.follow == "all") {
+            return Weights(DoubleArray(nLeft) { 1.0 }, DoubleArray(nTop) { 1.0 }, DoubleArray(nRight) { 1.0 }).normalized()
+        }
         val sigma = (0.28 + 0.08 * depth) * spread
         val hh = 9.0 / 16.0
         // Een staaflamp geeft licht van de vloer tot boven: gemiddelde over drie hoogtes

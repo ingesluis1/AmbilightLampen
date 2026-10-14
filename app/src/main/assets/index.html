@@ -95,6 +95,10 @@ label.s span{float:right;opacity:.8}
       <div class="seg" id="heightSeg" style="margin-top:6px">
         <button class="btn" data-h="ceiling">Plafond</button><button class="btn" data-h="sill">Vensterbank</button><button class="btn" data-h="table">Tafel</button><button class="btn" data-h="floor">Vloer</button>
       </div>
+      <div style="margin-top:8px;font-size:14px">Volgt</div>
+      <div class="seg" id="followSeg" style="margin-top:3px">
+        <button class="btn" data-f="auto">Automatisch</button><button class="btn" data-f="side">Hele zijkant</button><button class="btn" data-f="all">Hele beeld</button>
+      </div>
       <div class="row" style="margin-top:8px"><span class="grow" id="follows"></span><button class="btn" id="unplaceBtn">Van kaart</button></div>
       <div class="row" style="margin-top:8px"><label class="grow"><input type="checkbox" id="lampEnabled"> Doet mee met sync</label><span id="lampIp" style="font-size:13px"></span></div>
       <div class="row" style="margin-top:6px"><span>Ip-adres</span><input type="text" id="lampIpEdit" class="grow" placeholder="wordt vanzelf gevonden" inputmode="decimal"></div>
@@ -335,6 +339,8 @@ function selectLamp(id){selLamp=id;chips();showLamp();draw()}
 function follows(l){
   if(l.x<0||!L.tv)return t('Nog niet opgehangen');
   const a=L.tv.dir*Math.PI/180,fx=Math.cos(a),fy=Math.sin(a),xs=((l.x-L.tv.x)*fy+(l.y-L.tv.y)*-fx)/(L.tv.w/2);
+  if(l.follow==='all')return t('Volgt het hele beeld');
+  if(l.follow==='side')return t(xs<0?'Volgt de hele linkerkant van het beeld':'Volgt de hele rechterkant van het beeld');
   if(l.shape==='rod')return t(xs<-0.35?'Volgt de linkerkant van het beeld, van onder tot boven':xs>0.35?'Volgt de rechterkant van het beeld, van onder tot boven':'Volgt het midden van het beeld, van onder tot boven');
   if(xs<-1.15)return t('Volgt de linkerkant van het beeld');
   if(xs>1.15)return t('Volgt de rechterkant van het beeld');
@@ -348,12 +354,14 @@ function showLamp(){
   const rod=(l.shape||'bulb')==='rod';
   document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.s===(l.shape||'bulb')));
   $('heightSeg').classList.toggle('hidden',rod);
+  document.querySelectorAll('#followSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.f===(l.follow||'auto')));
   $('follows').textContent=follows(l);$('lampEnabled').checked=l.enabled;
   if(document.activeElement!==$('lampIpEdit'))$('lampIpEdit').value=l.ip||'';
   const lv=live[l.id];$('lampIp').innerHTML=(l.ip||t('geen ip'))+' '+(lv&&lv.online?'<span class="ok">'+t('bereikbaar')+'</span>':'<span class="bad">'+t('niet bereikbaar')+'</span>');
 }
 $('lampName').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.name=e.target.value;changed();chips()}};
 document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.shape=b.dataset.s;if(l.shape==='rod')l.height='floor';changed();showLamp()}});
+document.querySelectorAll('#followSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.follow=b.dataset.f;changed();showLamp()}});
 document.querySelectorAll('#heightSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.height=b.dataset.h;changed();showLamp()}});
 $('lampIpEdit').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);const v=e.target.value.trim();if(l&&/^\d+\.\d+\.\d+\.\d+$/.test(v)){l.ip=v;changed(true)}};
 $('lampEnabled').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.enabled=e.target.checked;changed()}};
@@ -372,7 +380,7 @@ $('autostart').onchange=e=>{settings.autostart=e.target.checked;changed(true)};
 /* ---------- opslaan en live ---------- */
 function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!noDraw)draw();clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
 async function save(){
-  const r=await api('/api/save',{layout:L,settings,lamps:lamps.map(l=>({id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,shape:l.shape||'bulb',enabled:l.enabled,ip:l.ip}))});
+  const r=await api('/api/save',{layout:L,settings,lamps:lamps.map(l=>({id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,shape:l.shape||'bulb',follow:l.follow||'auto',enabled:l.enabled,ip:l.ip}))});
   dirty=false;$('saved').textContent=r.ok?t('opgeslagen'):t('niet opgeslagen');
 }
 $('updBtn').onclick=async()=>{const u=S.update,n=I18N.notes(u.notes);if(!confirm(t('Wat is er nieuw in {v}',{v:u.latest})+':\n\n'+(n.length?'- '+n.join('\n- '):t('Geen beschrijving.'))+'\n\n'+t('Nu updaten?')))return;toast((await api('/api/update',{})).message+t('. Kijk op de tv.'))};

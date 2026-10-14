@@ -208,6 +208,7 @@ class WebServer(private val ctx: Context) {
                     l.x = j.optDouble("x", l.x); l.y = j.optDouble("y", l.y)
                     l.height = j.optString("height", l.height)
                     l.shape = j.optString("shape", l.shape)
+                    l.follow = j.optString("follow", l.follow)
                     l.enabled = j.optBoolean("enabled", l.enabled)
                     j.optString("ip").takeIf { it.isNotBlank() }?.let { l.ip = it }
                 }
