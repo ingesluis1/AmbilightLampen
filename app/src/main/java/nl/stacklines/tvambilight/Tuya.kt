@@ -306,17 +306,20 @@ class TuyaLamp(val lamp: Lamp) {
                 val batch: Map<String, Any>? = synchronized(lock) {
                     if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() }
                     else layerPending.entries.firstOrNull()?.let { e ->
-                        layerPending.remove(e.key); isLayer = true
-                        mapOf<String, Any>("61" to layerValue(e.key, e.value))
+                        // Lagen met (bijna) dezelfde kleur in één bericht: scheelt berichten bij egaal beeld en scènewissels
+                        val segs = layerPending.filter { (_, c) -> similar(c, e.value) }.keys.toList()
+                        segs.forEach { layerPending.remove(it) }; isLayer = true
+                        mapOf<String, Any>("61" to layerValue(segs, e.value))
                     }
                 }
                 val now = SystemClock.elapsedRealtime()
                 if (batch != null) {
                     // Wachten tot de lamp eerdere opdrachten heeft bevestigd (anders loopt de wachtrij vol)
                     val until = SystemClock.elapsedRealtime() + 400
-                    while (inflight >= MAX_INFLIGHT && SystemClock.elapsedRealtime() < until) { drain(); Thread.sleep(5) }
-                    if (inflight >= MAX_INFLIGHT && SystemClock.elapsedRealtime() - lastRx > 4000) throw IOException("lamp reageert niet meer")
-                    if (inflight >= MAX_INFLIGHT) inflight = MAX_INFLIGHT - 1   // antwoorden kunnen wegvallen; niet eeuwig blijven wachten
+                    val cap = if (isLayer) MAX_INFLIGHT_LAYERS else MAX_INFLIGHT
+                    while (inflight >= cap && SystemClock.elapsedRealtime() < until) { drain(); Thread.sleep(5) }
+                    if (inflight >= cap && SystemClock.elapsedRealtime() - lastRx > 4000) throw IOException("lamp reageert niet meer")
+                    if (inflight >= cap) inflight = cap - 1   // antwoorden kunnen wegvallen; niet eeuwig blijven wachten
                     // Laag-berichten zijn klein: die mogen sneller achter elkaar (getest op de Wall Washer)
                     val gap = when { !Store.settings.fade -> MIN_GAP_MS; isLayer -> LAYER_GAP_MS; else -> FADE_GAP_MS }
                     val wait = gap - (now - lastSend)
@@ -427,10 +430,10 @@ class TuyaLamp(val lamp: Lamp) {
 
     companion object {
         /** Functie 61 "schilderen": 00 02 00 14 01, dan h s v (elk 2 bytes), dan 0x80|aantal segmenten en de segmentnummers. */
-        fun layerValue(segment: Int, c: IntArray): String {
-            val b = java.nio.ByteBuffer.allocate(13)
+        fun layerValue(segments: List<Int>, c: IntArray): String {
+            val b = java.nio.ByteBuffer.allocate(12 + segments.size)
             b.put(byteArrayOf(0, 2, 0, 0x14, 1)); b.putShort(c[0].toShort()); b.putShort(c[1].toShort()); b.putShort(c[2].toShort())
-            b.put(0x81.toByte()); b.put(segment.toByte())
+            b.put((0x80 or segments.size).toByte()); segments.forEach { b.put(it.toByte()) }
             return android.util.Base64.encodeToString(b.array(), android.util.Base64.NO_WRAP)
         }
 
@@ -441,6 +444,14 @@ class TuyaLamp(val lamp: Lamp) {
         const val FADE_GAP_MS = 40L
         /** Hoeveel opdrachten er tegelijk onbevestigd onderweg mogen zijn. */
         const val MAX_INFLIGHT = 2
+        /** Lamp met lagen antwoordt trager (±155 ms) maar kan meer tegelijk aan. */
+        const val MAX_INFLIGHT_LAYERS = 4
+
+        /** Twee laagkleuren (h, s, v) die zo dicht bij elkaar liggen dat één bericht volstaat. */
+        fun similar(a: IntArray, b: IntArray): Boolean {
+            val dh = Math.abs(a[0] - b[0]).let { minOf(it, 360 - it) }
+            return (dh < 8 || a[1] < 80 && b[1] < 80) && Math.abs(a[1] - b[1]) < 60 && Math.abs(a[2] - b[2]) < 50
+        }
 
         fun hsvHex(h: Int, s: Int, v: Int) = "%04x%04x%04x".format(h, s, v)
     }
