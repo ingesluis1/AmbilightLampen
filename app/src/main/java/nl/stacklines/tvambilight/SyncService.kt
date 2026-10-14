@@ -92,6 +92,7 @@ class SyncService : Service() {
 
 class BootReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
-        if (i.action == Intent.ACTION_BOOT_COMPLETED) SyncService.start(c, boot = true)
+        // Na het opstarten van de tv of na een update: weer actief worden (en de sync hervatten als die aan stond)
+        if (i.action == Intent.ACTION_BOOT_COMPLETED || i.action == Intent.ACTION_MY_PACKAGE_REPLACED) SyncService.start(c, boot = true)
     }
 }
