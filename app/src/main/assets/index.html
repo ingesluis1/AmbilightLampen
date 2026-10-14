@@ -61,14 +61,14 @@ label.s span{float:right;opacity:.8}
   <p id="toolHelp"></p>
   <div class="tools" id="tools"></div>
   <div class="mapwrap" id="mapwrap"><canvas id="map"></canvas></div>
-  <div class="sizes">
-    <div>Breedte <b id="wv"></b> m<div class="row"><button class="btn" data-size="w,-1">-</button><button class="btn" data-size="w,1">+</button></div></div>
-    <div style="text-align:right">Diepte <b id="hv"></b> m<div class="row" style="justify-content:flex-end"><button class="btn" data-size="h,-1">-</button><button class="btn" data-size="h,1">+</button></div></div>
-  </div>
 
   <div id="panelFloor" style="margin-top:12px">
     <div class="palette" id="floors" style="grid-template-columns:repeat(4,1fr)"></div>
-    <div class="row"><span class="grow">Kies een vloer en veeg over de vakjes.</span><button class="btn" id="fillAll">Hele kamer</button></div>
+    <div class="row"><span class="grow">Kies een vloer en veeg over de vakjes.</span><button class="btn" id="fillAll">Hele kamer</button><button class="btn" id="sizeBtn">Kamermaat</button></div>
+  <div class="sizes hidden" id="roomSize">
+    <div>Breedte <b id="wv"></b> m<div class="row"><button class="btn" data-size="w,-1">-</button><button class="btn" data-size="w,1">+</button></div></div>
+    <div style="text-align:right">Diepte <b id="hv"></b> m<div class="row" style="justify-content:flex-end"><button class="btn" data-size="h,-1">-</button><button class="btn" data-size="h,1">+</button></div></div>
+  </div>
   </div>
   <div id="panelTv" class="hidden" style="margin-top:12px">
     <div class="row"><select id="tvSize" class="grow"></select><button class="btn" id="tvRot">Draai</button></div>
@@ -282,6 +282,7 @@ document.querySelectorAll('[data-size]').forEach(b=>b.onclick=()=>{
   else{if(v>L.h)for(let i=L.h;i<v;i++)L.floor.push(floorMat.repeat(L.w));else L.floor=L.floor.slice(0,v)}
   L[k]=v;changed();
 });
+$('sizeBtn').onclick=()=>{const h=$('roomSize').classList.toggle('hidden');$('sizeBtn').classList.toggle('on',!h)};
 $('fillAll').onclick=()=>{L.floor=L.floor.map(r=>r.replace(/[^0]/g,floorMat));changed();toast('Hele vloer aangepast')};
 $('itemRot').onclick=()=>{const it=L.items[selItem];if(it){it.dir=((it.dir==null?90:it.dir)+90)%360;changed()}};
 document.querySelectorAll('[data-isize]').forEach(b=>b.onclick=()=>{
