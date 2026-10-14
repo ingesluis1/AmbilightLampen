@@ -19,6 +19,9 @@ Android TV app that makes ordinary Tuya Wi-Fi lamps (Trust, LSC/Action and other
 - **Position decides colour:** a lamp to the left of the TV follows the left side of the picture, a ceiling lamp in front of the TV follows the part of the top edge above it, a rod lamp follows its side from bottom to top. The further a lamp is from the TV, the wider it looks.
 - **Test and tune:** blink or test each lamp, pick a colour, a rotating rainbow test pattern with your room in view (move lamps with the remote), and settings on the TV and on your phone.
 - **Updates:** the app checks GitHub for new releases and shows what's new before updating.
+- **Per lamp:** what it follows (automatic by position, top edge, whole side or whole picture), height (ceiling, window sill, table, floor), and for lamps with several colour layers (like a Eurodomest wall washer) each layer separately.
+- **Smooth and fast:** small changes fade, scene changes are instant; dark scenes become really dark. Every lamp gets the pace it can handle.
+- **TV off:** after 20 seconds of black picture the lamps go back to normal.
 - **Languages:** Dutch and English (Settings, Language).
 
 ## Install

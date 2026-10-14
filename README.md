@@ -18,6 +18,9 @@ Android TV-app die gewone Tuya-wifilampen (Trust, LSC/Action en andere merken di
 - **Je kamer tekenen:** op het tv-scherm staat een QR-code. Scan die met je telefoon en je krijgt een editor in pixel-art-stijl: vloer leggen per vakje van 1 meter (8 vloersoorten), meubels neerzetten (bank, hoekbank, fauteuil, salontafel, eettafel, plant, kleed, kast, bed; draaien, spiegelen, maat aanpassen), de tv plaatsen en je lampen ophangen (plafond, tafel of vloer).
 - **Plek bepaalt kleur:** een lamp links van de tv volgt de linkerkant van het beeld, een plafondlamp recht voor de tv het stuk bovenrand erboven. Hoe verder een lamp van de tv hangt, hoe breder hij meekijkt.
 - **Instellingen:** reactiesnelheid, kleurintensiteit, helderheid, licht bij zwart beeld, hoe breed lampen meekijken, wat de lampen na afloop doen (terug naar hoe ze stonden, warm wit of uit) en automatisch starten als de tv aangaat.
+- **Per lamp instelbaar:** wat hij volgt (automatisch op plek, bovenrand, hele zijkant of hele beeld), hoogte (plafond, vensterbank, tafel, vloer), en bij lampen met meerdere kleurlagen (zoals een Eurodomest Wall Washer) elke laag apart.
+- **Vloeiend en snel:** kleine veranderingen vloeien over, scènewissels gaan direct; donkere scènes worden echt donker. Elke lamp krijgt het tempo dat hij aankan.
+- **Tv uit:** na 20 seconden zwart beeld gaan de lampen terug naar hun gewone stand.
 - **Talen:** Nederlands en Engels (Instellingen, Taal).
 - **Standby:** gaat het scherm uit, dan stopt de sync en gaan de lampen terug naar hun oude stand. Bij aanzetten gaat hij weer verder.
 
