@@ -19,7 +19,7 @@ const I18N = (() => {
     'Nu updaten?': 'Update now?', 'Later': 'Later', '. Kijk op de tv.': '. Check the TV.',
     // tv-scherm
     'Kleurtest (alle lampen na elkaar)': 'Colour test (all lamps one by one)', 'Testbeeld (regenboog)': 'Test pattern (rainbow)',
-    'Testbeeld': 'Test pattern', 'Kamer inrichten en lampen ophangen: scan met je telefoon': 'Set up your room and place your lamps: scan with your phone',
+    'Testbeeld': 'Test pattern', 'Scan met je telefoon om je kamer in te richten en je lampen op te hangen': 'Scan with your phone to set up your room and place your lamps',
     'Nog geen lampen, voeg ze toe via de telefoon': 'No lamps yet, add them with your phone',
     'OK op een lamp laat hem knipperen': 'OK on a lamp makes it blink', ' (nog ophangen)': ' (not placed yet)',
     'Omhoog en omlaag: kiezen. Links en rechts: aanpassen. OK: aan of uit. Terug: sluiten.': 'Up and down: choose. Left and right: adjust. OK: on or off. Back: close.',
