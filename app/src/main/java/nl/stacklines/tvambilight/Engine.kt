@@ -287,13 +287,13 @@ object Engine {
                     val vv = max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
                     val prev = last[id]
                     val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
-                    if (prev != null && lampOn[id] == true && dh < 4 && abs(sv - prev[1]) < 30 && abs(vv - prev[2]) < 25) continue
+                    val fine = s.fade
+                    if (prev != null && lampOn[id] == true && dh < (if (fine) 2 else 4) && abs(sv - prev[1]) < (if (fine) 12 else 30) && abs(vv - prev[2]) < (if (fine) 10 else 25)) continue
                     last[id] = intArrayOf(h, sv, vv)
                     val dps = LinkedHashMap<String, Any>()
                     if (lampOn[id] != true) { dps["20"] = true; dps["21"] = "colour"; lampOn[id] = true }
-                    // Gewone lampen (dj) kunnen via functie 28 zelf overvloeien: "1" = vloeiend, dan h s v, helderheid, kleurtemperatuur
-                    if (s.fade && l.category == "dj" && !cut) dps["28"] = "1" + TuyaLamp.hsvHex(h, sv, vv) + "03e8" + "0000"
-                    else dps["24"] = TuyaLamp.hsvHex(h, sv, vv)
+                    // Altijd functie 24: met vloeiende overgangen sturen we zelf vaker en in kleinere stapjes
+                    dps["24"] = TuyaLamp.hsvHex(h, sv, vv)
                     worker.send(dps)
                     worker.shownColor = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
                 }

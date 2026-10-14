@@ -310,7 +310,8 @@ class TuyaLamp(val lamp: Lamp) {
                 val now = SystemClock.elapsedRealtime()
                 if (batch != null) {
                     // Laag-berichten zijn klein: die mogen sneller achter elkaar (getest op de Wall Washer)
-                    val wait = (if (isLayer && Store.settings.fade) LAYER_GAP_MS else MIN_GAP_MS) - (now - lastSend)
+                    val gap = when { !Store.settings.fade -> MIN_GAP_MS; isLayer -> LAYER_GAP_MS; else -> FADE_GAP_MS }
+                    val wait = gap - (now - lastSend)
                     if (wait > 0) Thread.sleep(wait)
                     sendControl(adapt(batch))
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
@@ -424,6 +425,8 @@ class TuyaLamp(val lamp: Lamp) {
         /** Minimale tijd tussen twee opdrachten; sneller verslikken de lampen zich. */
         const val MIN_GAP_MS = 70L
         const val LAYER_GAP_MS = 18L
+        /** Met vloeiende overgangen: gewone lampen vaker bijwerken (ongeveer 25 keer per seconde). */
+        const val FADE_GAP_MS = 40L
 
         fun hsvHex(h: Int, s: Int, v: Int) = "%04x%04x%04x".format(h, s, v)
     }
