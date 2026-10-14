@@ -178,6 +178,7 @@ class WebServer(private val ctx: Context) {
                 put("online", w?.online == true)
                 put("color", "#%06x".format((w?.shownColor ?: 0x555555) and 0xffffff))
                 put("supported", l.supported)
+                put("error", w?.lastFail ?: ""); put("reconnects", w?.reconnects ?: 0)
             })
         }
         val sample = Engine.lastSample

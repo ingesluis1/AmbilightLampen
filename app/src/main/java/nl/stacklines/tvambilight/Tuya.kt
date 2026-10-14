@@ -92,7 +92,8 @@ object TuyaCodec {
             if (len < 28 || len > 8192) throw IOException("ongeldige lengte $len")
             val rest = ByteArray(len); inp.readFully(rest); inp.readInt() // suffix
             val header = ByteBuffer.allocate(18).putInt(P66).putShort(unknown.toShort()).putInt(seq).putInt(cmd).putInt(len).array()
-            val plain = gcm(key, Cipher.DECRYPT_MODE, rest.copyOfRange(0, 12), rest.copyOfRange(12, len), header.copyOfRange(4, 18))
+            val plain = try { gcm(key, Cipher.DECRYPT_MODE, rest.copyOfRange(0, 12), rest.copyOfRange(12, len), header.copyOfRange(4, 18)) }
+                        catch (_: Exception) { return Frame(cmd, ByteArray(0)) }   // niet te ontsleutelen: overslaan
             return Frame(cmd, stripHeader(plain))
         }
         inp.readInt() // volgnummer
@@ -173,6 +174,11 @@ class TuyaLamp(val lamp: Lamp) {
     @Volatile var online = false
         private set
     @Volatile var lastError: String? = null
+        private set
+    @Volatile var reconnects = 0
+        private set
+    /** Laatste reden waarom de verbinding viel (blijft staan na opnieuw verbinden). */
+    @Volatile var lastFail: String = ""
         private set
     /** Laatst verstuurde kleur, voor de weergave op het scherm en de telefoon. */
     @Volatile var shownColor: Int = 0xFF555555.toInt()
@@ -336,7 +342,12 @@ class TuyaLamp(val lamp: Lamp) {
                     if (inflight >= cap && SystemClock.elapsedRealtime() - lastRx > 4000) throw IOException("lamp reageert niet meer")
                     if (inflight >= cap) inflight = cap - 1   // antwoorden kunnen wegvallen; niet eeuwig blijven wachten
                     // Laag-berichten zijn klein: die mogen sneller achter elkaar (getest op de Wall Washer)
-                    val gap = when { !Store.settingsForId(lamp.id).fade -> MIN_GAP_MS; isLayer -> LAYER_GAP_MS; else -> FADE_GAP_MS }
+                    val gap = when {
+                        isLayer && lamp.category == "dd" -> STRIP_GAP_MS          // ledstrips: rustig tempo, anders resetten ze
+                        !Store.settingsForId(lamp.id).fade -> MIN_GAP_MS
+                        isLayer -> LAYER_GAP_MS
+                        else -> FADE_GAP_MS
+                    }
                     val wait = gap - (now - lastSend)
                     if (wait > 0) Thread.sleep(wait)
                     sendControl(adapt(batch)); inflight++
@@ -348,10 +359,13 @@ class TuyaLamp(val lamp: Lamp) {
                     synchronized(lock) { if (pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(40) }
                 }
             } catch (e: Exception) {
-                lastError = e.message
+                lastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(120)
+                lastFail = lastError ?: ""
+                reconnects++
                 online = false
                 close()
-                sleepQuiet(2000)
+                // Sommige lampen (Wall Washer) resetten onder belasting om de paar seconden: dan meteen opnieuw verbinden
+                if (e !is java.net.SocketException || e.message?.contains("reset", true) != true) sleepQuiet(300)
             }
         }
         close()
@@ -455,12 +469,14 @@ class TuyaLamp(val lamp: Lamp) {
         /** Minimale tijd tussen twee opdrachten; sneller verslikken de lampen zich. */
         const val MIN_GAP_MS = 70L
         const val LAYER_GAP_MS = 18L
+        /** Ledstrips (Wall Washer) verbreken de verbinding als ze sneller dan ±6 berichten per seconde krijgen. */
+        const val STRIP_GAP_MS = 160L
         /** Met vloeiende overgangen: gewone lampen vaker bijwerken (ongeveer 25 keer per seconde). */
         const val FADE_GAP_MS = 40L
         /** Hoeveel opdrachten er tegelijk onbevestigd onderweg mogen zijn. */
         const val MAX_INFLIGHT = 2
         /** Lamp met lagen antwoordt trager (±155 ms) maar kan meer tegelijk aan. */
-        const val MAX_INFLIGHT_LAYERS = 2
+        const val MAX_INFLIGHT_LAYERS = 1
 
         /** Twee laagkleuren (h, s, v) die zo dicht bij elkaar liggen dat één bericht volstaat. */
         fun similar(a: IntArray, b: IntArray): Boolean {
