@@ -128,6 +128,7 @@ label.s span{float:right;opacity:.8}
   <label class="s">Na stoppen</label>
   <select id="after"><option value="restore">Terug naar hoe ze stonden</option><option value="white">Warm wit</option><option value="off">Uit</option></select>
   <label class="s"><input type="checkbox" id="fade"> Vloeiende overgangen</label>
+  <label class="s"><input type="checkbox" id="followAmbi"> Ambilight van de tv volgen (uit = lampen uit)</label>
   <label class="s"><input type="checkbox" id="autostart"> Automatisch starten als de tv aangaat</label>
   <label class="s">Taal</label>
   <select id="lang"><option value="nl">Nederlands</option><option value="en">English</option></select>
@@ -380,12 +381,13 @@ $('blinkBtn').onclick=async()=>{if(selLamp)toast((await api('/api/identify',{id:
 /* ---------- instellingen ---------- */
 const SL=['smooth','saturation','brightness','minLight','spread'];
 const fmt={smooth:v=>Math.round(v*100)+'%',saturation:v=>v.toFixed(2)+'x',brightness:v=>v.toFixed(2)+'x',minLight:v=>v==0?t('uit'):Math.round(v*100)+'%',spread:v=>v.toFixed(2)+'x'};
-function showSettings(){for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('lang').value=settings.lang||'nl'}
+function showSettings(){for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
 $('lang').onchange=async e=>{settings.lang=e.target.value;await api('/api/save',{settings});location.reload()};
 for(const k of SL)$(k).oninput=e=>{settings[k]=+e.target.value;$('v_'+k).textContent=fmt[k](settings[k]);changed(true)};
 $('after').onchange=e=>{settings.after=e.target.value;changed(true)};
 $('autostart').onchange=e=>{settings.autostart=e.target.checked;changed(true)};
 $('fade').onchange=e=>{settings.fade=e.target.checked;changed(true)};
+$('followAmbi').onchange=e=>{settings.followAmbi=e.target.checked;changed(true)};
 
 /* ---------- opslaan en live ---------- */
 function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!noDraw)draw();clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}

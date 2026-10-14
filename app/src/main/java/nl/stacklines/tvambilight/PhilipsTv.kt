@@ -86,6 +86,16 @@ object PhilipsTv {
         } catch (_: Exception) { null }
     }
 
+    /** Staat Ambilight aan? null als het niet op te vragen is. */
+    fun ambilightOn(): Boolean? {
+        val u = Store.tvUser ?: return null
+        val p = Store.tvPass ?: return null
+        return try {
+            val r = call("GET", "/ambilight/power", user = u, pass = p)
+            if (r.code != 200) null else !JSONObject(r.body).optString("power").equals("Off", true)
+        } catch (_: Exception) { null }
+    }
+
     /** Stap 1: de tv toont een pincode van 4 cijfers. */
     fun pairRequest(): String {
         val id = (1..16).map { "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".random() }.joinToString("")

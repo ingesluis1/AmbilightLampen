@@ -187,6 +187,25 @@ object Engine {
     private fun rgbDist(a: DoubleArray, b: DoubleArray) = Math.sqrt((0..2).sumOf { (a[it] - b[it]) * (a[it] - b[it]) })
     private const val CUT_DIST = 110.0
 
+
+    /** Lampen terugzetten volgens "Na stoppen" (bij stoppen en bij pauze omdat Ambilight uit staat). */
+    private fun restoreAll(touched: Set<String>, saved: Map<String, JSONObject?>) {
+        for (id in touched) {
+                val w = workers[id] ?: continue
+                val restore: Map<String, Any> = when (Store.settings.after) {
+                    "off" -> mapOf("20" to false)
+                    "white" -> mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500)
+                    else -> saved[id]?.let { st ->
+                        val m = LinkedHashMap<String, Any>()
+                        for (k in listOf("20", "21", "22", "23", "24")) if (st.has(k)) m[k] = st.get(k)
+                        m
+                    }?.takeIf { it.isNotEmpty() } ?: mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500)
+                }
+                w.send(restore)
+                w.shownColor = 0xFF555555.toInt()
+            }
+    }
+
     private fun loop() {
         val saved = HashMap<String, JSONObject?>()
         val smooth = HashMap<String, DoubleArray>()
@@ -198,6 +217,7 @@ object Engine {
 
         val startLamps = Store.lampsSnapshot().filter { it.enabled && workers.containsKey(it.id) }
         val touched = LinkedHashSet<String>()
+        var lastAmbiCheck = 0L; var ambiOn = true; var paused = false
         for (l in startLamps) {
             val w = workers[l.id] ?: continue
             saved[l.id] = if (Store.settings.after == "restore") w.queryStatus() else null
@@ -213,6 +233,13 @@ object Engine {
                 // Met vloeiende overgangen vaker meten; de gladheid per meting omrekenen zodat het even snel aanvoelt
                 val hzEff = if (s.fade) maxOf(s.hz, 25) else s.hz
                 val alpha = 1 - Math.pow(1 - s.smooth.coerceIn(0.01, 1.0), 15.0 / hzEff)
+                // Ambilight uit op de tv: lampen terug en wachten tot hij weer aan gaat
+                if (s.followAmbi && t0 - lastAmbiCheck > 2000) { lastAmbiCheck = t0; ambiOn = PhilipsTv.ambilightOn() ?: ambiOn }
+                if (s.followAmbi && !ambiOn) {
+                    if (!paused) { paused = true; restoreAll(touched, saved); lampOn.clear(); last.clear(); smooth.clear() }
+                    tvStatus = "Ambilight staat uit"; Thread.sleep(500); continue
+                }
+                if (paused) { paused = false }
                 val sample = PhilipsTv.measured()
                 if (sample == null) {
                     tvStatus = if (Store.tvPaired) "Tv niet bereikbaar" else "Tv nog niet gekoppeld"
@@ -269,20 +296,7 @@ object Engine {
             }
         } catch (_: InterruptedException) {
         } finally {
-            for (id in touched) {
-                val w = workers[id] ?: continue
-                val restore: Map<String, Any> = when (Store.settings.after) {
-                    "off" -> mapOf("20" to false)
-                    "white" -> mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500)
-                    else -> saved[id]?.let { st ->
-                        val m = LinkedHashMap<String, Any>()
-                        for (k in listOf("20", "21", "22", "23", "24")) if (st.has(k)) m[k] = st.get(k)
-                        m
-                    }?.takeIf { it.isNotEmpty() } ?: mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500)
-                }
-                w.send(restore)
-                w.shownColor = 0xFF555555.toInt()
-            }
+            restoreAll(touched, saved)
             tvStatus = "Gestopt"
         }
     }
