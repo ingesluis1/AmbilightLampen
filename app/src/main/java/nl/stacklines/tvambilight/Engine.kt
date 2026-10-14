@@ -162,7 +162,8 @@ object Engine {
         var shown = 0
         for ((i, target) in cols.withIndex()) {
             val key = l.id + "#" + i
-            val sm = smooth[key]?.let { o -> DoubleArray(3) { o[it] + alpha * (target[it] - o[it]) } } ?: target
+            val cut = smooth[key]?.let { o -> rgbDist(o, target) > CUT_DIST } ?: true
+            val sm = if (cut) target else smooth[key]?.let { o -> DoubleArray(3) { o[it] + alpha * (target[it] - o[it]) } } ?: target
             smooth[key] = sm
             val hsv = FloatArray(3)
             Color.RGBToHSV(sm[0].roundToInt().coerceIn(0, 255), sm[1].roundToInt().coerceIn(0, 255), sm[2].roundToInt().coerceIn(0, 255), hsv)
@@ -181,6 +182,10 @@ object Engine {
         }
         if (shown != 0) worker.shownColor = shown
     }
+
+    /** Afstand tussen twee kleuren (0..441); boven CUT_DIST telt het als scènewissel. */
+    private fun rgbDist(a: DoubleArray, b: DoubleArray) = Math.sqrt((0..2).sumOf { (a[it] - b[it]) * (a[it] - b[it]) })
+    private const val CUT_DIST = 110.0
 
     private fun loop() {
         val saved = HashMap<String, JSONObject?>()
@@ -229,7 +234,9 @@ object Engine {
                     if (touched.add(id)) syncWorkers()
                     if (l.layers > 0) { syncLayers(l, worker, sample, s, alpha, smooth, last, lampOn); continue }
                     val target = Mixer.mix(weights[id] ?: continue, sample)
-                    val sm = smooth[id]?.let { o -> DoubleArray(3) { o[it] + alpha * (target[it] - o[it]) } } ?: target
+                    // Grote, plotselinge verandering (scènewissel): direct springen; kleine: gladstrijken en overvloeien
+                    val cut = smooth[id]?.let { o -> rgbDist(o, target) > CUT_DIST } ?: true
+                    val sm = if (cut) target else smooth[id]?.let { o -> DoubleArray(3) { o[it] + alpha * (target[it] - o[it]) } } ?: target
                     smooth[id] = sm
                     val hsv = FloatArray(3)
                     Color.RGBToHSV(sm[0].roundToInt().coerceIn(0, 255), sm[1].roundToInt().coerceIn(0, 255), sm[2].roundToInt().coerceIn(0, 255), hsv)
@@ -252,7 +259,7 @@ object Engine {
                     val dps = LinkedHashMap<String, Any>()
                     if (lampOn[id] != true) { dps["20"] = true; dps["21"] = "colour"; lampOn[id] = true }
                     // Gewone lampen (dj) kunnen via functie 28 zelf overvloeien: "1" = vloeiend, dan h s v, helderheid, kleurtemperatuur
-                    if (s.fade && l.category == "dj") dps["28"] = "1" + TuyaLamp.hsvHex(h, sv, vv) + "03e8" + "0000"
+                    if (s.fade && l.category == "dj" && !cut) dps["28"] = "1" + TuyaLamp.hsvHex(h, sv, vv) + "03e8" + "0000"
                     else dps["24"] = TuyaLamp.hsvHex(h, sv, vv)
                     worker.send(dps)
                     worker.shownColor = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
