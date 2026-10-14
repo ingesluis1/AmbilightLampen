@@ -235,7 +235,7 @@ object Engine {
 
         val startLamps = Store.lampsSnapshot().filter { it.enabled && workers.containsKey(it.id) }
         val touched = LinkedHashSet<String>()
-        var lastAmbiCheck = 0L; var ambiOn = true; var paused = false
+        var blackSince = 0L; var paused = false
         for (l in startLamps) {
             val w = workers[l.id] ?: continue
             saved[l.id] = if (Store.settings.after == "restore") w.queryStatus() else null
@@ -251,14 +251,18 @@ object Engine {
                 // Met vloeiende overgangen vaker meten; de gladheid per meting omrekenen zodat het even snel aanvoelt
                 val hzEff = if (s.fade) maxOf(s.hz, 25) else s.hz
                 val alpha = 1 - Math.pow(1 - s.smooth.coerceIn(0.01, 1.0), 15.0 / hzEff)
-                // Ambilight uit op de tv: lampen terug en wachten tot hij weer aan gaat
-                if (s.followAmbi && t0 - lastAmbiCheck > 2000) { lastAmbiCheck = t0; ambiOn = PhilipsTv.ambilightOn() ?: ambiOn }
-                if (s.followAmbi && !ambiOn) {
-                    if (!paused) { paused = true; restoreAll(touched, saved); lampOn.clear(); last.clear(); smooth.clear() }
-                    tvStatus = "Ambilight staat uit"; Thread.sleep(500); continue
+                val sample = PhilipsTv.measured()
+                // Tv uit of standby: de API van sommige tv's meldt Ambilight altijd uit, dus we kijken naar het beeld zelf.
+                // Langer dan 20 seconden volledig zwart = tv uit: lampen terug naar hun gewone stand, tot er weer beeld is.
+                if (s.followAmbi && sample != null) {
+                    val maxC = (sample.left + sample.top + sample.right).maxOfOrNull { it.max() } ?: 0
+                    if (maxC > 10) blackSince = 0L else if (blackSince == 0L) blackSince = t0
+                    if (blackSince != 0L && t0 - blackSince > 20_000) {
+                        if (!paused) { paused = true; restoreAll(touched, saved); lampOn.clear(); last.clear(); smooth.clear() }
+                        tvStatus = "Tv lijkt uit"; Thread.sleep(500); continue
+                    }
                 }
                 if (paused) { paused = false }
-                val sample = PhilipsTv.measured()
                 if (sample == null) {
                     tvStatus = if (Store.tvPaired) "Tv niet bereikbaar" else "Tv nog niet gekoppeld"
                     Thread.sleep(2000); continue
