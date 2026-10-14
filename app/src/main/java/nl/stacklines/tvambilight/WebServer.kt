@@ -97,38 +97,38 @@ class WebServer(private val ctx: Context) {
                         send("200 OK", "image/png", bos.toByteArray())
                     }
                     path == "/api/state" -> json(state())
-                    path == "/api/save" && method == "POST" -> { save(JSONObject(req)); msg(true, "Opgeslagen") }
+                    path == "/api/save" && method == "POST" -> { save(JSONObject(req)); msg(true, tr("Opgeslagen", "Saved")) }
                     path == "/api/import" && method == "POST" -> msg(true, import(req))
                     path == "/api/identify" && method == "POST" -> {
-                        if (Engine.running) msg(false, "Stop eerst de sync") else { Engine.blink(JSONObject(req).getString("id")); msg(true, "Lamp knippert") }
+                        if (Engine.running) msg(false, tr("Stop eerst de sync", "Stop the sync first")) else { Engine.blink(JSONObject(req).getString("id")); msg(true, tr("Lamp knippert", "Lamp is blinking")) }
                     }
                     path == "/api/test" && method == "POST" -> {
                         val id = JSONObject(req).optString("id")
                         when {
-                            Engine.running -> msg(false, "Stop eerst de sync")
-                            id.isBlank() -> { Engine.testAll(); msg(true, "Alle lampen worden na elkaar getest") }
-                            else -> { Engine.test(id); msg(true, "Rood, groen, blauw, wit, en dan terug") }
+                            Engine.running -> msg(false, tr("Stop eerst de sync", "Stop the sync first"))
+                            id.isBlank() -> { Engine.testAll(); msg(true, tr("Alle lampen worden na elkaar getest", "All lamps are tested one by one")) }
+                            else -> { Engine.test(id); msg(true, tr("Rood, groen, blauw, wit, en dan terug", "Red, green, blue, white, and then back")) }
                         }
                     }
                     path == "/api/color" && method == "POST" -> {
                         val j = JSONObject(req)
-                        if (Engine.running) msg(false, "Stop eerst de sync")
-                        else { Engine.setColor(j.getString("id"), android.graphics.Color.parseColor(j.getString("color"))); msg(true, "Kleur gezet") }
+                        if (Engine.running) msg(false, tr("Stop eerst de sync", "Stop the sync first"))
+                        else { Engine.setColor(j.getString("id"), android.graphics.Color.parseColor(j.getString("color"))); msg(true, tr("Kleur gezet", "Colour set")) }
                     }
                     path == "/api/sync" && method == "POST" -> {
                         val on = JSONObject(req).optBoolean("on")
                         Store.syncWanted = on; Store.save()
                         if (on) Engine.start() else Engine.stop()
-                        msg(true, if (on) "Sync gestart" else "Sync gestopt")
+                        msg(true, if (on) tr("Sync gestart", "Sync started") else tr("Sync gestopt", "Sync stopped"))
                     }
                     path == "/api/pair/request" && method == "POST" -> {
                         JSONObject(req).optString("host").ifBlank { null }?.let { Store.tvHost = it; Store.save() }
                         val r = PhilipsTv.pairRequest()
-                        msg(r == "OK", if (r == "OK") "Er staat nu een pincode op de tv" else r)
+                        msg(r == "OK", if (r == "OK") tr("Er staat nu een pincode op de tv", "A PIN code is now shown on the TV") else r)
                     }
                     path == "/api/pair/grant" && method == "POST" -> {
                         val r = PhilipsTv.pairGrant(JSONObject(req).optString("pin").trim())
-                        msg(r == "OK", if (r == "OK") "Tv gekoppeld" else r)
+                        msg(r == "OK", if (r == "OK") tr("Tv gekoppeld", "TV paired") else r)
                     }
                     path == "/api/cloud" && method == "POST" -> {
                         val j = JSONObject(req)
@@ -136,15 +136,15 @@ class WebServer(private val ctx: Context) {
                         j.optString("secret").trim().ifBlank { null }?.let { Store.cloudSecret = it }
                         j.optString("region").ifBlank { null }?.let { Store.cloudRegion = it }
                         Store.save()
-                        try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, "Tuya weigerde: ${e.message}") }
+                        try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, tr("Tuya weigerde: ", "Tuya refused: ") + e.message) }
                     }
                     path == "/api/cloud/refresh" && method == "POST" -> {
-                        try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, "Ophalen mislukt: ${e.message}") }
+                        try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, tr("Ophalen mislukt: ", "Fetching failed: ") + e.message) }
                     }
                     path == "/api/update" && method == "POST" -> {
                         Updater.check(force = true)
                         if (Updater.available(ctx)) msg(true, Updater.install(ctx))
-                        else msg(false, "Je hebt al de nieuwste versie (${Updater.current(ctx)})")
+                        else msg(false, tr("Je hebt al de nieuwste versie", "You already have the latest version") + " (${Updater.current(ctx)})")
                     }
                     path == "/api/lamp/delete" && method == "POST" -> {
                         val id = JSONObject(req).getString("id")
@@ -152,20 +152,20 @@ class WebServer(private val ctx: Context) {
                             Store.lamps.firstOrNull { it.id == id }?.let { Store.hidden[id] = it.name }
                             Store.lamps.removeAll { it.id == id }
                         }
-                        Store.save(); Engine.syncWorkers(); msg(true, "Lamp verwijderd")
+                        Store.save(); Engine.syncWorkers(); msg(true, tr("Lamp verwijderd", "Lamp removed"))
                     }
                     path == "/api/lamp/restore" && method == "POST" -> {
                         val id = JSONObject(req).getString("id")
                         synchronized(Store) { Store.hidden.remove(id) }
                         Store.save()
                         if (Store.cloudId != null && Store.cloudSecret != null) {
-                            try { TuyaCloud.refresh(); msg(true, "Lamp teruggezet") } catch (e: Exception) { msg(false, "Terugzetten mislukt: ${e.message}") }
-                        } else msg(true, "Zoek de lamp opnieuw of upload devices.json")
+                            try { TuyaCloud.refresh(); msg(true, tr("Lamp teruggezet", "Lamp restored")) } catch (e: Exception) { msg(false, tr("Terugzetten mislukt: ", "Restoring failed: ") + e.message) }
+                        } else msg(true, tr("Zoek de lamp opnieuw of upload devices.json", "Search for the lamp again or upload devices.json"))
                     }
                     else -> send("404 Not Found", "text/plain", "Niet gevonden".toByteArray())
                 }
             } catch (e: Exception) {
-                msg(false, "Fout: ${e.message}")
+                msg(false, tr("Fout: ", "Error: ") + e.message)
             }
         }
     }
@@ -228,7 +228,7 @@ class WebServer(private val ctx: Context) {
                 Store.tvUser = t.optString("device_id").ifBlank { null }
                 Store.tvPass = t.optString("auth_key").ifBlank { null }
                 t.optString("host").ifBlank { null }?.let { Store.tvHost = it }
-                tvNote = " Tv-koppeling overgenomen."
+                tvNote = tr(" Tv-koppeling overgenomen.", " TV pairing imported.")
             }
         }
         var added = 0; var updated = 0
@@ -251,7 +251,7 @@ class WebServer(private val ctx: Context) {
             }
         }
         Store.save(); Engine.syncWorkers()
-        return "$added lamp(en) toegevoegd, $updated bijgewerkt.$tvNote"
+        return tr("$added lamp(en) toegevoegd, $updated bijgewerkt.", "$added lamp(s) added, $updated updated.") + tvNote
     }
 
     /** Adres dat de telefoon opent (via de QR-code). */
@@ -261,6 +261,7 @@ class WebServer(private val ctx: Context) {
         private val STATIC = mapOf(
             "/" to "text/html; charset=utf-8", "/index.html" to "text/html; charset=utf-8",
             "/tv.html" to "text/html; charset=utf-8", "/room.js" to "application/javascript; charset=utf-8",
+            "/i18n.js" to "application/javascript; charset=utf-8",
             "/ui.css" to "text/css; charset=utf-8"
         )
 

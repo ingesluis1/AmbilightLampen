@@ -94,10 +94,11 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
   <div class="row" style="margin-top:2vh;gap:1vw"><button class="btn gold" id="updGo" style="font-size:2.3vh">Nu updaten</button><button class="btn" id="updLater" style="font-size:2.3vh">Later</button></div>
 </section></div>
 <div id="toast"></div>
+<script src="/i18n.js"></script>
 <script src="/room.js"></script>
 <script>
 const $=id=>document.getElementById(id);
-let S=null,L=null,baseImg=null,baseKey='',busy=false;
+let S=null,L=null,baseImg=null,baseKey='',busy=false,langDone=false;
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2200)}
 async function api(p,b){const r=await fetch(p,b===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});return r.json()}
 
@@ -113,31 +114,31 @@ function render(){
 function status(){
   const s=S,on=s.lamps.filter(l=>l.online).length,placed=s.lamps.filter(l=>l.x>=0).length;
   document.body.classList.toggle('night',s.sync);
-  $('iSync').className=s.sync?'on':'';$('tSync').textContent='Sync: '+(s.sync?'aan':'uit');
+  $('iSync').className=s.sync?'on':'';$('tSync').textContent='Sync: '+t(s.sync?'aan':'uit');
   $('iTv').className=!s.tv.paired?'off':(s.sync&&s.tv.status!=='Verbonden'?'warn':'on');
-  $('tTv').textContent='Tv: '+(!s.tv.paired?'nog niet gekoppeld':s.sync?s.tv.status.toLowerCase():'gekoppeld');
+  $('tTv').textContent=t('Tv')+': '+(!s.tv.paired?t('nog niet gekoppeld'):s.sync?t(s.tv.status).toLowerCase():t('gekoppeld'));
   $('iLamps').className=!s.lamps.length?'off':on===s.lamps.length?'on':'warn';
-  $('tLamps').textContent=s.lamps.length?`Lampen: ${on} van ${s.lamps.length} bereikbaar`:'Nog geen lampen, voeg ze toe via de telefoon';
-  $('syncBtn').textContent=s.sync?'Sync stoppen':'Sync starten';
+  $('tLamps').textContent=s.lamps.length?t('Lampen: {a} van {b} bereikbaar',{a:on,b:s.lamps.length}):t('Nog geen lampen, voeg ze toe via de telefoon');
+  $('syncBtn').textContent=t(s.sync?'Sync stoppen':'Sync starten');
   const ids=s.lamps.map(l=>l.id+l.name+(l.x<0)).join();
   if($('legend').dataset.ids!==ids){
     $('legend').dataset.ids=ids;
-    $('legend').innerHTML='<div class="hint">OK op een lamp laat hem knipperen</div>'+s.lamps.map(l=>`<button class="btn lamp" data-id="${l.id}"><span class="sq"></span>${l.name}${l.x<0?' (nog ophangen)':''}</button>`).join('');
+    $('legend').innerHTML='<div class="hint">'+t('OK op een lamp laat hem knipperen')+'</div>'+s.lamps.map(l=>`<button class="btn lamp" data-id="${l.id}"><span class="sq"></span>${l.name}${l.x<0?t(' (nog ophangen)'):''}</button>`).join('');
     $('legend').querySelectorAll('.lamp').forEach(b=>{
       b.onclick=async()=>toast((await api('/api/identify',{id:b.dataset.id})).message);
       b.addEventListener('focus',()=>b.classList.add('focus'));b.addEventListener('blur',()=>b.classList.remove('focus'));
     });
   }
   for(const b of $('legend').querySelectorAll('.lamp')){const l=s.lamps.find(x=>x.id===b.dataset.id);if(l)b.querySelector('.sq').style.background=l.online?(l.color&&l.color!=='#555555'?l.color:'#ffd696'):'#6a6070'}
-  if(s.update){const u=s.update;$('updBtn').classList.toggle('hidden',!u.available);$('updBtn').textContent='Update naar '+u.latest;
-    $('ver').textContent='Versie '+u.current+(u.status?' | '+u.status:'')}
+  if(s.update){const u=s.update;$('updBtn').classList.toggle('hidden',!u.available);$('updBtn').textContent=t('Update naar {v}',{v:u.latest});
+    $('ver').textContent=t('Versie {v}',{v:u.current})+(u.status?' | '+u.status:'')}
   if(s.link&&$('url').textContent!==s.link){$('url').textContent=s.link;$('qr').src='/qr.png?'+encodeURIComponent(s.link)}
 }
 async function poll(){
-  try{S=await api('/api/state');status();render();rbRender()}catch(e){}
+  try{S=await api('/api/state');if(!langDone){langDone=true;I18N.set(S.settings.lang);I18N.apply()}status();render();rbRender()}catch(e){}
   setTimeout(poll,S&&S.sync?150:500);
 }
-$('syncBtn').onclick=async()=>{if(busy)return;busy=true;const on=!(S&&S.sync);toast(on?'Sync start...':'Sync stopt...');await api('/api/sync',{on});busy=false};
+$('syncBtn').onclick=async()=>{if(busy)return;busy=true;const on=!(S&&S.sync);toast(t(on?'Sync start...':'Sync stopt...'));await api('/api/sync',{on});busy=false};
 $('testBtn').onclick=async()=>toast((await api('/api/test',{})).message);
 
 // Instellingen met de afstandsbediening
@@ -145,10 +146,11 @@ const ROWS=[
   {k:'smooth',label:'Reactiesnelheid',min:0.08,max:1,step:0.04,fmt:v=>Math.round(v*100)+'%'},
   {k:'saturation',label:'Kleurintensiteit',min:0.8,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'brightness',label:'Helderheid',min:0.5,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
-  {k:'minLight',label:'Licht bij zwart beeld',min:0,max:0.3,step:0.01,fmt:v=>v<0.005?'uit':Math.round(v*100)+'%'},
+  {k:'minLight',label:'Licht bij zwart beeld',min:0,max:0.3,step:0.01,fmt:v=>v<0.005?t('uit'):Math.round(v*100)+'%'},
   {k:'spread',label:'Hoe breed lampen meekijken',min:0.4,max:2.5,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'after',label:'Na stoppen',options:[['restore','Terug naar hoe ze stonden'],['white','Warm wit'],['off','Uit']]},
   {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
+  {k:'lang',label:'Taal',options:[['nl','Nederlands'],['en','English']],reload:true,raw:true},
 ];
 let setOpen=false,setIdx=0,setVals=null,setTimer=null;
 function openSettings(){if(!S)return;setVals={...S.settings};setOpen=true;setIdx=0;$('settings').classList.remove('hidden');renderSettings()}
@@ -156,8 +158,8 @@ function closeSettings(){setOpen=false;$('settings').classList.add('hidden');$('
 let rbOpen=false,rbStartedSync=false,rbSpeed=8,rbSel=-1,rbSave=null,rbLamps=null;
 function rbHint(){
   const l=rbLamps&&rbLamps[rbSel];
-  $('rbHint').textContent=l?('"'+l.name+'" gekozen: pijltjes schuiven hem 25 cm, OK kiest de volgende lamp.')
-    :'Kijk of de kleur in dezelfde richting langs je lampen draait. OK: lamp kiezen om te verschuiven. Links/rechts: snelheid. Terug: stoppen.';
+  $('rbHint').textContent=l?t('"{n}" gekozen: pijltjes schuiven hem 25 cm, OK kiest de volgende lamp.',{n:l.name})
+    :t('Kijk of de kleur in dezelfde richting langs je lampen draait. OK: lamp kiezen om te verschuiven. Links/rechts: snelheid. Terug: stoppen.');
 }
 function rbRender(){
   if(!rbOpen||!S)return;
@@ -184,7 +186,7 @@ async function closeRainbow(){
   rbOpen=false;$('rainbow').classList.add('hidden');$('rainbowBtn').focus();
   if(rbStartedSync){rbStartedSync=false;await api('/api/sync',{on:false})}
 }
-function speedRb(d){rbSpeed=Math.min(30,Math.max(2,rbSpeed+d));$('rainbow').style.setProperty('--speed',rbSpeed+'s');$('rbSpeed').textContent='Eén rondje per '+rbSpeed+' seconden'}
+function speedRb(d){rbSpeed=Math.min(30,Math.max(2,rbSpeed+d));$('rainbow').style.setProperty('--speed',rbSpeed+'s');$('rbSpeed').textContent=t('Eén rondje per {n} seconden',{n:rbSpeed})}
 $('rainbowBtn').onclick=openRainbow;
 document.addEventListener('keydown',e=>{
   if(!rbOpen)return;
@@ -200,10 +202,10 @@ window.onBack=()=>{if(rbOpen){closeRainbow();return true}if(setOpen){closeSettin
 function renderSettings(){
   $('srows').innerHTML=ROWS.map((r,i)=>{
     const v=setVals[r.k];let val,bar='';
-    if(r.bool)val=v?'aan':'uit';
-    else if(r.options)val=(r.options.find(o=>o[0]===v)||r.options[0])[1];
+    if(r.bool)val=t(v?'aan':'uit');
+    else if(r.options){const o=(r.options.find(o=>o[0]===v)||r.options[0])[1];val=r.raw?o:t(o)}
     else{val=r.fmt(+v);const n=20,f=Math.round((v-r.min)/(r.max-r.min)*n);bar='<div class="bar">'+Array.from({length:n},(_,j)=>`<i class="${j<f?'on':''}"></i>`).join('')+'</div>'}
-    return `<div class="srow${i===setIdx?' focus':''}"><div class="top"><span>${r.label}</span><span><span class="arrows">${r.bool?'OK ':'&lt; '}</span>${val}<span class="arrows">${r.bool?'':' &gt;'}</span></span></div>${bar}</div>`}).join('');
+    return `<div class="srow${i===setIdx?' focus':''}"><div class="top"><span>${t(r.label)}</span><span><span class="arrows">${r.bool?'OK ':'&lt; '}</span>${val}<span class="arrows">${r.bool?'':' &gt;'}</span></span></div>${bar}</div>`}).join('');
 }
 function changeSetting(dir){
   const r=ROWS[setIdx];
@@ -211,15 +213,15 @@ function changeSetting(dir){
   else if(r.options){const i=r.options.findIndex(o=>o[0]===setVals[r.k]);setVals[r.k]=r.options[(i+dir+r.options.length)%r.options.length][0]}
   else setVals[r.k]=Math.round(Math.min(r.max,Math.max(r.min,+setVals[r.k]+dir*r.step))*100)/100;
   renderSettings();clearTimeout(setTimer);
-  setTimer=setTimeout(async()=>{const res=await api('/api/save',{settings:setVals});if(!res.ok)toast(res.message)},350);
+  setTimer=setTimeout(async()=>{const res=await api('/api/save',{settings:setVals});if(!res.ok)toast(res.message);else if(r.reload)location.reload()},r.reload?50:350);
 }
 $('setBtn').onclick=openSettings;
 $('updBtn').onclick=openUpd;
 let updOpen=false;
 function openUpd(){if(!S||!S.update)return;updOpen=true;const u=S.update;
-  $('updTitle').textContent='Wat is er nieuw in '+u.latest;
-  const lines=(u.notes||'').split(/\r?\n/).map(l=>l.replace(/^[-*]\s*/,'').trim()).filter(Boolean);
-  $('updNotes').innerHTML=lines.length?'<ul>'+lines.map(l=>'<li></li>').join('')+'</ul>':'<p>Geen beschrijving.</p>';
+  $('updTitle').textContent=t('Wat is er nieuw in {v}',{v:u.latest});
+  const lines=I18N.notes(u.notes);
+  $('updNotes').innerHTML=lines.length?'<ul>'+lines.map(l=>'<li></li>').join('')+'</ul>':'<p>'+t('Geen beschrijving.')+'</p>';
   $('updNotes').querySelectorAll('li').forEach((li,i)=>li.textContent=lines[i]);
   $('upd').classList.remove('hidden');$('updGo').focus()}
 function closeUpd(){updOpen=false;$('upd').classList.add('hidden');$('updBtn').focus()}

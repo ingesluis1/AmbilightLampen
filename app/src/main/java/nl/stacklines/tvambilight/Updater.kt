@@ -72,15 +72,15 @@ object Updater {
 
     /** Download en start de installatie. Geeft een melding terug voor de gebruiker. */
     fun install(ctx: Context): String {
-        val url = apkUrl ?: return "Geen update gevonden"
+        val url = apkUrl ?: return tr("Geen update gevonden", "No update found")
         if (Build.VERSION.SDK_INT >= 26 && !ctx.packageManager.canRequestPackageInstalls()) {
             ctx.startActivity(Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + ctx.packageName))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            return "Sta eerst toe dat deze app updates mag installeren en druk dan nog een keer op Update"
+            return tr("Sta eerst toe dat deze app updates mag installeren en druk dan nog een keer op Update", "First allow this app to install updates, then press Update again")
         }
         Thread {
             try {
-                status = "Downloaden..."
+                status = tr("Downloaden...", "Downloading...")
                 val pi = ctx.packageManager.packageInstaller
                 val params = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
                 val id = pi.createSession(params)
@@ -96,16 +96,16 @@ object Updater {
                         c.setRequestProperty("User-Agent", "AmbilightLampen")
                     }
                     session.openWrite("update.apk", 0, -1).use { out -> c.inputStream.use { it.copyTo(out) }; session.fsync(out) }
-                    status = "Installeren..."
+                    status = tr("Installeren...", "Installing...")
                     val intent = Intent(ctx, UpdateReceiver::class.java)
                     val flags = PendingIntent.FLAG_UPDATE_CURRENT or (if (Build.VERSION.SDK_INT >= 31) PendingIntent.FLAG_MUTABLE else 0)
                     session.commit(PendingIntent.getBroadcast(ctx, 0, intent, flags).intentSender)
                 }
             } catch (e: Exception) {
-                status = "Update mislukt: ${e.message}"
+                status = tr("Update mislukt: ", "Update failed: ") + e.message
             }
         }.start()
-        return "Update wordt gedownload"
+        return tr("Update wordt gedownload", "Downloading the update")
     }
 
     internal fun setStatus(s: String) { status = s }
@@ -119,10 +119,10 @@ class UpdateReceiver : BroadcastReceiver() {
                 @Suppress("DEPRECATION")
                 val confirm = i.getParcelableExtra<Intent>(Intent.EXTRA_INTENT) ?: return
                 c.startActivity(confirm.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                Updater.setStatus("Bevestig de update op het scherm")
+                Updater.setStatus(tr("Bevestig de update op het scherm", "Confirm the update on the screen"))
             }
-            PackageInstaller.STATUS_SUCCESS -> Updater.setStatus("Bijgewerkt")
-            else -> Updater.setStatus("Update mislukt: " + (i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "onbekend"))
+            PackageInstaller.STATUS_SUCCESS -> Updater.setStatus(tr("Bijgewerkt", "Updated"))
+            else -> Updater.setStatus(tr("Update mislukt: ", "Update failed: ") + (i.getStringExtra(PackageInstaller.EXTRA_STATUS_MESSAGE) ?: "?"))
         }
     }
 }

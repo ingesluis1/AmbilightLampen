@@ -120,12 +120,14 @@ label.s span{float:right;opacity:.8}
   <label class="s">Na stoppen</label>
   <select id="after"><option value="restore">Terug naar hoe ze stonden</option><option value="white">Warm wit</option><option value="off">Uit</option></select>
   <label class="s"><input type="checkbox" id="autostart"> Automatisch starten als de tv aangaat</label>
+  <label class="s">Taal</label>
+  <select id="lang"><option value="nl">Nederlands</option><option value="en">English</option></select>
 </section>
 
 <section class="panel">
   <h2>Lampen toevoegen</h2>
   <div id="cloudOn" class="hidden">
-    <p>Nieuwe lamp? Koppel hem eerst in de <b>Smart Life</b>-app en druk dan hier. Naam en sleutel komen uit je Tuya-project, het adres vindt de tv zelf.</p>
+    <p data-en="New lamp? First pair it in the &lt;b&gt;Smart Life&lt;/b&gt; app, then press here. The name and key come from your Tuya project, the TV finds the address itself.">Nieuwe lamp? Koppel hem eerst in de <b>Smart Life</b>-app en druk dan hier. Naam en sleutel komen uit je Tuya-project, het adres vindt de tv zelf.</p>
     <button class="btn gold" id="cloudRefresh">Nieuwe lampen zoeken</button>
     <button class="btn" id="cloudChange" style="margin-left:6px">Andere sleutels</button>
   </div>
@@ -147,6 +149,7 @@ label.s span{float:right;opacity:.8}
 </main>
 <div id="toast"></div>
 
+<script src="/i18n.js"></script>
 <script src="/room.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -177,7 +180,7 @@ function spriteThumb(type){
     g.drawImage(t,(size-(w+2)*k)/2,(size-(d+2)*k)/2,(w+2)*k,(d+2)*k)},size);
 }
 function buildTools(){
-  const t=$('tools');t.innerHTML='';
+  const tb=$('tools');tb.innerHTML='';
   for(const [k,label] of TOOLS){
     const b=document.createElement('button');b.className='btn';b.dataset.tool=k;
     let icon;
@@ -186,18 +189,18 @@ function buildTools(){
     if(k==='item')icon=spriteThumb('sofa');
     if(k==='tv')icon=preview(g=>{g.fillStyle='#6b4430';g.fillRect(0,6,13,5);g.fillStyle='#0c0c10';g.fillRect(1,3,11,4);g.fillStyle='#f2b35a';g.fillRect(1,7,11,1)},13);
     if(k==='lamp')icon=preview(g=>{g.fillStyle='rgba(255,214,150,.45)';g.fillRect(2,2,9,9);g.fillStyle='#2a1a2e';g.fillRect(4,3,5,7);g.fillRect(3,4,7,5);g.fillStyle='#d8d2c4';g.fillRect(4,4,5,5);g.fillStyle='#ffd696';g.fillRect(5,5,3,3)},13);
-    b.append(icon,document.createTextNode(label));b.onclick=()=>setTool(k);t.append(b);
+    b.append(icon,document.createTextNode(t(label)));b.onclick=()=>setTool(k);tb.append(b);
   }
   const fl=$('floors');fl.innerHTML='';
   for(const f of Room.FLOORS){
     const b=document.createElement('button');b.className='btn';b.dataset.mat=f.code;
-    b.append(preview(g=>{for(let y=0;y<16;y++)for(let x=0;x<16;x++){const c=Room.floorPixel(f.code,x,y);g.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;g.fillRect(x,y,1,1)}},16),document.createTextNode(f.name));
+    b.append(preview(g=>{for(let y=0;y<16;y++)for(let x=0;x<16;x++){const c=Room.floorPixel(f.code,x,y);g.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;g.fillRect(x,y,1,1)}},16),document.createTextNode(t(f.name)));
     b.onclick=()=>{floorMat=f.code;floorState();if(tool!=='floor')setTool('floor')};fl.append(b);
   }
   const p=$('palette');p.innerHTML='';
   for(const type of Object.keys(Room.ITEMS)){
     const b=document.createElement('button');b.className='btn';b.dataset.type=type;
-    b.append(spriteThumb(type),document.createTextNode(Room.ITEMS[type].name));
+    b.append(spriteThumb(type),document.createTextNode(t(Room.ITEMS[type].name)));
     b.onclick=()=>{newItemType=newItemType===type?null:type;selItem=null;paletteState();draw()};p.append(b);
   }
 }
@@ -205,7 +208,7 @@ function floorState(){document.querySelectorAll('#floors .btn').forEach(b=>b.cla
 function paletteState(){
   document.querySelectorAll('#palette .btn').forEach(b=>b.classList.toggle('on',b.dataset.type===newItemType));
   const it=L&&L.items[selItem];$('itemActions').classList.toggle('hidden',!it);
-  if(it){const def=Room.ITEMS[it.type];$('itemName').textContent=def.name;
+  if(it){const def=Room.ITEMS[it.type];$('itemName').textContent=t(def.name);
     $('iw').textContent=(it.w||def.w).toFixed(1);$('id_').textContent=(it.d||def.d).toFixed(1);
     $('itemFlip').classList.toggle('hidden',it.type!=='corner')}
 }
@@ -214,7 +217,7 @@ function setTool(k){
   document.querySelectorAll('#tools .btn').forEach(b=>b.classList.toggle('on',b.dataset.tool===k));
   $('panelFloor').classList.toggle('hidden',k!=='floor');floorState();
   $('panelTv').classList.toggle('hidden',k!=='tv');$('panelItem').classList.toggle('hidden',k!=='item');$('panelLamp').classList.toggle('hidden',k!=='lamp');
-  $('toolHelp').textContent=HELP[k];
+  $('toolHelp').textContent=t(HELP[k]);
   if(k!=='item'){selItem=null;newItemType=null}
   if(k!=='lamp')selLamp=null;
   paletteState();draw();
@@ -266,7 +269,7 @@ cv.addEventListener('pointerdown',e=>{if(!L||!view)return;cv.setPointerCapture(e
     const hit=lamps.filter(l=>l.x>=0).find(l=>Math.hypot(l.x-mx,l.y-my)<.35);
     if(hit){selectLamp(hit.id);drag='lamp'}
     else if(selLamp){const l=lamps.find(l=>l.id===selLamp);l.x=snap(mx);l.y=snap(my);drag='lamp';changed();showLamp();chips()}
-    else toast('Kies eerst een lamp hieronder');
+    else toast(t('Kies eerst een lamp hieronder'));
   }
 });
 cv.addEventListener('pointermove',e=>{if(!L||!view)return;const [mx,my]=pos(e);
@@ -283,7 +286,7 @@ document.querySelectorAll('[data-size]').forEach(b=>b.onclick=()=>{
   L[k]=v;changed();
 });
 $('sizeBtn').onclick=()=>{const h=$('roomSize').classList.toggle('hidden');$('sizeBtn').classList.toggle('on',!h)};
-$('fillAll').onclick=()=>{L.floor=L.floor.map(r=>r.replace(/[^0]/g,floorMat));changed();toast('Hele vloer aangepast')};
+$('fillAll').onclick=()=>{L.floor=L.floor.map(r=>r.replace(/[^0]/g,floorMat));changed();toast(t('Hele vloer aangepast'))};
 $('itemRot').onclick=()=>{const it=L.items[selItem];if(it){it.dir=((it.dir==null?90:it.dir)+90)%360;changed()}};
 document.querySelectorAll('[data-isize]').forEach(b=>b.onclick=()=>{
   const it=L.items[selItem];if(!it)return;const def=Room.ITEMS[it.type];const [k,dd]=b.dataset.isize.split(',');
@@ -293,30 +296,31 @@ $('itemDel').onclick=()=>{if(L.items[selItem]){L.items.splice(selItem,1);selItem
 
 /* ---------- tv ---------- */
 const tvInch=()=>Math.round(L.tv.w/0.0254/0.8716);
-$('tvSize').innerHTML=INCH.map(i=>`<option value="${i}">${i} inch (${(i*0.0254*0.8716).toFixed(2)} m breed)</option>`).join('');
+function tvSizes(){$('tvSize').innerHTML=INCH.map(i=>`<option value="${i}">${t('{i} inch ({m} m breed)',{i,m:(i*0.0254*0.8716).toFixed(2)})}</option>`).join('')}
+tvSizes();
 $('tvSize').onchange=e=>{L.tv.w=+(e.target.value*0.0254*0.8716).toFixed(3);changed()};
 $('tvRot').onclick=()=>{L.tv.dir=(L.tv.dir+90)%360;changed()};
 
 /* ---------- lampen ---------- */
 function chips(){
   const c=$('chips');c.innerHTML='';
-  if(!lamps.length){c.innerHTML='<span>Nog geen lampen. Voeg ze onderaan toe.</span>';return}
+  if(!lamps.length){c.innerHTML='<span>'+t('Nog geen lampen. Voeg ze onderaan toe.')+'</span>';return}
   for(const l of lamps){const b=document.createElement('button');b.className='btn chip'+(l.id===selLamp?' sel':'');
     const d=document.createElement('span');d.className='dot';const lv=live[l.id];d.style.background=lv&&lv.online?(S&&S.sync?lv.color:'#ffd696'):'#6a6070';
-    b.append(d,document.createTextNode(l.name+(l.x<0?' (nog ophangen)':'')));b.onclick=()=>selectLamp(l.id);c.append(b)}
+    b.append(d,document.createTextNode(l.name+(l.x<0?t(' (nog ophangen)'):'')));b.onclick=()=>selectLamp(l.id);c.append(b)}
 }
 function lampList(){
   const box=$('lampList');
-  if(!lamps.length){box.innerHTML='<span>Nog geen lampen.</span>';return}
+  if(!lamps.length){box.innerHTML='<span>'+t('Nog geen lampen.')+'</span>';return}
   if(box.dataset.ids!==lamps.map(l=>l.id+l.name).join()){
     box.dataset.ids=lamps.map(l=>l.id+l.name).join();box.innerHTML='';
     for(const l of lamps){
       const r=document.createElement('div');r.className='lrow';r.dataset.id=l.id;
-      r.innerHTML=`<span class="dot"></span><span class="name"></span><button class="btn" data-a="blink">Knipper</button><button class="btn" data-a="test">Test</button><input type="color" value="#ffb050"><button class="btn red" data-a="del">Weg</button>`;
+      r.innerHTML=`<span class="dot"></span><span class="name"></span><button class="btn" data-a="blink">${t('Knipper')}</button><button class="btn" data-a="test">${t('Test')}</button><input type="color" value="#ffb050"><button class="btn red" data-a="del">${t('Weg')}</button>`;
       r.querySelector('.name').textContent=l.name;
       r.querySelector('[data-a=blink]').onclick=async()=>toast((await api('/api/identify',{id:l.id})).message);
       r.querySelector('[data-a=test]').onclick=async()=>toast((await api('/api/test',{id:l.id})).message);
-      r.querySelector('[data-a=del]').onclick=async()=>{if(!confirm('"'+l.name+'" verwijderen? Je kunt hem later terugzetten onder Lampen toevoegen.'))return;
+      r.querySelector('[data-a=del]').onclick=async()=>{if(!confirm(t('"{n}" verwijderen? Je kunt hem later terugzetten onder Lampen toevoegen.',{n:l.name})))return;
         const res=await api('/api/lamp/delete',{id:l.id});toast(res.message);if(selLamp===l.id)selLamp=null;load()};
       r.querySelector('input').onchange=async e=>toast((await api('/api/color',{id:l.id,color:e.target.value})).message);
       box.append(r);
@@ -324,18 +328,18 @@ function lampList(){
   }
   for(const r of box.children){const lv=live[r.dataset.id];if(!lv)continue;
     r.querySelector('.dot').style.background=lv.online?(lv.color&&lv.color!=='#555555'?lv.color:'#ffd696'):'#6a6070';
-    r.querySelector('.name').title=lv.online?'bereikbaar':'niet bereikbaar'}
+    r.querySelector('.name').title=lv.online?t('bereikbaar'):t('niet bereikbaar')}
 }
 $('testAll').onclick=async()=>toast((await api('/api/test',{})).message);
 function selectLamp(id){selLamp=id;chips();showLamp();draw()}
 function follows(l){
-  if(l.x<0||!L.tv)return 'Nog niet opgehangen';
-  if(l.shape==='rod'){const a0=L.tv.dir*Math.PI/180,x0=((l.x-L.tv.x)*Math.sin(a0)+(l.y-L.tv.y)*-Math.cos(a0))/(L.tv.w/2);
-    return 'Volgt '+(x0<-0.35?'de linkerkant':x0>0.35?'de rechterkant':'het midden')+' van het beeld, van onder tot boven'}
+  if(l.x<0||!L.tv)return t('Nog niet opgehangen');
   const a=L.tv.dir*Math.PI/180,fx=Math.cos(a),fy=Math.sin(a),xs=((l.x-L.tv.x)*fy+(l.y-L.tv.y)*-fx)/(L.tv.w/2);
-  const side=xs<-1.15?'links naast':xs>1.15?'rechts naast':xs<-.35?'linkerdeel':xs>.35?'rechterdeel':'midden';
-  if(side.endsWith('naast'))return 'Volgt de '+(xs<0?'linker':'rechter')+'kant van het beeld';
-  return 'Volgt '+(l.height==='ceiling'?'de bovenrand':l.height==='table'?'de zijkanten':'de onderkant')+', '+side;
+  if(l.shape==='rod')return t(xs<-0.35?'Volgt de linkerkant van het beeld, van onder tot boven':xs>0.35?'Volgt de rechterkant van het beeld, van onder tot boven':'Volgt het midden van het beeld, van onder tot boven');
+  if(xs<-1.15)return t('Volgt de linkerkant van het beeld');
+  if(xs>1.15)return t('Volgt de rechterkant van het beeld');
+  const side=xs<-.35?'linkerdeel':xs>.35?'rechterdeel':'midden';
+  return t('Volgt {e}, {s}',{e:t(l.height==='ceiling'?'de bovenrand':l.height==='table'?'de zijkanten':'de onderkant'),s:t(side)});
 }
 function showLamp(){
   const l=lamps.find(l=>l.id===selLamp);$('lampDetail').classList.toggle('hidden',!l);if(!l)return;
@@ -346,7 +350,7 @@ function showLamp(){
   $('heightSeg').classList.toggle('hidden',rod);
   $('follows').textContent=follows(l);$('lampEnabled').checked=l.enabled;
   if(document.activeElement!==$('lampIpEdit'))$('lampIpEdit').value=l.ip||'';
-  const lv=live[l.id];$('lampIp').innerHTML=(l.ip||'geen ip')+' '+(lv&&lv.online?'<span class="ok">bereikbaar</span>':'<span class="bad">niet bereikbaar</span>');
+  const lv=live[l.id];$('lampIp').innerHTML=(l.ip||t('geen ip'))+' '+(lv&&lv.online?'<span class="ok">'+t('bereikbaar')+'</span>':'<span class="bad">'+t('niet bereikbaar')+'</span>');
 }
 $('lampName').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.name=e.target.value;changed();chips()}};
 document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.shape=b.dataset.s;if(l.shape==='rod')l.height='floor';changed();showLamp()}});
@@ -358,27 +362,28 @@ $('blinkBtn').onclick=async()=>{if(selLamp)toast((await api('/api/identify',{id:
 
 /* ---------- instellingen ---------- */
 const SL=['smooth','saturation','brightness','minLight','spread'];
-const fmt={smooth:v=>Math.round(v*100)+'%',saturation:v=>v.toFixed(2)+'x',brightness:v=>v.toFixed(2)+'x',minLight:v=>v==0?'uit':Math.round(v*100)+'%',spread:v=>v.toFixed(2)+'x'};
-function showSettings(){for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('autostart').checked=settings.autostart}
+const fmt={smooth:v=>Math.round(v*100)+'%',saturation:v=>v.toFixed(2)+'x',brightness:v=>v.toFixed(2)+'x',minLight:v=>v==0?t('uit'):Math.round(v*100)+'%',spread:v=>v.toFixed(2)+'x'};
+function showSettings(){for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('autostart').checked=settings.autostart;$('lang').value=settings.lang||'nl'}
+$('lang').onchange=async e=>{settings.lang=e.target.value;await api('/api/save',{settings});location.reload()};
 for(const k of SL)$(k).oninput=e=>{settings[k]=+e.target.value;$('v_'+k).textContent=fmt[k](settings[k]);changed(true)};
 $('after').onchange=e=>{settings.after=e.target.value;changed(true)};
 $('autostart').onchange=e=>{settings.autostart=e.target.checked;changed(true)};
 
 /* ---------- opslaan en live ---------- */
-function changed(noDraw){dirty=true;$('saved').textContent='opslaan...';if(!noDraw)draw();clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
+function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!noDraw)draw();clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
 async function save(){
   const r=await api('/api/save',{layout:L,settings,lamps:lamps.map(l=>({id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,shape:l.shape||'bulb',enabled:l.enabled,ip:l.ip}))});
-  dirty=false;$('saved').textContent=r.ok?'opgeslagen':'niet opgeslagen';
+  dirty=false;$('saved').textContent=r.ok?t('opgeslagen'):t('niet opgeslagen');
 }
-$('updBtn').onclick=async()=>{const u=S.update;if(!confirm('Wat is er nieuw in '+u.latest+':\n\n'+(u.notes||'Geen beschrijving.')+'\n\nNu updaten?'))return;toast((await api('/api/update',{})).message+'. Kijk op de tv.')};
+$('updBtn').onclick=async()=>{const u=S.update,n=I18N.notes(u.notes);if(!confirm(t('Wat is er nieuw in {v}',{v:u.latest})+':\n\n'+(n.length?'- '+n.join('\n- '):t('Geen beschrijving.'))+'\n\n'+t('Nu updaten?')))return;toast((await api('/api/update',{})).message+t('. Kijk op de tv.'))};
 $('syncBtn').onclick=async()=>{const on=!(S&&S.sync);$('syncBtn').disabled=true;const r=await api('/api/sync',{on});toast(r.message);setTimeout(()=>{$('syncBtn').disabled=false;poll()},on?2500:3500)};
 $('pairBtn').onclick=async()=>{const r=await api('/api/pair/request',{host:$('tvHost').value.trim()});toast(r.message);if(r.ok){$('pinRow').classList.remove('hidden');$('pin').focus()}};
 $('grantBtn').onclick=async()=>{const r=await api('/api/pair/grant',{pin:$('pin').value});toast(r.message);if(r.ok)poll()};
-$('cloudSave').onclick=async()=>{const b=$('cloudSave');b.disabled=true;b.textContent='Zoeken...';
+$('cloudSave').onclick=async()=>{const b=$('cloudSave');b.disabled=true;b.textContent=t('Zoeken...');
   const r=await api('/api/cloud',{id:$('cloudId').value,secret:$('cloudSecret').value,region:$('cloudRegion').value});
-  b.disabled=false;b.textContent='Opslaan en zoeken';toast(r.message);if(r.ok){$('cloudId').value='';$('cloudSecret').value='';cloudShown=false;load()}};
-$('cloudRefresh').onclick=async()=>{const b=$('cloudRefresh');b.disabled=true;b.textContent='Zoeken...';
-  const r=await api('/api/cloud/refresh',{});b.disabled=false;b.textContent='Nieuwe lampen zoeken';toast(r.message);load()};
+  b.disabled=false;b.textContent=t('Opslaan en zoeken');toast(r.message);if(r.ok){$('cloudId').value='';$('cloudSecret').value='';cloudShown=false;load()}};
+$('cloudRefresh').onclick=async()=>{const b=$('cloudRefresh');b.disabled=true;b.textContent=t('Zoeken...');
+  const r=await api('/api/cloud/refresh',{});b.disabled=false;b.textContent=t('Nieuwe lampen zoeken');toast(r.message);load()};
 $('cloudChange').onclick=()=>{$('cloudSetup').classList.remove('hidden');$('cloudOn').classList.add('hidden')};
 $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();
   const r=await fetch('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:t}).then(x=>x.json());toast(r.message);e.target.value='';load()};
@@ -386,20 +391,20 @@ $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;const 
 function hiddenList(s){
   const h=s.hidden||[];$('hiddenBox').classList.toggle('hidden',!h.length);
   const key=h.map(x=>x.id).join();if($('hiddenList').dataset.k===key)return;$('hiddenList').dataset.k=key;$('hiddenList').innerHTML='';
-  for(const x of h){const r=document.createElement('div');r.className='lrow';r.innerHTML='<span class="name"></span><button class="btn">Terugzetten</button>';
+  for(const x of h){const r=document.createElement('div');r.className='lrow';r.innerHTML='<span class="name"></span><button class="btn">'+t('Terugzetten')+'</button>';
     r.querySelector('.name').textContent=x.name;
     r.querySelector('.btn').onclick=async()=>{const res=await api('/api/lamp/restore',{id:x.id});toast(res.message);load()};$('hiddenList').append(r)}
 }
 function liveFrom(s){
   hiddenList(s);
   live={};for(const l of s.lamps)live[l.id]=l;
-  $('syncBtn').textContent=s.sync?'Sync stoppen':'Sync starten';
-  if(s.update){$('updBtn').classList.toggle('hidden',!s.update.available);$('updBtn').textContent='Update '+s.update.latest}
+  $('syncBtn').textContent=t(s.sync?'Sync stoppen':'Sync starten');
+  if(s.update){$('updBtn').classList.toggle('hidden',!s.update.available);$('updBtn').textContent=t('Update {v}',{v:s.update.latest})}
   $('pairCard').classList.toggle('hidden',s.tv.paired);
   if(s.cloud&&!cloudShown){cloudShown=true;$('cloudOn').classList.toggle('hidden',!s.cloud.configured);$('cloudSetup').classList.toggle('hidden',s.cloud.configured);$('cloudRegion').value=s.cloud.region}
   if(!$('tvHost').value)$('tvHost').value=s.tv.host;
   const on=s.lamps.filter(l=>l.online).length;
-  $('tvStatus').innerHTML=`Tv: ${s.tv.paired?'<span class="ok">gekoppeld</span>':'<span class="bad">niet gekoppeld</span>'} | Lampen: ${on} van ${s.lamps.length} bereikbaar`;
+  $('tvStatus').innerHTML=`${t('Tv')}: ${s.tv.paired?'<span class="ok">'+t('gekoppeld')+'</span>':'<span class="bad">'+t('niet gekoppeld')+'</span>'} | ${t('Lampen: {a} van {b} bereikbaar',{a:on,b:s.lamps.length})}`;
 }
 async function load(){
   S=await api('/api/state');
@@ -411,7 +416,7 @@ async function load(){
   chips();showLamp();lampList();draw();
 }
 async function poll(){try{const s=await api('/api/state');S=s;liveFrom(s);chips();showLamp();lampList();draw()}catch(e){}}
-buildTools();setTool('floor');load();
+(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang)}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');load()})();
 setInterval(()=>{if(S&&S.sync)poll()},500);
 setInterval(()=>{if(!(S&&S.sync))poll()},1500);
 window.addEventListener('resize',draw);

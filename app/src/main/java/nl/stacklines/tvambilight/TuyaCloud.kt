@@ -82,9 +82,9 @@ object TuyaCloud {
         }
         Store.save(); Engine.syncWorkers()
         return buildString {
-            append(if (added.isEmpty()) "Geen nieuwe lampen gevonden." else "Nieuw: ${added.joinToString(", ")}. Hang ze op via Lampen.")
-            if (updated > 0) append(" $updated sleutel(s) bijgewerkt.")
-            if (added.isNotEmpty()) append(" Het ip-adres wordt binnen een halve minuut vanzelf gevonden.")
+            append(if (added.isEmpty()) tr("Geen nieuwe lampen gevonden.", "No new lamps found.") else tr("Nieuw: ", "New: ") + added.joinToString(", ") + tr(". Hang ze op via Lampen.", ". Place them under Lamps."))
+            if (updated > 0) append(tr(" $updated sleutel(s) bijgewerkt.", " $updated key(s) updated."))
+            if (added.isNotEmpty()) append(tr(" Het ip-adres wordt binnen een halve minuut vanzelf gevonden.", " The IP address is found automatically within half a minute."))
         }
     }
 }

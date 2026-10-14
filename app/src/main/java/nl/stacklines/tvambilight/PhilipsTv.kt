@@ -92,14 +92,14 @@ object PhilipsTv {
         val req = JSONObject().put("scope", org.json.JSONArray(listOf("read", "write", "control"))).put("device", device(id))
         val r = call("POST", "/pair/request", req.toString())
         val j = JSONObject(r.body)
-        if (j.optString("error_id") != "SUCCESS") return "De tv weigerde: " + j.optString("error_text", r.body)
+        if (j.optString("error_id") != "SUCCESS") return tr("De tv weigerde: ", "The TV refused: ") + j.optString("error_text", r.body)
         pairState = JSONObject().put("id", id).put("key", j.getString("auth_key")).put("ts", j.get("timestamp"))
         return "OK"
     }
 
     /** Stap 2: pincode bevestigen. Bij succes worden de inloggegevens opgeslagen. */
     fun pairGrant(pin: String): String {
-        val st = pairState ?: return "Start eerst het koppelen."
+        val st = pairState ?: return tr("Start eerst het koppelen.", "Start pairing first.")
         val id = st.getString("id"); val key = st.getString("key"); val ts = st.get("ts").toString()
         val mac = Mac.getInstance("HmacSHA1").apply { init(SecretKeySpec(sharedKey, "HmacSHA1")) }
         val sig = android.util.Base64.encodeToString(mac.doFinal((ts + pin).toByteArray()), android.util.Base64.NO_WRAP)
@@ -114,7 +114,7 @@ object PhilipsTv {
             pairState = null; challenge = null
             return "OK"
         }
-        return "Koppelen mislukt (${r.code}): " + j.optString("error_text", r.body.take(120))
+        return tr("Koppelen mislukt", "Pairing failed") + " (${r.code}): " + j.optString("error_text", r.body.take(120))
     }
 
     private fun device(id: String) = JSONObject().put("device_name", "ambilight-lampen").put("device_os", "Android")

@@ -1,5 +1,7 @@
 # Ambilight Lampen
 
+Nederlands | [English](README.en.md)
+
 Android TV-app die gewone Tuya-wifilampen (Trust, LSC/Action en andere merken die in Smart Life werken) laat meekleuren met het beeld van een Philips Ambilight-tv, een beetje zoals Philips Hue Sync. De app draait op de tv zelf, dus er hoeft geen pc of extra kastje aan te staan.
 
 ![Tv-scherm](docs/tv-scherm.png)
@@ -11,6 +13,7 @@ Android TV-app die gewone Tuya-wifilampen (Trust, LSC/Action en andere merken di
 - **Je kamer tekenen:** op het tv-scherm staat een QR-code. Scan die met je telefoon en je krijgt een editor in pixel-art-stijl: vloer leggen per vakje van 1 meter (8 vloersoorten), meubels neerzetten (bank, hoekbank, fauteuil, salontafel, eettafel, plant, kleed, kast, bed; draaien, spiegelen, maat aanpassen), de tv plaatsen en je lampen ophangen (plafond, tafel of vloer).
 - **Plek bepaalt kleur:** een lamp links van de tv volgt de linkerkant van het beeld, een plafondlamp recht voor de tv het stuk bovenrand erboven. Hoe verder een lamp van de tv hangt, hoe breder hij meekijkt.
 - **Instellingen:** reactiesnelheid, kleurintensiteit, helderheid, licht bij zwart beeld, hoe breed lampen meekijken, wat de lampen na afloop doen (terug naar hoe ze stonden, warm wit of uit) en automatisch starten als de tv aangaat.
+- **Talen:** Nederlands en Engels (Instellingen, Taal).
 - **Standby:** gaat het scherm uit, dan stopt de sync en gaan de lampen terug naar hun oude stand. Bij aanzetten gaat hij weer verder.
 
 ## Installeren
@@ -40,7 +43,7 @@ De local keys van de lampen, de tv-koppeling en de Tuya-sleutels staan alleen in
 
 ## Beperkingen
 
-- Alleen lampen met het lokale Tuya-protocol 3.1 en 3.3 (de meeste Trust-lampen). Versie 3.4 en 3.5 worden herkend maar nog niet aangestuurd.
+- Lokaal Tuya-protocol 3.1, 3.3, 3.4 en 3.5 (Trust, LSC/Action en de meeste andere Smart Life-lampen).
 - Alleen Philips-tv's met Ambilight en de JointSpace-API (versie 6, Android TV). Getest op een 65OLED810.
 - Het gratis IoT Core-abonnement van Tuya loopt na een maand af (verlengen kan). Daarna werkt alleen "Nieuwe lampen zoeken" niet meer; lampen die al in de app staan blijven werken.
 - Wifilampen zijn trager dan Hue Entertainment: reken op 0,1 tot 0,3 seconde vertraging. Voor sfeer werkt dat goed, heel korte flitsen komen deels later.

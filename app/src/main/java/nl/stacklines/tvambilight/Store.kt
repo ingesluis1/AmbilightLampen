@@ -46,11 +46,12 @@ class Settings {
     var hz = 15
     var autostart = true
     var after = "restore"    // restore | white | off
+    var lang = "nl"          // nl | en
 
     fun toJson() = JSONObject().apply {
         put("smooth", smooth); put("saturation", saturation); put("brightness", brightness)
         put("minLight", minLight); put("spread", spread); put("hz", hz)
-        put("autostart", autostart); put("after", after)
+        put("autostart", autostart); put("after", after); put("lang", lang)
     }
 
     fun apply(o: JSONObject) {
@@ -62,8 +63,12 @@ class Settings {
         hz = o.optInt("hz", hz).coerceIn(5, 25)
         autostart = o.optBoolean("autostart", autostart)
         after = o.optString("after", after)
+        lang = if (o.optString("lang", lang) == "en") "en" else "nl"
     }
 }
+
+/** Tekst in de gekozen taal (Nederlands of Engels). */
+fun tr(nl: String, en: String) = if (Store.settings.lang == "en") en else nl
 
 /** Alles wat bewaard wordt, in één JSON-bestand in de app-opslag. */
 object Store {
