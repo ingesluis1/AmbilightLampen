@@ -103,7 +103,7 @@ label.s span{float:right;opacity:.8}
       <div class="seg" id="layerSeg" style="margin-top:3px">
         <button class="btn" data-n="0">Uit</button><button class="btn" data-n="2">2</button><button class="btn" data-n="3">3</button><button class="btn" data-n="4">4</button><button class="btn" data-n="5">5</button>
       </div>
-      <div class="row" style="margin-top:8px"><span>Groepje</span><select id="lampGroup" class="grow"></select></div>
+      <div class="row" style="margin-top:8px"><span>Groep</span><select id="lampGroup" class="grow"></select></div>
       <div style="margin-top:8px;font-size:14px">Kleur</div>
       <div class="seg" id="satSeg" style="margin-top:3px">
         <button class="btn" data-k="0.8">Zwakker</button><button class="btn" data-k="1">Normaal</button><button class="btn" data-k="1.4">Sterker</button><button class="btn" data-k="1.8">Veel sterker</button>
@@ -126,7 +126,7 @@ label.s span{float:right;opacity:.8}
 <section class="panel">
   <h2>Instellingen</h2>
   <div class="row"><span>Voor</span><select id="setTarget" class="grow"></select></div>
-  <div class="row" style="margin-top:6px"><button class="btn" id="grpNew">Nieuw groepje</button><input type="text" id="grpName" class="grow hidden" placeholder="Naam van het groepje"><button class="btn red hidden" id="grpDel">Groepje weg</button></div>
+  <div class="row" style="margin-top:6px"><button class="btn" id="grpNew">Nieuwe groep</button><input type="text" id="grpName" class="grow hidden" placeholder="Naam van de groep"><button class="btn red hidden" id="grpDel">Verwijderen</button></div>
   <div class="hint" id="grpHint"></div>
   <label class="s">Reactiesnelheid <span id="v_smooth"></span></label><input type="range" id="smooth" min="0.08" max="1" step="0.01">
   <label class="s">Kleurintensiteit <span id="v_saturation"></span></label><input type="range" id="saturation" min="0.8" max="2.6" step="0.05">
@@ -406,16 +406,16 @@ function groupUI(){
   const g=groups.find(g=>g.id===setTarget);
   $('grpName').classList.toggle('hidden',!g);$('grpDel').classList.toggle('hidden',!g);$('globalOnly').classList.toggle('hidden',!!g);
   if(g&&document.activeElement!==$('grpName'))$('grpName').value=g.name;
-  $('grpHint').textContent=g?t('Deze instellingen gelden voor de lampen in "{n}". Kies het groepje bij een lamp onder Lampen.',{n:g.name}):t('Lampen zonder groepje gebruiken deze instellingen.');
+  $('grpHint').textContent=g?t('Deze instellingen gelden voor de lampen in "{n}". Kies de groep bij een lamp onder Lampen.',{n:g.name}):t('Lampen zonder groep gebruiken deze instellingen.');
   const lg=$('lampGroup');if(lg){const v=(lamps.find(l=>l.id===selLamp)||{}).group||'';lg.innerHTML='<option value="">'+t('Geen (standaard)')+'</option>'+groups.map(g=>`<option value="${g.id}"></option>`).join('');[...lg.options].forEach((o,i)=>{if(i>0)o.textContent=groups[i-1].name});lg.value=v}
 }
 function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
 $('lang').onchange=async e=>{settings.lang=e.target.value;await api('/api/save',{settings});location.reload()};
 for(const k of SL)$(k).oninput=e=>{tgt()[k]=+e.target.value;$('v_'+k).textContent=fmt[k](tgt()[k]);changed(true)};
 $('setTarget').onchange=e=>{setTarget=e.target.value;groupUI();showSettings()};
-$('grpNew').onclick=()=>{const id='g'+Date.now().toString(36);groups.push({id,name:t('Groepje {n}',{n:groups.length+1}),settings:JSON.parse(JSON.stringify(settings))});setTarget=id;groupUI();showSettings();changed(true);$('grpName').focus()};
+$('grpNew').onclick=()=>{const id='g'+Date.now().toString(36);groups.push({id,name:t('Groep {n}',{n:groups.length+1}),settings:JSON.parse(JSON.stringify(settings))});setTarget=id;groupUI();showSettings();changed(true);$('grpName').focus()};
 $('grpName').oninput=e=>{const g=groups.find(g=>g.id===setTarget);if(g){g.name=e.target.value;groupUI();chips();changed(true)}};
-$('grpDel').onclick=()=>{const g=groups.find(g=>g.id===setTarget);if(!g||!confirm(t('Groepje "{n}" weghalen? De lampen erin gaan terug naar de standaardinstellingen.',{n:g.name})))return;
+$('grpDel').onclick=()=>{const g=groups.find(g=>g.id===setTarget);if(!g||!confirm(t('Groep "{n}" verwijderen? De lampen erin gaan terug naar de standaardinstellingen.',{n:g.name})))return;
   groups=groups.filter(x=>x.id!==g.id);lamps.forEach(l=>{if(l.group===g.id)l.group=''});setTarget='';groupUI();showSettings();changed(true)};
 $('lampGroup').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.group=e.target.value;changed(true);showLamp()}};
 $('after').onchange=e=>{settings.after=e.target.value;changed(true)};

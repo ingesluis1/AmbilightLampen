@@ -323,7 +323,7 @@ class TuyaLamp(val lamp: Lamp) {
                         val keys = layerPending.filter { (_, c) -> similar(c, e.value) }.keys.toList()
                         keys.forEach { layerPending.remove(it) }; isLayer = true
                         // Sleutel 0 = alle segmenten (niet-bestaande segmenten negeert de lamp)
-                        val segs = if (0 in keys) (1..10).toList() else keys
+                        val segs = if (0 in keys) (1..3).toList() else keys
                         mapOf<String, Any>("61" to layerValue(segs, e.value))
                     }
                 }
@@ -460,7 +460,7 @@ class TuyaLamp(val lamp: Lamp) {
         /** Hoeveel opdrachten er tegelijk onbevestigd onderweg mogen zijn. */
         const val MAX_INFLIGHT = 2
         /** Lamp met lagen antwoordt trager (±155 ms) maar kan meer tegelijk aan. */
-        const val MAX_INFLIGHT_LAYERS = 4
+        const val MAX_INFLIGHT_LAYERS = 2
 
         /** Twee laagkleuren (h, s, v) die zo dicht bij elkaar liggen dat één bericht volstaat. */
         fun similar(a: IntArray, b: IntArray): Boolean {
