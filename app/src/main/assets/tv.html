@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ambilight Lampen</title>
+<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/ui.css">
+<style>
+html,body{height:100%;overflow:hidden;transition:background .6s}
+body.night{background:#0e0814}
+.wrap{display:flex;height:100vh;gap:3vw;padding:4vh 3vw;align-items:center}
+.stage{flex:1;height:100%;display:flex;align-items:center;justify-content:center;position:relative}
+#map{image-rendering:pixelated;border:4px solid #120a16;box-shadow:0 0 0 3px #3b2240,0 10px 30px rgba(0,0,0,.5)}
+.side{width:31vw;max-height:92vh;display:flex;flex-direction:column;gap:0}
+.side .panel{margin-top:0;margin-bottom:2vh}
+h1{margin:0;font-size:3.2vh;font-weight:700}
+.stat{display:flex;align-items:center;gap:.8vw;font-size:2.1vh;margin-top:.6vh}
+.stat i{width:1.2vh;height:1.2vh;background:#8a7a6a;border:2px solid var(--ink);display:inline-block}
+.stat i.on{background:#5fb85a}.stat i.warn{background:#e0a040}.stat i.off{background:#c0503a}
+.btns{display:flex;flex-direction:column;gap:1.2vh;margin-top:1.6vh}
+.btns .btn{font-size:2.3vh;padding:1.1vh 1vw;text-align:left}
+.legend{display:flex;flex-direction:column;gap:.6vh;margin-top:1.2vh;font-size:2vh}
+.legend div{display:flex;align-items:center;gap:.8vw}
+.legend span.sq{width:1.8vh;height:1.8vh;border:2px solid var(--ink);display:inline-block}
+.qr{display:flex;gap:1.2vw;align-items:center}
+.qr img{width:15vh;height:15vh;image-rendering:pixelated;border:3px solid var(--ink);background:#fff;padding:4px}
+.qr p{font-size:1.9vh;margin:0}
+.qr small{display:block;margin-top:.6vh;font-size:1.6vh;opacity:.75;word-break:break-all}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage" id="stage"><canvas id="map"></canvas></div>
+  <div class="side">
+    <section class="panel">
+      <h1>Ambilight Lampen</h1>
+      <div class="stat"><i id="iSync"></i><span id="tSync"></span></div>
+      <div class="stat"><i id="iTv"></i><span id="tTv"></span></div>
+      <div class="stat"><i id="iLamps"></i><span id="tLamps"></span></div>
+      <div class="btns">
+        <button class="btn gold" id="syncBtn">Sync starten</button>
+        <button class="btn" id="blinkBtn">Lampen laten knipperen</button>
+      </div>
+      <div class="legend" id="legend"></div>
+    </section>
+    <section class="panel">
+      <div class="qr"><img id="qr" alt=""><div><p>Kamer inrichten en lampen ophangen: scan met je telefoon</p><small id="url"></small></div></div>
+    </section>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="/room.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+let S=null,L=null,baseImg=null,baseKey='',busy=false;
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2200)}
+async function api(p,b){const r=await fetch(p,b===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});return r.json()}
+
+function render(){
+  if(!S)return;
+  L=Room.migrate(S.layout);
+  const key=JSON.stringify(L)+JSON.stringify(S.lamps.map(l=>[l.x,l.y,l.height]));
+  if(key!==baseKey){baseImg=Room.base(L,S.lamps);baseKey=key}
+  const live={};for(const l of S.lamps)live[l.id]=l;
+  const img=Room.frame(baseImg,L,S.lamps,live,S.sync,S.top);
+  const st=$('stage');Room.present($('map'),img,st.clientWidth-14,st.clientHeight-14,true);
+}
+function status(){
+  const s=S,on=s.lamps.filter(l=>l.online).length,placed=s.lamps.filter(l=>l.x>=0).length;
+  document.body.classList.toggle('night',s.sync);
+  $('iSync').className=s.sync?'on':'';$('tSync').textContent='Sync: '+(s.sync?'aan':'uit');
+  $('iTv').className=!s.tv.paired?'off':(s.sync&&s.tv.status!=='Verbonden'?'warn':'on');
+  $('tTv').textContent='Tv: '+(!s.tv.paired?'nog niet gekoppeld':s.sync?s.tv.status.toLowerCase():'gekoppeld');
+  $('iLamps').className=!s.lamps.length?'off':on===s.lamps.length?'on':'warn';
+  $('tLamps').textContent=s.lamps.length?`Lampen: ${on} van ${s.lamps.length} bereikbaar`:'Nog geen lampen, voeg ze toe via de telefoon';
+  $('syncBtn').textContent=s.sync?'Sync stoppen':'Sync starten';
+  $('legend').innerHTML=s.lamps.map(l=>`<div><span class="sq" style="background:${l.online?(s.sync?l.color:'#ffd696'):'#6a6070'}"></span>${l.name}${l.x<0?' (nog ophangen)':''}</div>`).join('');
+  if(s.link&&$('url').textContent!==s.link){$('url').textContent=s.link;$('qr').src='/qr.png?'+encodeURIComponent(s.link)}
+}
+async function poll(){
+  try{S=await api('/api/state');status();render()}catch(e){}
+  setTimeout(poll,S&&S.sync?150:1000);
+}
+$('syncBtn').onclick=async()=>{if(busy)return;busy=true;const on=!(S&&S.sync);toast(on?'Sync start...':'Sync stopt...');await api('/api/sync',{on});busy=false};
+$('blinkBtn').onclick=async()=>{for(const l of (S?S.lamps:[]))api('/api/identify',{id:l.id});toast('Lampen knipperen')};
+
+// Afstandsbediening: pijltjes wisselen tussen de knoppen, OK drukt
+const btns=()=>[...document.querySelectorAll('.btns .btn')];
+document.addEventListener('keydown',e=>{
+  const b=btns(),i=b.indexOf(document.activeElement);
+  if(e.key==='ArrowDown'||e.key==='ArrowRight'){b[(i+1+b.length)%b.length].focus();e.preventDefault()}
+  if(e.key==='ArrowUp'||e.key==='ArrowLeft'){b[(i-1+b.length)%b.length].focus();e.preventDefault()}
+});
+btns().forEach(b=>{b.addEventListener('focus',()=>b.classList.add('focus'));b.addEventListener('blur',()=>b.classList.remove('focus'))});
+$('syncBtn').focus();
+window.addEventListener('resize',render);
+document.fonts&&document.fonts.ready.then(render);
+poll();
+</script>
+</body>
+</html>
