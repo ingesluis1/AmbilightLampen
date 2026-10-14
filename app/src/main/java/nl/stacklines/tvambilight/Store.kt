@@ -15,14 +15,15 @@ class Lamp(
     var x: Double = -1.0,
     var y: Double = -1.0,
     var height: String = "ceiling",   // ceiling | table | floor
-    var enabled: Boolean = true
+    var enabled: Boolean = true,
+    var shape: String = "bulb"        // bulb (lamp/spot) | rod (staaflamp)
 ) {
     val placed get() = x >= 0 && y >= 0
-    val supported get() = version == "3.3" || version == "3.1"
+    val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5")
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
         put("id", id); put("name", name); put("ip", ip); put("version", version)
-        put("x", x); put("y", y); put("height", height); put("enabled", enabled)
+        put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape)
         if (withKey) put("key", key)
     }
 
@@ -31,7 +32,7 @@ class Lamp(
             o.getString("id"), o.optString("key"), o.optString("name", o.getString("id")),
             o.optString("ip"), o.optString("version", "3.3"),
             o.optDouble("x", -1.0), o.optDouble("y", -1.0),
-            o.optString("height", "ceiling"), o.optBoolean("enabled", true)
+            o.optString("height", "ceiling"), o.optBoolean("enabled", true), o.optString("shape", "bulb")
         )
     }
 }

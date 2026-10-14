@@ -308,6 +308,15 @@ const Room = (() => {
 
   function lampFixture(g, l, color) {
     const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
+    if (l.shape === 'rod') {
+      // staande staaf: voetje op de vloer, lichtgevende buis omhoog (3/4-aanzicht)
+      g.fillStyle = 'rgba(30,10,30,.35)'; g.fillRect(x - 3, y, 8, 3);
+      g.fillStyle = '#2a1a2e'; g.fillRect(x - 3, y - 1, 7, 3); g.fillRect(x - 2, y - 20, 5, 20);
+      g.fillStyle = '#4a3a50'; g.fillRect(x - 2, y, 5, 1);
+      g.fillStyle = color; g.fillRect(x - 1, y - 19, 3, 18);
+      g.fillStyle = 'rgba(255,255,255,.45)'; g.fillRect(x - 1, y - 19, 1, 18);
+      return;
+    }
     if (l.height === 'ceiling') {
       g.fillStyle = '#2a1a2e'; g.fillRect(x - 2, y - 3, 5, 7); g.fillRect(x - 3, y - 2, 7, 5);
       g.fillStyle = '#d8d2c4'; g.fillRect(x - 2, y - 2, 5, 5);
@@ -355,9 +364,14 @@ const Room = (() => {
       if (!lv.online) continue;
       const col = sync ? (lv.color || '#ffd696') : '#ffd696';
       const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
-      const big = l.height === 'ceiling' ? 1 : 0.75;
+      const big = l.height === 'ceiling' || l.shape === 'rod' ? 1 : 0.75;
       const rings = sync ? [[30, 0.06], [22, 0.07], [14, 0.09], [7, 0.12]] : [[14, 0.05], [7, 0.06]];
-      for (const [r, a] of rings) { g.globalAlpha = a; g.fillStyle = col; g.beginPath(); g.arc(x, y, r * big, 0, 7); g.fill(); }
+      if (l.shape === 'rod') {
+        // langgerekte gloed langs de staaf
+        for (const [r, a] of rings) { g.globalAlpha = a; g.fillStyle = col; g.beginPath(); g.ellipse(x, y - 9, r * 0.8, r * 1.15, 0, 0, 7); g.fill(); }
+      } else {
+        for (const [r, a] of rings) { g.globalAlpha = a; g.fillStyle = col; g.beginPath(); g.arc(x, y, r * big, 0, 7); g.fill(); }
+      }
     }
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     for (const l of lamps) {

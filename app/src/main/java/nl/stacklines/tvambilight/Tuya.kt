@@ -3,49 +3,123 @@ package nl.stacklines.tvambilight
 import android.os.SystemClock
 import org.json.JSONObject
 import java.io.DataInputStream
+import java.io.IOException
 import java.io.OutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
 import java.nio.ByteBuffer
+import java.security.SecureRandom
 import java.util.zip.CRC32
 import javax.crypto.Cipher
+import javax.crypto.Mac
+import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
 
-/** Lokaal Tuya-protocol (versie 3.1/3.3): AES-ECB met de local key, frames met CRC32. */
+/**
+ * Lokaal Tuya-protocol.
+ * 3.1/3.3: AES-ECB met de local key, frames 0x55AA met CRC32.
+ * 3.4: eerst een sessiesleutel afspreken, daarna AES-ECB met die sleutel, frames 0x55AA met HMAC-SHA256.
+ * 3.5: ook een sessiesleutel, frames 0x6699 met AES-GCM.
+ */
 object TuyaCodec {
+    const val SESS_KEY_NEG_START = 3
+    const val SESS_KEY_NEG_RESP = 4
+    const val SESS_KEY_NEG_FINISH = 5
     const val CONTROL = 7
     const val STATUS = 8
     const val HEART_BEAT = 9
     const val DP_QUERY = 10
+    const val CONTROL_NEW = 13
+    const val DP_QUERY_NEW = 16
 
-    fun aes(key: ByteArray, mode: Int, data: ByteArray): ByteArray {
-        val c = Cipher.getInstance("AES/ECB/PKCS5Padding")
+    private const val P55 = 0x000055AA
+    private const val S55 = 0x0000AA55
+    private const val P66 = 0x00006699
+    private const val S66 = 0x00009966
+    private val rnd = SecureRandom()
+
+    fun aes(key: ByteArray, mode: Int, data: ByteArray, pad: Boolean = true): ByteArray {
+        val c = Cipher.getInstance(if (pad) "AES/ECB/PKCS5Padding" else "AES/ECB/NoPadding")
         c.init(mode, SecretKeySpec(key, "AES"))
         return c.doFinal(data)
     }
 
-    fun frame(seq: Int, cmd: Int, payload: ByteArray): ByteArray {
+    fun gcm(key: ByteArray, mode: Int, iv: ByteArray, data: ByteArray, aad: ByteArray?): ByteArray {
+        val c = Cipher.getInstance("AES/GCM/NoPadding")
+        c.init(mode, SecretKeySpec(key, "AES"), GCMParameterSpec(128, iv))
+        if (aad != null) c.updateAAD(aad)
+        return c.doFinal(data)
+    }
+
+    fun hmac(key: ByteArray, data: ByteArray): ByteArray =
+        Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(key, "HmacSHA256")) }.doFinal(data)
+
+    /** Frame voor 3.1/3.3: payload is al versleuteld. */
+    fun frameCrc(seq: Int, cmd: Int, payload: ByteArray): ByteArray {
         val bb = ByteBuffer.allocate(16 + payload.size + 8)
-        bb.putInt(0x000055AA); bb.putInt(seq); bb.putInt(cmd); bb.putInt(payload.size + 8); bb.put(payload)
+        bb.putInt(P55); bb.putInt(seq); bb.putInt(cmd); bb.putInt(payload.size + 8); bb.put(payload)
         val crc = CRC32(); crc.update(bb.array(), 0, 16 + payload.size)
-        bb.putInt(crc.value.toInt()); bb.putInt(0x0000AA55)
+        bb.putInt(crc.value.toInt()); bb.putInt(S55)
         return bb.array()
     }
 
-    /** Leest één frame; geeft (commando, payload zonder crc/suffix). */
-    fun readFrame(inp: DataInputStream): Pair<Int, ByteArray> {
-        var prefix = inp.readInt()
-        while (prefix != 0x000055AA) prefix = (prefix shl 8) or inp.readUnsignedByte()
-        inp.readInt() // volgnummer
-        val cmd = inp.readInt()
-        val len = inp.readInt()
-        if (len < 8 || len > 8192) throw java.io.IOException("ongeldige lengte $len")
-        val rest = ByteArray(len); inp.readFully(rest)
-        return cmd to rest.copyOfRange(0, len - 8)
+    /** Frame voor 3.4: payload wordt hier versleuteld en ondertekend. */
+    fun frameHmac(key: ByteArray, seq: Int, cmd: Int, plain: ByteArray): ByteArray {
+        val enc = aes(key, Cipher.ENCRYPT_MODE, plain)
+        val bb = ByteBuffer.allocate(16 + enc.size + 32 + 4)
+        bb.putInt(P55); bb.putInt(seq); bb.putInt(cmd); bb.putInt(enc.size + 36); bb.put(enc)
+        bb.put(hmac(key, bb.array().copyOfRange(0, 16 + enc.size))); bb.putInt(S55)
+        return bb.array()
     }
 
-    /** Ontsleutelt een payload; probeert met en zonder 4-byte returncode en "3.3"-kop. */
-    fun decode(key: ByteArray, p: ByteArray): String? {
+    /** Frame voor 3.5: AES-GCM met de kop als extra geverifieerde data. */
+    fun frameGcm(key: ByteArray, seq: Int, cmd: Int, plain: ByteArray): ByteArray {
+        val header = ByteBuffer.allocate(18).putInt(P66).putShort(0).putInt(seq).putInt(cmd).putInt(12 + plain.size + 16).array()
+        val iv = ByteArray(12).also { rnd.nextBytes(it) }
+        val ct = gcm(key, Cipher.ENCRYPT_MODE, iv, plain, header.copyOfRange(4, 18))
+        return header + iv + ct + ByteBuffer.allocate(4).putInt(S66).array()
+    }
+
+    class Frame(val cmd: Int, val plain: ByteArray)
+
+    /** Leest één frame en ontsleutelt het (met de sleutel die nu geldt). */
+    fun readFrame(inp: DataInputStream, version: String, key: ByteArray): Frame {
+        var prefix = inp.readInt()
+        while (prefix != P55 && prefix != P66) prefix = (prefix shl 8) or inp.readUnsignedByte()
+        if (prefix == P66) {
+            val unknown = inp.readUnsignedShort()
+            val seq = inp.readInt(); val cmd = inp.readInt(); val len = inp.readInt()
+            if (len < 28 || len > 8192) throw IOException("ongeldige lengte $len")
+            val rest = ByteArray(len); inp.readFully(rest); inp.readInt() // suffix
+            val header = ByteBuffer.allocate(18).putInt(P66).putShort(unknown.toShort()).putInt(seq).putInt(cmd).putInt(len).array()
+            val plain = gcm(key, Cipher.DECRYPT_MODE, rest.copyOfRange(0, 12), rest.copyOfRange(12, len), header.copyOfRange(4, 18))
+            return Frame(cmd, stripHeader(plain))
+        }
+        inp.readInt() // volgnummer
+        val cmd = inp.readInt(); val len = inp.readInt()
+        if (len < 8 || len > 8192) throw IOException("ongeldige lengte $len")
+        val rest = ByteArray(len); inp.readFully(rest)
+        if (version == "3.4") {
+            val body = rest.copyOfRange(0, len - 36)
+            for (off in intArrayOf(4, 0)) {
+                if (body.size - off <= 0 || (body.size - off) % 16 != 0) continue
+                try { return Frame(cmd, stripHeader(aes(key, Cipher.DECRYPT_MODE, body.copyOfRange(off, body.size)))) } catch (_: Exception) { }
+            }
+            return Frame(cmd, ByteArray(0))
+        }
+        return Frame(cmd, decodeLegacy(key, rest.copyOfRange(0, len - 8)) ?: ByteArray(0))
+    }
+
+    /** Haalt een returncode van 4 bytes en/of een "3.x"-kop van 15 bytes weg. */
+    private fun stripHeader(p: ByteArray): ByteArray {
+        var d = p
+        if (d.size >= 4 && d[0] == 0.toByte() && d[1] == 0.toByte() && d[2] == 0.toByte() && d.size > 4 && d[4] != 0.toByte()) d = d.copyOfRange(4, d.size)
+        if (d.size >= 15 && d[0] == '3'.code.toByte() && d[1] == '.'.code.toByte()) d = d.copyOfRange(15, d.size)
+        return d
+    }
+
+    /** 3.1/3.3: met en zonder returncode en "3.3"-kop proberen. */
+    fun decodeLegacy(key: ByteArray, p: ByteArray): ByteArray? {
         for (off in intArrayOf(4, 0)) {
             if (p.size <= off) continue
             var start = off
@@ -53,15 +127,42 @@ object TuyaCodec {
             val body = p.copyOfRange(start, p.size)
             if (body.isEmpty() || body.size % 16 != 0) continue
             try {
-                val s = String(aes(key, Cipher.DECRYPT_MODE, body), Charsets.UTF_8)
-                if (s.startsWith("{")) return s
+                val d = aes(key, Cipher.DECRYPT_MODE, body)
+                if (d.isNotEmpty() && d[0] == '{'.code.toByte()) return d
             } catch (_: Exception) { }
         }
-        // Versie 3.1 stuurt status soms onversleuteld
-        val plain = String(p, Charsets.UTF_8)
-        val i = plain.indexOf('{')
-        return if (i >= 0) plain.substring(i) else null
+        val i = p.indexOf('{'.code.toByte())
+        return if (i >= 0) p.copyOfRange(i, p.size) else null
     }
+
+    /** Tekst-versie (voor Discovery en oude aanroepen). */
+    fun decode(key: ByteArray, p: ByteArray): String? = decodeLegacy(key, p)?.toString(Charsets.UTF_8)
+
+    fun jsonOf(b: ByteArray): JSONObject? {
+        val s = b.toString(Charsets.UTF_8)
+        val i = s.indexOf('{'); val j = s.lastIndexOf('}')
+        if (i < 0 || j <= i) return null
+        return try { JSONObject(s.substring(i, j + 1)) } catch (_: Exception) { null }
+    }
+
+    /** Haalt het getal van de lamp uit het antwoord op stap 1 (met of zonder returncode), gecontroleerd met de HMAC. */
+    fun remoteNonce(plain: ByteArray, localKey: ByteArray, localNonce: ByteArray): ByteArray? {
+        val expect = hmac(localKey, localNonce)
+        for (off in intArrayOf(0, 4)) {
+            if (plain.size >= off + 48 && plain.copyOfRange(off + 16, off + 48).contentEquals(expect)) return plain.copyOfRange(off, off + 16)
+        }
+        return null
+    }
+
+    /** Sessiesleutel uit beide getallen: 3.4 met AES-ECB, 3.5 met AES-GCM (iv = eerste 12 bytes van ons getal). */
+    fun sessionKey(version: String, localKey: ByteArray, localNonce: ByteArray, remoteNonce: ByteArray): ByteArray {
+        val x = ByteArray(16) { (localNonce[it].toInt() xor remoteNonce[it].toInt()).toByte() }
+        return if (version == "3.4") aes(localKey, Cipher.ENCRYPT_MODE, x, pad = false)
+        else gcm(localKey, Cipher.ENCRYPT_MODE, localNonce.copyOfRange(0, 12), x, null).copyOfRange(0, 16)
+    }
+
+    /** De dps uit een statusbericht, ook als ze in "data" zitten (3.4/3.5). */
+    fun dpsOf(j: JSONObject): JSONObject? = j.optJSONObject("dps") ?: j.optJSONObject("data")?.optJSONObject("dps")
 }
 
 /**
@@ -76,7 +177,10 @@ class TuyaLamp(val lamp: Lamp) {
     /** Laatst verstuurde kleur, voor de weergave op het scherm en de telefoon. */
     @Volatile var shownColor: Int = 0xFF555555.toInt()
 
-    private val key = lamp.key.toByteArray(Charsets.UTF_8)
+    private val localKey = lamp.key.toByteArray(Charsets.UTF_8)
+    private val ver = lamp.version
+    private val modern = ver == "3.4" || ver == "3.5"
+    private var key = localKey
     private val ip = lamp.ip
     private val pending = LinkedHashMap<String, Any>()
     private val lock = Object()
@@ -167,9 +271,9 @@ class TuyaLamp(val lamp: Lamp) {
                 drain()
                 if (queryWanted) {
                     queryWanted = false
-                    val j = JSONObject().put("gwId", lamp.id).put("devId", lamp.id).put("uid", lamp.id)
-                        .put("t", (System.currentTimeMillis() / 1000).toString())
-                    write(TuyaCodec.DP_QUERY, enc(j.toString()))
+                    if (modern) write(TuyaCodec.DP_QUERY_NEW, "{}", header = false)
+                    else write(TuyaCodec.DP_QUERY, JSONObject().put("gwId", lamp.id).put("devId", lamp.id).put("uid", lamp.id)
+                        .put("t", (System.currentTimeMillis() / 1000).toString()).toString(), header = false)
                     continue
                 }
                 val batch: Map<String, Any>? = synchronized(lock) {
@@ -179,10 +283,10 @@ class TuyaLamp(val lamp: Lamp) {
                 if (batch != null) {
                     val wait = MIN_GAP_MS - (now - lastSend)
                     if (wait > 0) Thread.sleep(wait)
-                    write(TuyaCodec.CONTROL, control(batch))
+                    sendControl(batch)
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
                 } else if (now - lastBeat > 8000) {
-                    write(TuyaCodec.HEART_BEAT, enc("{}"))
+                    write(TuyaCodec.HEART_BEAT, "{}", header = false)
                     lastBeat = now
                 } else {
                     synchronized(lock) { if (pending.isEmpty() && !queryWanted) lock.wait(40) }
@@ -204,36 +308,71 @@ class TuyaLamp(val lamp: Lamp) {
         s.connect(InetSocketAddress(ip, 6668), 2500)
         s.soTimeout = 1500
         sock = s; out = s.getOutputStream(); inp = DataInputStream(s.getInputStream().buffered())
+        key = localKey
+        if (modern) negotiate()
         online = true; lastError = null
+    }
+
+    /** 3.4/3.5: sessiesleutel afspreken met twee willekeurige getallen (van ons en van de lamp). */
+    private fun negotiate() {
+        val localNonce = ByteArray(16).also { SecureRandom().nextBytes(it) }
+        writeRaw(TuyaCodec.SESS_KEY_NEG_START, localNonce)
+        var remote: ByteArray? = null
+        val end = SystemClock.elapsedRealtime() + 3000
+        while (remote == null && SystemClock.elapsedRealtime() < end) {
+            val f = TuyaCodec.readFrame(inp!!, ver, localKey)
+            if (f.cmd == TuyaCodec.SESS_KEY_NEG_RESP) remote = TuyaCodec.remoteNonce(f.plain, localKey, localNonce) ?: throw IOException("sleutel van de lamp klopt niet")
+        }
+        val r = remote ?: throw IOException("lamp gaf geen sessiesleutel")
+        writeRaw(TuyaCodec.SESS_KEY_NEG_FINISH, TuyaCodec.hmac(localKey, r))
+        key = TuyaCodec.sessionKey(ver, localKey, localNonce, r)
     }
 
     private fun drain() {
         val i = inp ?: return
         val raw = sock?.getInputStream() ?: return
         while (raw.available() > 0 || i.available() >= 16) {
-            val (cmd, p) = TuyaCodec.readFrame(i)
-            if (cmd == TuyaCodec.DP_QUERY || cmd == TuyaCodec.STATUS) {
-                val s = TuyaCodec.decode(key, p) ?: continue
-                try {
-                    JSONObject(s).optJSONObject("dps")?.let { if (it.has("20") && it.has("21")) statusResult = it }
-                } catch (_: Exception) { }
+            val f = TuyaCodec.readFrame(i, ver, key)
+            if (f.cmd == TuyaCodec.DP_QUERY || f.cmd == TuyaCodec.DP_QUERY_NEW || f.cmd == TuyaCodec.STATUS) {
+                val dps = TuyaCodec.jsonOf(f.plain)?.let { TuyaCodec.dpsOf(it) } ?: continue
+                if (dps.has("20") && dps.has("21")) statusResult = dps
             }
         }
     }
 
-    private fun write(cmd: Int, payload: ByteArray) {
-        val o = out ?: throw java.io.IOException("geen verbinding")
-        o.write(TuyaCodec.frame(seq++, cmd, payload)); o.flush()
+    private fun sendControl(dps: Map<String, Any>) {
+        val t = System.currentTimeMillis() / 1000
+        if (modern) {
+            write(TuyaCodec.CONTROL_NEW, JSONObject().put("protocol", 5).put("t", t)
+                .put("data", JSONObject().put("dps", JSONObject(dps))).toString(), header = true)
+        } else {
+            write(TuyaCodec.CONTROL, JSONObject().put("devId", lamp.id).put("uid", lamp.id).put("t", t.toString())
+                .put("dps", JSONObject(dps)).toString(), header = ver == "3.3")
+        }
     }
 
-    private fun enc(s: String) = TuyaCodec.aes(key, Cipher.ENCRYPT_MODE, s.toByteArray(Charsets.UTF_8))
+    /** Versleutelt en verstuurt een JSON-bericht; header = de "3.x"-kop van 15 bytes ervoor. */
+    private fun write(cmd: Int, json: String, header: Boolean) {
+        val body = json.toByteArray(Charsets.UTF_8)
+        val head = if (header) ver.toByteArray() + ByteArray(12) else ByteArray(0)
+        when (ver) {
+            "3.4" -> writeBytes(TuyaCodec.frameHmac(key, seq++, cmd, head + body))
+            "3.5" -> writeBytes(TuyaCodec.frameGcm(key, seq++, cmd, head + body))
+            else -> {
+                // 3.1/3.3: kop staat buiten de versleuteling
+                writeBytes(TuyaCodec.frameCrc(seq++, cmd, head + TuyaCodec.aes(key, Cipher.ENCRYPT_MODE, body)))
+            }
+        }
+    }
 
-    private fun control(dps: Map<String, Any>): ByteArray {
-        val j = JSONObject().put("devId", lamp.id).put("uid", lamp.id)
-            .put("t", (System.currentTimeMillis() / 1000).toString())
-            .put("dps", JSONObject(dps))
-        val body = enc(j.toString())
-        return if (lamp.version == "3.3") "3.3".toByteArray() + ByteArray(12) + body else body
+    /** Ruwe bytes (sessiesleutel-stappen) met de local key. */
+    private fun writeRaw(cmd: Int, payload: ByteArray) {
+        writeBytes(if (ver == "3.5") TuyaCodec.frameGcm(localKey, seq++, cmd, payload) else TuyaCodec.frameHmac(localKey, seq++, cmd, payload))
+    }
+
+    private fun writeBytes(b: ByteArray) {
+        val o = out ?: throw IOException("geen verbinding")
+        o.write(b); o.flush()
     }
 
     private fun close() {

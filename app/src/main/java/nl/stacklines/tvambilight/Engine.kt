@@ -46,13 +46,15 @@ object Mixer {
         val (xs, ys, depth) = Triple(p[0], p[1], p[2])
         val sigma = (0.28 + 0.08 * depth) * spread
         val hh = 9.0 / 16.0
-        fun g(zx: Double, zy: Double): Double {
-            val dx = xs - zx; val dy = (ys - zy) * hh
-            return exp(-(dx * dx + dy * dy) / (2 * sigma * sigma))
+        // Een staaflamp geeft licht van de vloer tot boven: gemiddelde over drie hoogtes
+        val heights = if (lamp.shape == "rod") listOf(-0.7, 0.1, 0.9) else listOf(ys)
+        fun gs(zx: Double, zy: Double) = heights.sumOf { h ->
+            val dx = xs - zx; val dy = (h - zy) * hh
+            exp(-(dx * dx + dy * dy) / (2 * sigma * sigma))
         }
-        val top = DoubleArray(nTop) { i -> g(-1 + (2.0 * i + 1) / nTop, 1.0) }
-        val left = DoubleArray(nLeft) { j -> g(-1.0, -1 + (2.0 * j + 1) / nLeft) }
-        val right = DoubleArray(nRight) { j -> g(1.0, -1 + (2.0 * j + 1) / nRight) }
+        val top = DoubleArray(nTop) { i -> gs(-1 + (2.0 * i + 1) / nTop, 1.0) }
+        val left = DoubleArray(nLeft) { j -> gs(-1.0, -1 + (2.0 * j + 1) / nLeft) }
+        val right = DoubleArray(nRight) { j -> gs(1.0, -1 + (2.0 * j + 1) / nRight) }
         return Weights(left, top, right).normalized()
     }
 

@@ -89,7 +89,10 @@ label.s span{float:right;opacity:.8}
     <div class="chips" id="chips"></div>
     <div id="lampDetail" class="hidden">
       <div class="row"><input type="text" id="lampName" class="grow" placeholder="Naam"><button class="btn" id="blinkBtn">Knipper</button></div>
-      <div class="seg" id="heightSeg" style="margin-top:8px">
+      <div class="seg" id="shapeSeg" style="margin-top:8px">
+        <button class="btn" data-s="bulb">Lamp of spot</button><button class="btn" data-s="rod">Staaflamp</button>
+      </div>
+      <div class="seg" id="heightSeg" style="margin-top:6px">
         <button class="btn" data-h="ceiling">Plafond</button><button class="btn" data-h="table">Tafel</button><button class="btn" data-h="floor">Vloer</button>
       </div>
       <div class="row" style="margin-top:8px"><span class="grow" id="follows"></span><button class="btn" id="unplaceBtn">Van kaart</button></div>
@@ -323,6 +326,8 @@ $('testAll').onclick=async()=>toast((await api('/api/test',{})).message);
 function selectLamp(id){selLamp=id;chips();showLamp();draw()}
 function follows(l){
   if(l.x<0||!L.tv)return 'Nog niet opgehangen';
+  if(l.shape==='rod'){const a0=L.tv.dir*Math.PI/180,x0=((l.x-L.tv.x)*Math.sin(a0)+(l.y-L.tv.y)*-Math.cos(a0))/(L.tv.w/2);
+    return 'Volgt '+(x0<-0.35?'de linkerkant':x0>0.35?'de rechterkant':'het midden')+' van het beeld, van onder tot boven'}
   const a=L.tv.dir*Math.PI/180,fx=Math.cos(a),fy=Math.sin(a),xs=((l.x-L.tv.x)*fy+(l.y-L.tv.y)*-fx)/(L.tv.w/2);
   const side=xs<-1.15?'links naast':xs>1.15?'rechts naast':xs<-.35?'linkerdeel':xs>.35?'rechterdeel':'midden';
   if(side.endsWith('naast'))return 'Volgt de '+(xs<0?'linker':'rechter')+'kant van het beeld';
@@ -332,11 +337,15 @@ function showLamp(){
   const l=lamps.find(l=>l.id===selLamp);$('lampDetail').classList.toggle('hidden',!l);if(!l)return;
   if(document.activeElement!==$('lampName'))$('lampName').value=l.name;
   document.querySelectorAll('#heightSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.h===l.height));
+  const rod=(l.shape||'bulb')==='rod';
+  document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.s===(l.shape||'bulb')));
+  $('heightSeg').classList.toggle('hidden',rod);
   $('follows').textContent=follows(l);$('lampEnabled').checked=l.enabled;
   if(document.activeElement!==$('lampIpEdit'))$('lampIpEdit').value=l.ip||'';
   const lv=live[l.id];$('lampIp').innerHTML=(l.ip||'geen ip')+' '+(lv&&lv.online?'<span class="ok">bereikbaar</span>':'<span class="bad">niet bereikbaar</span>');
 }
 $('lampName').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.name=e.target.value;changed();chips()}};
+document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.shape=b.dataset.s;if(l.shape==='rod')l.height='floor';changed();showLamp()}});
 document.querySelectorAll('#heightSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.height=b.dataset.h;changed();showLamp()}});
 $('lampIpEdit').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);const v=e.target.value.trim();if(l&&/^\d+\.\d+\.\d+\.\d+$/.test(v)){l.ip=v;changed(true)}};
 $('lampEnabled').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.enabled=e.target.checked;changed()}};
@@ -354,7 +363,7 @@ $('autostart').onchange=e=>{settings.autostart=e.target.checked;changed(true)};
 /* ---------- opslaan en live ---------- */
 function changed(noDraw){dirty=true;$('saved').textContent='opslaan...';if(!noDraw)draw();clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
 async function save(){
-  const r=await api('/api/save',{layout:L,settings,lamps:lamps.map(l=>({id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,enabled:l.enabled,ip:l.ip}))});
+  const r=await api('/api/save',{layout:L,settings,lamps:lamps.map(l=>({id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,shape:l.shape||'bulb',enabled:l.enabled,ip:l.ip}))});
   dirty=false;$('saved').textContent=r.ok?'opgeslagen':'niet opgeslagen';
 }
 $('updBtn').onclick=async()=>{const u=S.update;if(!confirm('Wat is er nieuw in '+u.latest+':\n\n'+(u.notes||'Geen beschrijving.')+'\n\nNu updaten?'))return;toast((await api('/api/update',{})).message+'. Kijk op de tv.')};

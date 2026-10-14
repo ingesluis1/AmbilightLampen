@@ -23,7 +23,7 @@ object Discovery {
             val wifi = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager?
             wifi?.createMulticastLock("tuya")?.apply { setReferenceCounted(false); acquire() }
         } catch (_: Exception) { }
-        for (port in intArrayOf(6666, 6667)) {
+        for (port in intArrayOf(6666, 6667, 7000)) {
             Thread({ listen(port, onFound) }, "discovery-$port").apply { isDaemon = true; start() }
         }
     }
@@ -39,6 +39,13 @@ object Discovery {
                 sock.receive(pkt)
                 val data = buf.copyOf(pkt.length)
                 if (data.size < 28) continue
+                if (data[0] == 0.toByte() && data[1] == 0.toByte() && data[2] == 0x66.toByte() && data[3] == 0x99.toByte()) {
+                    val f = TuyaCodec.readFrame(java.io.DataInputStream(data.inputStream()), "3.5", udpKey)
+                    val j = TuyaCodec.jsonOf(f.plain) ?: continue
+                    val id = j.optString("gwId").ifBlank { j.optString("devId") }
+                    if (id.isNotBlank() && j.optString("ip").isNotBlank()) onFound(id, j.optString("ip"), j.optString("version", "3.5"))
+                    continue
+                }
                 val len = ((data[12].toInt() and 0xff) shl 24) or ((data[13].toInt() and 0xff) shl 16) or
                     ((data[14].toInt() and 0xff) shl 8) or (data[15].toInt() and 0xff)
                 val end = (16 + len - 8).coerceAtMost(data.size)
