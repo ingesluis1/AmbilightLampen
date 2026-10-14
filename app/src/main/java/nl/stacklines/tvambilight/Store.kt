@@ -52,7 +52,7 @@ class Settings {
     var after = "restore"    // restore | white | off
     var lang = "nl"          // nl | en
     var fade = true          // lampen laten overvloeien (Tuya functie 28) in plaats van springen
-    var followAmbi = false   // Ambilight van de tv uit = lampen terug en sync pauzeren
+    var followAmbi = true    // Ambilight van de tv uit (ook standby) = lampen terug en sync pauzeren
 
     fun toJson() = JSONObject().apply {
         put("smooth", smooth); put("saturation", saturation); put("brightness", brightness)
