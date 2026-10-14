@@ -143,6 +143,7 @@ $('testBtn').onclick=async()=>toast((await api('/api/test',{})).message);
 
 // Instellingen met de afstandsbediening
 const ROWS=[
+  {k:'_target',label:'Instellingen voor',target:true},
   {k:'smooth',label:'Reactiesnelheid',min:0.08,max:1,step:0.04,fmt:v=>Math.round(v*100)+'%'},
   {k:'saturation',label:'Kleurintensiteit',min:0.8,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'brightness',label:'Helderheid',min:0.5,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
@@ -155,8 +156,11 @@ const ROWS=[
   {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
   {k:'lang',label:'Taal',options:[['nl','Nederlands'],['en','English']],reload:true,raw:true},
 ];
-let setOpen=false,setIdx=0,setVals=null,setTimer=null;
-function openSettings(){if(!S)return;setVals={...S.settings};setOpen=true;setIdx=0;$('settings').classList.remove('hidden');renderSettings()}
+let setOpen=false,setIdx=0,setVals=null,setTimer=null,setTgt='';
+const GLOBAL_ONLY=['after','autostart','followAmbi','lang'];
+function rows(){return ROWS.filter(r=>!(setTgt&&GLOBAL_ONLY.includes(r.k)))}
+function tgtGroup(){return (S.groups||[]).find(g=>g.id===setTgt)}
+function openSettings(){if(!S)return;setTgt='';setVals={...S.settings};setOpen=true;setIdx=0;$('settings').classList.remove('hidden');renderSettings()}
 function closeSettings(){setOpen=false;$('settings').classList.add('hidden');$('setBtn').focus()}
 let rbOpen=false,rbStartedSync=false,rbSpeed=8,rbSel=-1,rbSave=null,rbLamps=null;
 function rbHint(){
@@ -203,20 +207,26 @@ document.addEventListener('keydown',e=>{
 },true);
 window.onBack=()=>{if(rbOpen){closeRainbow();return true}if(setOpen){closeSettings();return true}return false};
 function renderSettings(){
-  $('srows').innerHTML=ROWS.map((r,i)=>{
+  $('srows').innerHTML=rows().map((r,i)=>{
     const v=setVals[r.k];let val,bar='';
-    if(r.bool)val=t(v?'aan':'uit');
+    if(r.target){const g=tgtGroup();val=g?g.name:t('Alle lampen (standaard)')}
+    else if(r.bool)val=t(v?'aan':'uit');
     else if(r.options){const o=(r.options.find(o=>o[0]===v)||r.options[0])[1];val=r.raw?o:t(o)}
     else{val=r.fmt(+v);const n=20,f=Math.round((v-r.min)/(r.max-r.min)*n);bar='<div class="bar">'+Array.from({length:n},(_,j)=>`<i class="${j<f?'on':''}"></i>`).join('')+'</div>'}
     return `<div class="srow${i===setIdx?' focus':''}"><div class="top"><span>${t(r.label)}</span><span><span class="arrows">${r.bool?'OK ':'&lt; '}</span>${val}<span class="arrows">${r.bool?'':' &gt;'}</span></span></div>${bar}</div>`}).join('');
 }
 function changeSetting(dir){
-  const r=ROWS[setIdx];
+  const r=rows()[setIdx];
+  if(r.target){const ids=['',...(S.groups||[]).map(g=>g.id)];setTgt=ids[(ids.indexOf(setTgt)+dir+ids.length)%ids.length];
+    const g=tgtGroup();setVals={...(g?g.settings:S.settings)};renderSettings();return}
   if(r.bool)setVals[r.k]=!setVals[r.k];
   else if(r.options){const i=r.options.findIndex(o=>o[0]===setVals[r.k]);setVals[r.k]=r.options[(i+dir+r.options.length)%r.options.length][0]}
   else setVals[r.k]=Math.round(Math.min(r.max,Math.max(r.min,+setVals[r.k]+dir*r.step))*100)/100;
   renderSettings();clearTimeout(setTimer);
-  setTimer=setTimeout(async()=>{const res=await api('/api/save',{settings:setVals});if(!res.ok)toast(res.message);else if(r.reload)location.reload()},r.reload?50:350);
+  setTimer=setTimeout(async()=>{
+    const g=tgtGroup();
+    const body=g?{groups:(S.groups||[]).map(x=>x.id===g.id?{id:x.id,name:x.name,settings:setVals}:{id:x.id,name:x.name})}:{settings:setVals};
+    const res=await api('/api/save',body);if(!res.ok)toast(res.message);else if(r.reload)location.reload()},r.reload?50:350);
 }
 $('setBtn').onclick=openSettings;
 $('updBtn').onclick=openUpd;
@@ -238,11 +248,11 @@ document.addEventListener('keydown',e=>{
 const _ob=window.onBack;window.onBack=()=>{if(updOpen){closeUpd();return true}return _ob?_ob():false};
 document.addEventListener('keydown',e=>{
   if(!setOpen)return;
-  if(e.key==='ArrowDown'){setIdx=(setIdx+1)%ROWS.length;renderSettings()}
-  else if(e.key==='ArrowUp'){setIdx=(setIdx-1+ROWS.length)%ROWS.length;renderSettings()}
+  if(e.key==='ArrowDown'){setIdx=(setIdx+1)%rows().length;renderSettings()}
+  else if(e.key==='ArrowUp'){setIdx=(setIdx-1+rows().length)%rows().length;renderSettings()}
   else if(e.key==='ArrowRight')changeSetting(1);
   else if(e.key==='ArrowLeft')changeSetting(-1);
-  else if(e.key==='Enter'){const r=ROWS[setIdx];if(r.bool||r.options)changeSetting(1)}
+  else if(e.key==='Enter'){const r=rows()[setIdx];if(r.bool||r.options||r.target)changeSetting(1)}
   else if(e.key==='Escape'||e.key==='Backspace')closeSettings();
   else return;
   e.preventDefault();e.stopImmediatePropagation();

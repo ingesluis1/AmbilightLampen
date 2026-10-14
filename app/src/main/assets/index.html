@@ -103,6 +103,7 @@ label.s span{float:right;opacity:.8}
       <div class="seg" id="layerSeg" style="margin-top:3px">
         <button class="btn" data-n="0">Uit</button><button class="btn" data-n="2">2</button><button class="btn" data-n="3">3</button><button class="btn" data-n="4">4</button><button class="btn" data-n="5">5</button>
       </div>
+      <div class="row" style="margin-top:8px"><span>Groepje</span><select id="lampGroup" class="grow"></select></div>
       <div style="margin-top:8px;font-size:14px">Kleur</div>
       <div class="seg" id="satSeg" style="margin-top:3px">
         <button class="btn" data-k="0.8">Zwakker</button><button class="btn" data-k="1">Normaal</button><button class="btn" data-k="1.4">Sterker</button><button class="btn" data-k="1.8">Veel sterker</button>
@@ -124,19 +125,24 @@ label.s span{float:right;opacity:.8}
 
 <section class="panel">
   <h2>Instellingen</h2>
+  <div class="row"><span>Voor</span><select id="setTarget" class="grow"></select></div>
+  <div class="row" style="margin-top:6px"><button class="btn" id="grpNew">Nieuw groepje</button><input type="text" id="grpName" class="grow hidden" placeholder="Naam van het groepje"><button class="btn red hidden" id="grpDel">Groepje weg</button></div>
+  <div class="hint" id="grpHint"></div>
   <label class="s">Reactiesnelheid <span id="v_smooth"></span></label><input type="range" id="smooth" min="0.08" max="1" step="0.01">
   <label class="s">Kleurintensiteit <span id="v_saturation"></span></label><input type="range" id="saturation" min="0.8" max="2.6" step="0.05">
   <label class="s">Helderheid <span id="v_brightness"></span></label><input type="range" id="brightness" min="0.5" max="2.6" step="0.05">
   <label class="s">Licht bij zwart beeld <span id="v_minLight"></span></label><input type="range" id="minLight" min="0" max="0.3" step="0.01">
   <label class="s">Hoe breed lampen meekijken <span id="v_spread"></span></label><input type="range" id="spread" min="0.4" max="2.5" step="0.05">
-  <label class="s">Na stoppen</label>
-  <select id="after"><option value="restore">Terug naar hoe ze stonden</option><option value="white">Warm wit</option><option value="off">Uit</option></select>
   <label class="s"><input type="checkbox" id="fade"> Vloeiende overgangen</label>
   <label class="s"><input type="checkbox" id="cuts"> Scènewissels direct (uit = alles vloeit)</label>
+  <div id="globalOnly">
+  <label class="s">Na stoppen</label>
+  <select id="after"><option value="restore">Terug naar hoe ze stonden</option><option value="white">Warm wit</option><option value="off">Uit</option></select>
   <label class="s"><input type="checkbox" id="followAmbi"> Lampen terug als de tv uit staat (20 seconden zwart beeld)</label>
   <label class="s"><input type="checkbox" id="autostart"> Automatisch starten als de tv aangaat</label>
   <label class="s">Taal</label>
   <select id="lang"><option value="nl">Nederlands</option><option value="en">English</option></select>
+  </div>
 </section>
 
 <section class="panel">
@@ -169,7 +175,7 @@ label.s span{float:right;opacity:.8}
 <script>
 const $ = id => document.getElementById(id);
 let S = null, L = null, lamps = [], settings = {}, live = {};
-let cloudShown = false, floorMat = '1', tool = 'floor', selLamp = null, selItem = null, newItemType = null;
+let groups = [], setTarget = '', cloudShown = false, floorMat = '1', tool = 'floor', selLamp = null, selItem = null, newItemType = null;
 let dirty = false, saveTimer = null, baseImg = null, baseKey = '', view = null;
 const TOOLS = [['floor','Vloer'],['erase','Gum'],['item','Meubels'],['tv','Tv'],['lamp','Lampen']];
 const HELP = {floor:'Leg vloer door over de vakjes te vegen. De muren komen er vanzelf omheen. 1 vakje is 1 meter.',
@@ -322,7 +328,8 @@ function chips(){
   if(!lamps.length){c.innerHTML='<span>'+t('Nog geen lampen. Voeg ze onderaan toe.')+'</span>';return}
   for(const l of lamps){const b=document.createElement('button');b.className='btn chip'+(l.id===selLamp?' sel':'');
     const d=document.createElement('span');d.className='dot';const lv=live[l.id];d.style.background=lv&&lv.online?(S&&S.sync?lv.color:'#ffd696'):'#6a6070';
-    b.append(d,document.createTextNode(l.name+(l.x<0?t(' (nog ophangen)'):'')));b.onclick=()=>selectLamp(l.id);c.append(b)}
+    const gn=(groups.find(g=>g.id===l.group)||{}).name;
+    b.append(d,document.createTextNode(l.name+(gn?' · '+gn:'')+(l.x<0?t(' (nog ophangen)'):'')));b.onclick=()=>selectLamp(l.id);c.append(b)}
 }
 function lampList(){
   const box=$('lampList');
@@ -369,6 +376,7 @@ function showLamp(){
   const rod=(l.shape||'bulb')==='rod';
   document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.s===(l.shape||'bulb')));
   $('heightSeg').classList.toggle('hidden',rod);
+  groupUI();
   document.querySelectorAll('#followSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.f===(l.follow||'auto')));
   document.querySelectorAll('#layerSeg .btn').forEach(b=>b.classList.toggle('on',+b.dataset.n===(l.layers||0)));
   const sf=l.satBoost>0?l.satBoost:(l.satFactor||1);document.querySelectorAll('#satSeg .btn').forEach(b=>b.classList.toggle('on',Math.abs(+b.dataset.k-sf)<0.05));
@@ -391,19 +399,35 @@ $('blinkBtn').onclick=async()=>{if(selLamp)toast((await api('/api/identify',{id:
 /* ---------- instellingen ---------- */
 const SL=['smooth','saturation','brightness','minLight','spread'];
 const fmt={smooth:v=>Math.round(v*100)+'%',saturation:v=>v.toFixed(2)+'x',brightness:v=>v.toFixed(2)+'x',minLight:v=>v==0?t('uit'):Math.round(v*100)+'%',spread:v=>v.toFixed(2)+'x'};
-function showSettings(){for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
+function tgt(){const g=groups.find(g=>g.id===setTarget);return g?g.settings:settings}
+function groupUI(){
+  const sel=$('setTarget');sel.innerHTML='<option value="">'+t('Alle lampen (standaard)')+'</option>'+groups.map(g=>`<option value="${g.id}"></option>`).join('');
+  [...sel.options].forEach((o,i)=>{if(i>0)o.textContent=groups[i-1].name});sel.value=setTarget;
+  const g=groups.find(g=>g.id===setTarget);
+  $('grpName').classList.toggle('hidden',!g);$('grpDel').classList.toggle('hidden',!g);$('globalOnly').classList.toggle('hidden',!!g);
+  if(g&&document.activeElement!==$('grpName'))$('grpName').value=g.name;
+  $('grpHint').textContent=g?t('Deze instellingen gelden voor de lampen in "{n}". Kies het groepje bij een lamp onder Lampen.',{n:g.name}):t('Lampen zonder groepje gebruiken deze instellingen.');
+  const lg=$('lampGroup');if(lg){const v=(lamps.find(l=>l.id===selLamp)||{}).group||'';lg.innerHTML='<option value="">'+t('Geen (standaard)')+'</option>'+groups.map(g=>`<option value="${g.id}"></option>`).join('');[...lg.options].forEach((o,i)=>{if(i>0)o.textContent=groups[i-1].name});lg.value=v}
+}
+function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
 $('lang').onchange=async e=>{settings.lang=e.target.value;await api('/api/save',{settings});location.reload()};
-for(const k of SL)$(k).oninput=e=>{settings[k]=+e.target.value;$('v_'+k).textContent=fmt[k](settings[k]);changed(true)};
+for(const k of SL)$(k).oninput=e=>{tgt()[k]=+e.target.value;$('v_'+k).textContent=fmt[k](tgt()[k]);changed(true)};
+$('setTarget').onchange=e=>{setTarget=e.target.value;groupUI();showSettings()};
+$('grpNew').onclick=()=>{const id='g'+Date.now().toString(36);groups.push({id,name:t('Groepje {n}',{n:groups.length+1}),settings:JSON.parse(JSON.stringify(settings))});setTarget=id;groupUI();showSettings();changed(true);$('grpName').focus()};
+$('grpName').oninput=e=>{const g=groups.find(g=>g.id===setTarget);if(g){g.name=e.target.value;groupUI();chips();changed(true)}};
+$('grpDel').onclick=()=>{const g=groups.find(g=>g.id===setTarget);if(!g||!confirm(t('Groepje "{n}" weghalen? De lampen erin gaan terug naar de standaardinstellingen.',{n:g.name})))return;
+  groups=groups.filter(x=>x.id!==g.id);lamps.forEach(l=>{if(l.group===g.id)l.group=''});setTarget='';groupUI();showSettings();changed(true)};
+$('lampGroup').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.group=e.target.value;changed(true);showLamp()}};
 $('after').onchange=e=>{settings.after=e.target.value;changed(true)};
 $('autostart').onchange=e=>{settings.autostart=e.target.checked;changed(true)};
-$('fade').onchange=e=>{settings.fade=e.target.checked;changed(true)};
-$('cuts').onchange=e=>{settings.cuts=e.target.checked;changed(true)};
+$('fade').onchange=e=>{tgt().fade=e.target.checked;changed(true)};
+$('cuts').onchange=e=>{tgt().cuts=e.target.checked;changed(true)};
 $('followAmbi').onchange=e=>{settings.followAmbi=e.target.checked;changed(true)};
 
 /* ---------- opslaan en live ---------- */
 function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!noDraw)draw();clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
 async function save(){
-  const r=await api('/api/save',{layout:L,settings,lamps:lamps.map(l=>({id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,...(l.satBoost>0?{satBoost:l.satBoost}:{}),enabled:l.enabled,ip:l.ip}))});
+  const r=await api('/api/save',{layout:L,settings,groups,lamps:lamps.map(l=>({group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,...(l.satBoost>0?{satBoost:l.satBoost}:{}),enabled:l.enabled,ip:l.ip}))});
   dirty=false;$('saved').textContent=r.ok?t('opgeslagen'):t('niet opgeslagen');
 }
 $('updBtn').onclick=async()=>{const u=S.update,n=I18N.notes(u.notes);if(!confirm(t('Wat is er nieuw in {v}',{v:u.latest})+':\n\n'+(n.length?'- '+n.join('\n- '):t('Geen beschrijving.'))+'\n\n'+t('Nu updaten?')))return;toast((await api('/api/update',{})).message+t('. Kijk op de tv.'))};
@@ -439,7 +463,7 @@ function liveFrom(s){
 }
 async function load(){
   S=await api('/api/state');
-  if(!dirty){L=Room.migrate(S.layout);lamps=S.lamps.map(l=>({...l}));settings=S.settings;showSettings()}
+  if(!dirty){L=Room.migrate(S.layout);lamps=S.lamps.map(l=>({...l}));settings=S.settings;groups=(S.groups||[]).map(g=>JSON.parse(JSON.stringify(g)));if(!groups.find(g=>g.id===setTarget))setTarget='';groupUI();showSettings()}
   else for(const nl of S.lamps)if(!lamps.find(l=>l.id===nl.id))lamps.push({...nl});
   lamps=lamps.filter(l=>S.lamps.find(n=>n.id===l.id));
   liveFrom(S);
