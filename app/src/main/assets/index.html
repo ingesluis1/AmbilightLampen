@@ -15,6 +15,7 @@ body{padding-bottom:84px}
 #toast{bottom:calc(80px + env(safe-area-inset-bottom));z-index:7;max-width:calc(100% - 32px)}
 .btn.big{display:block;width:100%;font-size:20px;padding:14px}
 .lrow.sel{background:var(--parch-dk)}
+.ldetail{border:3px solid var(--ink);background:var(--cream);padding:10px;margin:2px 0 10px}
 .gcard{border:3px solid var(--ink);background:var(--parch-dk);padding:8px;margin-bottom:8px}
 .gcard .gl{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .gcard .gl .btn{padding:6px 9px;font-size:14px}
@@ -139,18 +140,8 @@ label.s span{float:right;opacity:.8}
   <p class="hint" style="margin:0 0 8px">Tik op de naam van een lamp om hem in te stellen.</p>
   <p>Knipper laat een lamp aan en uit gaan zodat je hem vindt. Test laat hem rood, groen, blauw en wit zien en zet hem daarna terug. Met het kleurvakje kies je zelf een kleur.</p>
   <div id="lampList"></div>
-  <button class="btn" id="testAll" style="margin-top:8px">Alle lampen na elkaar testen</button>
-</section>
-
-<section class="panel" id="groupPanel">
-  <h2>Groepen</h2>
-  <p style="margin:0 0 8px">Lampen in een groep krijgen samen eigen instellingen, bijvoorbeeld rustiger of feller. Tik de lampen aan die in de groep horen. Een lamp die al in een groep zit, zie je bij de andere groepen niet.</p>
-  <div id="groupList"></div>
-  <button class="btn" id="grpNew" style="margin-top:8px">Nieuwe groep</button>
-</section>
-
-<section class="panel hidden" id="lampDetailPanel">
-  <div class="row" style="margin-bottom:8px"><h2 id="lampDetailTitle" class="grow" style="margin:0"></h2><button class="btn" id="lampClose">Sluiten</button></div>
+  <div id="lampDetailHold"><div class="ldetail hidden" id="lampDetailPanel">
+  <div class="row" style="margin-bottom:8px"><b id="lampDetailTitle" class="grow" style="font-size:17px"></b><button class="btn" id="lampClose">Sluiten</button></div>
     <div id="lampDetail">
       <div class="row"><input type="text" id="lampName" class="grow" placeholder="Naam"><button class="btn" id="blinkBtn">Knipper</button></div>
       <div class="seg" id="shapeSeg" style="margin-top:8px">
@@ -176,7 +167,18 @@ label.s span{float:right;opacity:.8}
       <div class="row" style="margin-top:8px"><label class="grow"><input type="checkbox" id="lampEnabled"> Doet mee met sync</label><span id="lampIp" style="font-size:13px"></span></div>
       <div class="row" style="margin-top:6px"><span>Ip-adres</span><input type="text" id="lampIpEdit" class="grow" placeholder="wordt vanzelf gevonden" inputmode="decimal"></div>
     </div>
+</div></div>
+  <button class="btn" id="testAll" style="margin-top:8px">Alle lampen na elkaar testen</button>
 </section>
+
+<section class="panel" id="groupPanel">
+  <h2>Groepen</h2>
+  <p style="margin:0 0 8px">Lampen in een groep krijgen samen eigen instellingen, bijvoorbeeld rustiger of feller. Tik de lampen aan die in de groep horen. Een lamp die al in een groep zit, zie je bij de andere groepen niet.</p>
+  <div id="groupList"></div>
+  <button class="btn" id="grpNew" style="margin-top:8px">Nieuwe groep</button>
+</section>
+
+
 
 <section class="panel">
   <h2>Lampen toevoegen</h2>
@@ -417,11 +419,11 @@ function lampList(){
   const box=$('lampList');
   if(!lamps.length){box.innerHTML='<span>'+t('Nog geen lampen.')+'</span>';return}
   if(box.dataset.ids!==lamps.map(l=>l.id+l.name).join()){
-    box.dataset.ids=lamps.map(l=>l.id+l.name).join();box.innerHTML='';
+    box.dataset.ids=lamps.map(l=>l.id+l.name).join();$('lampDetailHold').append($('lampDetailPanel'));box.innerHTML='';
     for(const l of lamps){
       const r=document.createElement('div');r.className='lrow';r.dataset.id=l.id;
       r.innerHTML=`<span class="dot"></span><span class="name"></span><button class="btn" data-a="blink">${t('Knipper')}</button><button class="btn" data-a="test">${t('Test')}</button><input type="color" value="#ffb050"><button class="btn red" data-a="del">${t('Weg')}</button>`;
-      r.querySelector('.name').textContent=l.name;r.querySelector('.name').onclick=()=>{if(selLamp===l.id){closeLamp();return}selectLamp(l.id);setTimeout(()=>$('lampDetailPanel').scrollIntoView({behavior:'smooth'}),50)};
+      r.querySelector('.name').textContent=l.name;r.querySelector('.name').onclick=()=>{if(selLamp===l.id){closeLamp();return}selectLamp(l.id);setTimeout(()=>r.scrollIntoView({block:'start'}),50)};
       r.querySelector('[data-a=blink]').onclick=async()=>toast((await api('/api/identify',{id:l.id})).message);
       r.querySelector('[data-a=test]').onclick=async()=>toast((await api('/api/test',{id:l.id})).message);
       r.querySelector('[data-a=del]').onclick=async()=>{if(!confirm(t('"{n}" verwijderen? Je kunt hem later terugzetten onder Lampen toevoegen.',{n:l.name})))return;
@@ -434,6 +436,7 @@ function lampList(){
     const off=lv.online&&lv.on===false,d=r.querySelector('.dot');
     d.style.background=!lv.online?'#6a6070':off?'#2a2230':(lv.color&&lv.color!=='#555555'?lv.color:'#ffd696');
     d.title=!lv.online?t('niet bereikbaar'):off?t('uit'):t('aan');
+    const ci=r.querySelector('input[type=color]');if(ci&&document.activeElement!==ci&&/^#[0-9a-f]{6}$/i.test(lv.color||'')&&lv.color!=='#555555'&&!off)ci.value=lv.color;
     r.querySelector('.name').title=lv.online?t('bereikbaar'):t('niet bereikbaar')}
   for(const r of box.children)r.classList.toggle('sel',r.dataset.id===selLamp);
 }
@@ -456,6 +459,7 @@ function follows(l){
 }
 function showLamp(){
   const l=lamps.find(l=>l.id===selLamp);$('lampDetailPanel').classList.toggle('hidden',!l);$('roomLampRow').classList.toggle('hidden',!l);
+  const row=l&&[...$('lampList').children].find(r=>r.dataset.id===l.id);if(row&&row.nextSibling!==$('lampDetailPanel'))row.after($('lampDetailPanel'));
   for(const r of $('lampList').children)r.classList.toggle('sel',r.dataset.id===selLamp);if(!l)return;
   $('lampDetailTitle').textContent=l.name;$('roomLampName').textContent=l.name;
   if(document.activeElement!==$('lampName'))$('lampName').value=l.name;
@@ -614,7 +618,7 @@ function showTab(n){
   window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);
 }
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
-$('roomLampSettings').onclick=()=>{showTab('lamps');setTimeout(()=>$('lampDetailPanel').scrollIntoView({behavior:'smooth'}),50)};
+$('roomLampSettings').onclick=()=>{showTab('lamps');showLamp();setTimeout(()=>{const r=[...$('lampList').children].find(r=>r.dataset.id===selLamp);(r||$('lampDetailPanel')).scrollIntoView({block:'start'})},50)};
 (async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang)}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';showTab(tb);load()})();
 const fast=()=>S&&(S.sync||S.activeScene);
 setInterval(()=>{if(fast())poll()},500);
