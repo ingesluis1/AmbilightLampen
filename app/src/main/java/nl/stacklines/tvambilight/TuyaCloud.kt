@@ -70,7 +70,7 @@ object TuyaCloud {
                 val id = d.optString("id"); val key = d.optString("local_key")
                 if (id.isBlank() || key.length != 16) continue
                 if (d.optString("category") !in LIGHTS) { skipped++; continue }
-                if (id in Store.hidden) continue
+                if (id in Store.hidden || id in Store.forgotten) continue
                 val ex = Store.lamps.firstOrNull { it.id == id }
                 if (ex != null) {
                     if (ex.key != key) { ex.key = key; updated++ }

@@ -83,7 +83,7 @@ object Wiz {
         synchronized(Store) {
             for ((mac, v) in found) {
                 val id = "wiz-$mac"
-                if (id in Store.hidden) continue
+                if (id in Store.hidden || id in Store.forgotten) continue
                 val ex = Store.lamps.firstOrNull { it.id == id }
                 if (ex != null) { if (ex.ip != v.first) { ex.ip = v.first; changed = true } }
                 else {

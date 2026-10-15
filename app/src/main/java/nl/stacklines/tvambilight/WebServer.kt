@@ -184,6 +184,11 @@ class WebServer(private val ctx: Context) {
                         }
                         Store.save(); Engine.syncWorkers(); msg(true, tr("Lamp verwijderd", "Lamp removed"))
                     }
+                    path == "/api/lamp/forget" && method == "POST" -> {
+                        val id = JSONObject(req).getString("id")
+                        synchronized(Store) { Store.hidden.remove(id)?.let { Store.forgotten[id] = it } }
+                        Store.save(); msg(true, tr("Lamp definitief verwijderd", "Lamp removed for good"))
+                    }
                     path == "/api/lamp/restore" && method == "POST" -> {
                         val id = JSONObject(req).getString("id")
                         synchronized(Store) { Store.hidden.remove(id) }
@@ -301,7 +306,7 @@ class WebServer(private val ctx: Context) {
                     updated++
                 } else {
                     Store.lamps += Lamp(id, key, d.optString("name", id), d.optString("ip"), d.optString("version", "3.3").ifBlank { "3.3" })
-                    Store.hidden.remove(id)
+                    Store.hidden.remove(id); Store.forgotten.remove(id)
                     added++
                 }
             }

@@ -143,7 +143,7 @@ label.s span{float:right;opacity:.8}
 
 <section class="panel" id="groupPanel">
   <h2>Groepen</h2>
-  <p style="margin:0 0 8px">Lampen in een groep krijgen samen eigen instellingen, bijvoorbeeld rustiger of feller. Tik de lampen aan die in de groep horen.</p>
+  <p style="margin:0 0 8px">Lampen in een groep krijgen samen eigen instellingen, bijvoorbeeld rustiger of feller. Tik de lampen aan die in de groep horen. Een lamp die al in een groep zit, zie je bij de andere groepen niet.</p>
   <div id="groupList"></div>
   <button class="btn" id="grpNew" style="margin-top:8px">Nieuwe groep</button>
 </section>
@@ -196,9 +196,15 @@ label.s span{float:right;opacity:.8}
   <div style="margin-top:12px"><b>WiZ-lampen</b>
     <p style="margin:4px 0 8px">Koppel ze eerst in de WiZ-app en zet daar bij Instellingen, Beveiliging "Lokale communicatie" aan. De tv vindt ze dan vanzelf.</p>
     <button class="btn" id="wizScan">WiZ-lampen zoeken</button></div>
-  <div id="hiddenBox" class="hidden" style="margin-top:12px"><b>Verwijderde lampen</b><div id="hiddenList"></div></div>
   <details style="margin-top:12px"><summary>Of: devices.json van tinytuya uploaden</summary>
     <input type="file" id="importFile" accept=".json,application/json" style="margin-top:8px">
+  </details>
+</section>
+
+<section class="panel hidden" id="hiddenBox">
+  <details><summary><b>Verwijderde lampen</b> <span id="hiddenCount"></span></summary>
+    <p style="margin:8px 0">Terugzetten zet de lamp weer in je lijst. Definitief verwijderen haalt hem hier weg; hij komt dan ook niet terug bij nieuwe lampen zoeken.</p>
+    <div id="hiddenList"></div>
   </details>
 </section>
 </div>
@@ -496,7 +502,7 @@ function groupList(){
   const box=$('groupList'),key=groups.map(g=>g.id).join()+'|'+lamps.map(l=>l.id+l.name).join();
   if(box.dataset.k!==key){box.dataset.k=key;box.innerHTML=groups.length?'':'<span class="hint">'+t('Nog geen groepen.')+'</span>';
     for(const g of groups){const r=document.createElement('div');r.className='gcard';r.dataset.id=g.id;
-      r.innerHTML=`<input type="text" style="width:100%"><div class="gl"></div><div class="row" style="margin-top:8px"><button class="btn" data-a="set">${t('Instellingen')}</button><span class="grow"></span><button class="btn red" data-a="del">${t('Verwijderen')}</button></div>`;
+      r.innerHTML=`<input type="text" style="width:100%"><div class="gl"></div><div class="hint gfull hidden">${t('Alle lampen zitten al in een andere groep.')}</div><div class="row" style="margin-top:8px"><button class="btn" data-a="set">${t('Instellingen')}</button><span class="grow"></span><button class="btn red" data-a="del">${t('Verwijderen')}</button></div>`;
       const inp=r.querySelector('input');inp.placeholder=t('Naam van de groep');
       inp.oninput=()=>{g.name=inp.value;groupUI();chips();changed(true)};
       for(const l of lamps){const b=document.createElement('button');b.className='btn';b.dataset.lamp=l.id;b.textContent=l.name;
@@ -506,7 +512,10 @@ function groupList(){
         groups=groups.filter(x=>x.id!==g.id);lamps.forEach(l=>{if(l.group===g.id)l.group=''});if(setTarget===g.id)setTarget='';groupUI();showSettings();showLamp();changed(true)};
       box.append(r)}}
   for(const r of box.children){const g=groups.find(x=>x.id===r.dataset.id);if(!g)continue;const inp=r.querySelector('input');if(document.activeElement!==inp)inp.value=g.name;
-    r.querySelectorAll('.gl .btn').forEach(b=>{const l=lamps.find(x=>x.id===b.dataset.lamp);b.classList.toggle('on',!!l&&l.group===g.id)})}
+    let shown=0;
+    r.querySelectorAll('.gl .btn').forEach(b=>{const l=lamps.find(x=>x.id===b.dataset.lamp);const mine=!!l&&l.group===g.id,other=!!l&&!!l.group&&!mine&&groups.some(x=>x.id===l.group);
+      b.classList.toggle('on',mine);b.classList.toggle('hidden',other);if(!other)shown++});
+    r.querySelector('.gfull').classList.toggle('hidden',shown>0)}
 }
 function newGroup(){const id='g'+Date.now().toString(36);groups.push({id,name:t('Groep {n}',{n:groups.length+1}),settings:JSON.parse(JSON.stringify(settings))});changed(true);groupUI();return id}
 function focusGroup(id){setTimeout(()=>{const r=[...$('groupList').children].find(r=>r.dataset.id===id);if(!r)return;const n=r.querySelector('input');n.scrollIntoView({block:'center'});n.focus();n.select()},60)}
@@ -562,9 +571,13 @@ $('sceneSave').onclick=async()=>{const n=$('sceneName').value.trim();if(!n){toas
 function hiddenList(s){
   const h=s.hidden||[];$('hiddenBox').classList.toggle('hidden',!h.length);
   const key=h.map(x=>x.id).join();if($('hiddenList').dataset.k===key)return;$('hiddenList').dataset.k=key;$('hiddenList').innerHTML='';
-  for(const x of h){const r=document.createElement('div');r.className='lrow';r.innerHTML='<span class="name"></span><button class="btn">'+t('Terugzetten')+'</button>';
+  $('hiddenCount').textContent='('+h.length+')';
+  for(const x of h){const r=document.createElement('div');r.className='lrow';r.innerHTML='<span class="name"></span><button class="btn" data-a="back">'+t('Terugzetten')+'</button><button class="btn red" data-a="forget">'+t('Definitief verwijderen')+'</button>';
     r.querySelector('.name').textContent=x.name;
-    r.querySelector('.btn').onclick=async()=>{const res=await api('/api/lamp/restore',{id:x.id});toast(res.message);load()};$('hiddenList').append(r)}
+    r.querySelector('[data-a=back]').onclick=async()=>{const res=await api('/api/lamp/restore',{id:x.id});toast(res.message);load()};
+    r.querySelector('[data-a=forget]').onclick=async()=>{if(!confirm(t('"{n}" definitief verwijderen? Hij komt dan niet meer terug bij zoeken.',{n:x.name})))return;
+      const res=await api('/api/lamp/forget',{id:x.id});toast(res.message);load()};
+    $('hiddenList').append(r)}
 }
 function liveFrom(s){
   hiddenList(s);sceneList(s);
