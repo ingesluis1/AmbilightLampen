@@ -186,6 +186,7 @@ class TuyaLamp(val lamp: Lamp) {
     private val localKey = lamp.key.toByteArray(Charsets.UTF_8)
     private val ver = lamp.version
     private val modern = ver == "3.4" || ver == "3.5"
+    private val wiz = ver == Wiz.VERSION
     private var key = localKey
     private val ip = lamp.ip
     private val pending = LinkedHashMap<String, Any>()
@@ -301,7 +302,72 @@ class TuyaLamp(val lamp: Lamp) {
         synchronized(lock) { lock.notifyAll() }
     }
 
+    /** WiZ: losse UDP-berichten; wachten op het antwoord geeft vanzelf het tempo dat de lamp aankan. */
+    private fun wizLoop() {
+        var mode = "white"
+        var lastSend = 0L; var lastBeat = 0L
+        var udp: java.net.DatagramSocket? = null
+        val buf = ByteArray(2048)
+        fun exchange(method: String, params: JSONObject?, waitMs: Int): JSONObject? {
+            val s = udp ?: java.net.DatagramSocket().also { udp = it }
+            val msg = JSONObject().put("method", method).apply { if (params != null) put("params", params) }.toString().toByteArray()
+            s.send(java.net.DatagramPacket(msg, msg.size, java.net.InetAddress.getByName(ip), Wiz.PORT))
+            val end = SystemClock.elapsedRealtime() + waitMs
+            while (true) {
+                val left = end - SystemClock.elapsedRealtime(); if (left <= 0) return null
+                s.soTimeout = left.toInt().coerceAtLeast(1)
+                val pkt = java.net.DatagramPacket(buf, buf.size)
+                try { s.receive(pkt) } catch (_: java.net.SocketTimeoutException) { return null }
+                val j = try { JSONObject(String(buf, 0, pkt.length)) } catch (_: Exception) { continue }
+                if (j.optString("method") != method) continue
+                lastRx = SystemClock.elapsedRealtime(); online = true; lastError = null
+                return j
+            }
+        }
+        while (running) {
+            try {
+                if (ip.isBlank()) { online = false; sleepQuiet(2000); continue }
+                val now = SystemClock.elapsedRealtime()
+                if (queryWanted || lastBeat == 0L) {
+                    queryWanted = false; lastBeat = now
+                    exchange("getPilot", null, 600)?.optJSONObject("result")?.let { r ->
+                        val d = Wiz.dps(r); mode = d.optString("21", mode); statusResult = d
+                    }
+                    continue
+                }
+                val batch: Map<String, Any>? = synchronized(lock) {
+                    // Lagen kent WiZ niet: neem de belangrijkste laag als kleur voor de hele lamp
+                    layerPending.entries.maxByOrNull { it.value.getOrElse(3) { 0 } }?.let { e ->
+                        if (!pending.containsKey("24")) pending["24"] = hsvHex(e.value[0], e.value[1], e.value[2]); layerPending.clear()
+                    }
+                    if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() } else null
+                }
+                if (batch != null) {
+                    val gap = if (Store.settingsForId(lamp.id).fade) FADE_GAP_MS else MIN_GAP_MS
+                    val wait = gap - (now - lastSend); if (wait > 0) Thread.sleep(wait)
+                    val p = Wiz.pilot(batch, mode)
+                    (batch["21"] as? String)?.let { mode = it }
+                    if (p.length() > 0) exchange("setPilot", p, 250)
+                    lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
+                } else if (now - lastBeat > 5000) {
+                    lastBeat = now
+                    if (exchange("getPilot", null, 600) == null && now - lastRx > 12_000) online = false
+                } else {
+                    synchronized(lock) { if (pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(40) }
+                }
+            } catch (_: InterruptedException) {
+            } catch (e: Exception) {
+                lastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(120); lastFail = lastError ?: ""
+                reconnects++; online = false
+                try { udp?.close() } catch (_: Exception) { }; udp = null
+                sleepQuiet(500)
+            }
+        }
+        try { udp?.close() } catch (_: Exception) { }
+    }
+
     private fun loop() {
+        if (wiz) { wizLoop(); return }
         var lastSend = 0L
         var lastBeat = 0L
         while (running) {

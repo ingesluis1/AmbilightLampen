@@ -143,6 +143,15 @@ class WebServer(private val ctx: Context) {
                         Store.save()
                         try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, tr("Tuya weigerde: ", "Tuya refused: ") + e.message) }
                     }
+                    path == "/api/wiz/scan" && method == "POST" -> {
+                        val n = Wiz.scan(3000)
+                        val all = Store.lampsSnapshot().count { it.version == Wiz.VERSION }
+                        msg(true, when {
+                            n > 0 -> tr("$n nieuwe WiZ-lamp(en) gevonden", "$n new WiZ lamp(s) found")
+                            all > 0 -> tr("Geen nieuwe WiZ-lampen, $all al bekend", "No new WiZ lamps, $all already known")
+                            else -> tr("Geen WiZ-lampen gevonden. Staat Lokale communicatie aan in de WiZ-app?", "No WiZ lamps found. Is Local communication on in the WiZ app?")
+                        })
+                    }
                     path == "/api/cloud/refresh" && method == "POST" -> {
                         try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, tr("Ophalen mislukt: ", "Fetching failed: ") + e.message) }
                     }
@@ -179,7 +188,11 @@ class WebServer(private val ctx: Context) {
                         val id = JSONObject(req).getString("id")
                         synchronized(Store) { Store.hidden.remove(id) }
                         Store.save()
-                        if (Store.cloudId != null && Store.cloudSecret != null) {
+                        if (id.startsWith("wiz-")) {
+                            Wiz.scan(3000)
+                            if (Store.lampsSnapshot().any { it.id == id }) msg(true, tr("Lamp teruggezet", "Lamp restored"))
+                            else msg(true, tr("Lamp komt terug zodra de tv hem weer op het netwerk ziet", "The lamp comes back as soon as the TV sees it on the network again"))
+                        } else if (Store.cloudId != null && Store.cloudSecret != null) {
                             try { TuyaCloud.refresh(); msg(true, tr("Lamp teruggezet", "Lamp restored")) } catch (e: Exception) { msg(false, tr("Terugzetten mislukt: ", "Restoring failed: ") + e.message) }
                         } else msg(true, tr("Zoek de lamp opnieuw of upload devices.json", "Search for the lamp again or upload devices.json"))
                     }

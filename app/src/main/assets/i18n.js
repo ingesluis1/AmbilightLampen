@@ -57,6 +57,8 @@ const I18N = (() => {
     'Zonsondergang': 'Sunset', 'Roze & blauw': 'Pink & blue', 'Noorderlicht': 'Northern lights', 'Oceaan': 'Ocean', 'Haardvuur': 'Fireplace',
     'Regenboog': 'Rainbow', 'Warme gloed': 'Warm glow', 'Lentebloesem': 'Spring blossom', 'Filmavond': 'Movie night', 'Nachtlampje': 'Night light',
     'Ontspannen': 'Relax', 'Lezen': 'Read', 'Concentratie': 'Concentrate',
+    'WiZ-lampen': 'WiZ lamps', 'WiZ-lampen zoeken': 'Find WiZ lamps',
+    'Koppel ze eerst in de WiZ-app en zet daar bij Instellingen, Beveiliging "Lokale communicatie" aan. De tv vindt ze dan vanzelf.': 'Pair them in the WiZ app first and turn on "Local communication" under Settings, Security. The TV then finds them by itself.',
     'Lampen uit': 'Lamps off', 'Lampen aan': 'Lamps on',
     'Bediening': 'Control', 'Kamer': 'Room', 'Status': 'Status', 'Instellingen van deze lamp': 'Settings for this lamp',
     'Tik op de naam van een lamp om hem in te stellen.': 'Tap the name of a lamp to set it up.',

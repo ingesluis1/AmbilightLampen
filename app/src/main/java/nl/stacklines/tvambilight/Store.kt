@@ -26,7 +26,7 @@ class Lamp(
     /** Ledstrips tonen kleuren witter dan lampen; die standaard iets voller. */
     val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
     val placed get() = x >= 0 && y >= 0
-    val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5")
+    val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5", Wiz.VERSION)
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
         put("id", id); put("name", name); put("ip", ip); put("version", version)

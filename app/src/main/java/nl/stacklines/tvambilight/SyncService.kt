@@ -24,6 +24,7 @@ class App : Application() {
                 Store.save(); Engine.syncWorkers()
             }
         }
+        Wiz.startBackground()
         Engine.syncWorkers()
     }
 

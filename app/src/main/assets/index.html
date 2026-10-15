@@ -183,6 +183,9 @@ label.s span{float:right;opacity:.8}
       <option value="us">Western America</option><option value="us-e">Eastern America</option><option value="in">India</option><option value="cn">China</option>
     </select><button class="btn gold" id="cloudSave">Opslaan en zoeken</button></div>
   </div>
+  <div style="margin-top:12px"><b>WiZ-lampen</b>
+    <p style="margin:4px 0 8px">Koppel ze eerst in de WiZ-app en zet daar bij Instellingen, Beveiliging "Lokale communicatie" aan. De tv vindt ze dan vanzelf.</p>
+    <button class="btn" id="wizScan">WiZ-lampen zoeken</button></div>
   <div id="hiddenBox" class="hidden" style="margin-top:12px"><b>Verwijderde lampen</b><div id="hiddenList"></div></div>
   <details style="margin-top:12px"><summary>Of: devices.json van tinytuya uploaden</summary>
     <input type="file" id="importFile" accept=".json,application/json" style="margin-top:8px">
@@ -503,6 +506,8 @@ $('grantBtn').onclick=async()=>{const r=await api('/api/pair/grant',{pin:$('pin'
 $('cloudSave').onclick=async()=>{const b=$('cloudSave');b.disabled=true;b.textContent=t('Zoeken...');
   const r=await api('/api/cloud',{id:$('cloudId').value,secret:$('cloudSecret').value,region:$('cloudRegion').value});
   b.disabled=false;b.textContent=t('Opslaan en zoeken');toast(r.message);if(r.ok){$('cloudId').value='';$('cloudSecret').value='';cloudShown=false;load()}};
+$('wizScan').onclick=async()=>{const b=$('wizScan');b.disabled=true;b.textContent=t('Zoeken...');
+  const r=await api('/api/wiz/scan',{});b.disabled=false;b.textContent=t('WiZ-lampen zoeken');toast(r.message);load()};
 $('cloudRefresh').onclick=async()=>{const b=$('cloudRefresh');b.disabled=true;b.textContent=t('Zoeken...');
   const r=await api('/api/cloud/refresh',{});b.disabled=false;b.textContent=t('Nieuwe lampen zoeken');toast(r.message);load()};
 $('cloudChange').onclick=()=>{$('cloudSetup').classList.remove('hidden');$('cloudOn').classList.add('hidden')};
