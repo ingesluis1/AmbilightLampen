@@ -146,6 +146,22 @@ class WebServer(private val ctx: Context) {
                         if (Updater.available(ctx)) msg(true, Updater.install(ctx))
                         else msg(false, tr("Je hebt al de nieuwste versie", "You already have the latest version") + " (${Updater.current(ctx)})")
                     }
+                    path == "/api/scene" && method == "POST" -> {
+                        val id = JSONObject(req).optString("id")
+                        val sc = SceneEngine.all().firstOrNull { it.id == id }
+                        if (sc == null) { SceneEngine.stop(); msg(true, tr("Scène gestopt", "Scene stopped")) }
+                        else { SceneEngine.start(sc); msg(true, tr("Scène: ", "Scene: ") + sc.name) }
+                    }
+                    path == "/api/scene/save" && method == "POST" -> {
+                        val sc = SceneEngine.saveCurrent(JSONObject(req).optString("name").trim())
+                        msg(true, tr("Opgeslagen als scène: ", "Saved as scene: ") + sc.name)
+                    }
+                    path == "/api/scene/delete" && method == "POST" -> {
+                        val id = JSONObject(req).optString("id")
+                        if (SceneEngine.active?.id == id) SceneEngine.stop()
+                        Store.customScenes = Store.customScenes.filter { it.id != id }; Store.save()
+                        msg(true, tr("Scène verwijderd", "Scene deleted"))
+                    }
                     path == "/api/lamp/delete" && method == "POST" -> {
                         val id = JSONObject(req).getString("id")
                         synchronized(Store) {
@@ -189,6 +205,8 @@ class WebServer(private val ctx: Context) {
             put("groups", JSONArray().apply { Store.groups.forEach { put(it.toJson()) } })
             put("tv", JSONObject().put("paired", Store.tvPaired).put("host", Store.tvHost).put("status", Engine.tvStatus))
             put("sync", Engine.running)
+            put("scenes", JSONArray().apply { SceneEngine.all().forEach { put(it.toJson()) } })
+            put("activeScene", SceneEngine.active?.id ?: "")
             put("update", JSONObject().put("current", Updater.current(ctx)).put("latest", Updater.latest ?: "")
                 .put("available", Updater.available(ctx)).put("status", Updater.status).put("notes", Updater.notes))
             put("hidden", JSONArray().apply { Store.hidden.forEach { (k, n) -> put(JSONObject().put("id", k).put("name", n)) } })

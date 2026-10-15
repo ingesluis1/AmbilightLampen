@@ -38,6 +38,15 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
 #rainbow .inner p{font-size:1.8vh;margin:0;opacity:.85}
 #rbStage{flex:1;width:100%;display:flex;align-items:center;justify-content:center;min-height:0}
 #rbMap{image-rendering:pixelated}
+#scenes{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:center;justify-content:center;z-index:8}
+#scenes .panel{width:70vw;margin:0}
+#scenes h2{font-size:3vh;margin:0 0 1.4vh}
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1vh 1vw}
+.scard{border:3px solid var(--ink);background:var(--parch-dk);padding:1vh .8vw;font-size:2vh;font-weight:600}
+.scard.focus{background:var(--gold);outline:3px solid var(--cream)}
+.scard.on{box-shadow:inset 0 0 0 3px var(--wood-dk)}
+.scard .sw{display:flex;gap:3px;margin-top:.8vh;height:1.6vh}
+.scard .sw i{flex:1;border:2px solid var(--ink)}
 #settings{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:center;justify-content:center;z-index:8}
 #settings .panel{width:58vw;margin:0}
 #settings h2{font-size:3vh;margin:0 0 1.4vh}
@@ -63,6 +72,7 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
       <div class="stat"><i id="iLamps"></i><span id="tLamps"></span></div>
       <div class="btns">
         <button class="btn gold" id="syncBtn">Sync starten</button>
+        <button class="btn" id="sceneBtn">Scènes</button>
         <button class="btn" id="testBtn">Kleurtest (alle lampen na elkaar)</button>
         <button class="btn" id="rainbowBtn">Testbeeld (regenboog)</button>
         <button class="btn" id="setBtn">Instellingen</button>
@@ -82,6 +92,11 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
   <p id="rbHint"></p>
   <p id="rbSpeed"></p>
 </div></div>
+<div id="scenes" class="hidden"><section class="panel">
+  <h2>Scènes</h2>
+  <div class="sgrid" id="sgrid"></div>
+  <div class="shint">Pijltjes: kiezen. OK: aanzetten. Terug: sluiten. Sync starten stopt de scène.</div>
+</section></div>
 <div id="settings" class="hidden"><section class="panel">
   <h2>Instellingen</h2>
   <div id="srows"></div>
@@ -114,7 +129,9 @@ function render(){
 function status(){
   const s=S,on=s.lamps.filter(l=>l.online).length,placed=s.lamps.filter(l=>l.x>=0).length;
   document.body.classList.toggle('night',s.sync);
-  $('iSync').className=s.sync?'on':'';$('tSync').textContent='Sync: '+t(s.sync?'aan':'uit');
+  $('iSync').className=s.sync||s.activeScene?'on':'';
+  const scn=(s.scenes||[]).find(x=>x.id===s.activeScene);
+  $('tSync').textContent=scn?t('Scène')+': '+t(scn.name):'Sync: '+t(s.sync?'aan':'uit');
   $('iTv').className=!s.tv.paired?'off':(s.sync&&s.tv.status!=='Verbonden'?'warn':'on');
   $('tTv').textContent=t('Tv')+': '+(!s.tv.paired?t('nog niet gekoppeld'):s.sync?t(s.tv.status).toLowerCase():t('gekoppeld'));
   $('iLamps').className=!s.lamps.length?'off':on===s.lamps.length?'on':'warn';
@@ -229,6 +246,26 @@ function changeSetting(dir){
     const res=await api('/api/save',body);if(!res.ok)toast(res.message);else if(r.reload)location.reload()},r.reload?50:350);
 }
 $('setBtn').onclick=openSettings;
+// Scènes kiezen met de afstandsbediening
+let scOpen=false,scIdx=0;
+function scList(){const l=(S&&S.scenes)||[];return S&&S.activeScene?[{id:'',name:t('Scène stoppen'),preview:[]},...l]:l}
+function renderScenes(){
+  $('sgrid').innerHTML=scList().map((sc,i)=>`<div class="scard${i===scIdx?' focus':''}${S.activeScene===sc.id?' on':''}"><span></span><div class="sw">${(sc.preview||[]).map(c=>`<i style="background:${c}"></i>`).join('')}</div></div>`).join('');
+  [...$('sgrid').children].forEach((d,i)=>d.querySelector('span').textContent=t(scList()[i].name));
+}
+function openScenes(){if(!S)return;scOpen=true;scIdx=0;$('scenes').classList.remove('hidden');renderScenes()}
+function closeScenes(){scOpen=false;$('scenes').classList.add('hidden');$('sceneBtn').focus()}
+$('sceneBtn').onclick=openScenes;
+document.addEventListener('keydown',async e=>{
+  if(!scOpen)return;
+  const n=scList().length;
+  if(e.key==='ArrowRight')scIdx=(scIdx+1)%n;else if(e.key==='ArrowLeft')scIdx=(scIdx-1+n)%n;
+  else if(e.key==='ArrowDown')scIdx=Math.min(n-1,scIdx+4);else if(e.key==='ArrowUp')scIdx=Math.max(0,scIdx-4);
+  else if(e.key==='Enter'){const sc=scList()[scIdx];toast((await api('/api/scene',{id:sc.id})).message);S=await api('/api/state');closeScenes();status();return}
+  else if(e.key==='Escape'||e.key==='Backspace'){closeScenes()}
+  else return;
+  e.preventDefault();e.stopImmediatePropagation();renderScenes();
+},true);
 $('updBtn').onclick=openUpd;
 let updOpen=false;
 function openUpd(){if(!S||!S.update)return;updOpen=true;const u=S.update;
@@ -245,7 +282,7 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown'){(document.activeElement===$('updGo')?$('updLater'):$('updGo')).focus();e.preventDefault();e.stopImmediatePropagation()}
   else if(e.key==='Escape'||e.key==='Backspace'){closeUpd();e.preventDefault();e.stopImmediatePropagation()}
 },true);
-const _ob=window.onBack;window.onBack=()=>{if(updOpen){closeUpd();return true}return _ob?_ob():false};
+const _ob=window.onBack;window.onBack=()=>{if(updOpen){closeUpd();return true}if(scOpen){closeScenes();return true}return _ob?_ob():false};
 document.addEventListener('keydown',e=>{
   if(!setOpen)return;
   if(e.key==='ArrowDown'){setIdx=(setIdx+1)%rows().length;renderSettings()}

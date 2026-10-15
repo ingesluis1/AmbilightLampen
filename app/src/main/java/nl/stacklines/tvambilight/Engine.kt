@@ -146,6 +146,7 @@ object Engine {
     @Synchronized
     fun start() {
         if (running) return
+        SceneEngine.stop()
         syncWorkers()
         running = true
         thread = Thread(::loop, "sync").apply { isDaemon = true; start() }

@@ -31,6 +31,12 @@ main{max-width:640px;margin:0 auto;padding:0 12px}
 label.s{display:block;margin:12px 0 2px;font-size:15px}
 label.s span{float:right;opacity:.8}
 .hint{font-size:13px;opacity:.8;margin-top:8px}
+.sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.scard{padding:7px 6px;font-size:13px;text-align:left;position:relative}
+.scard.on{background:var(--gold)}
+.scard .sw{display:flex;gap:2px;margin-top:5px;height:10px}
+.scard .sw i{flex:1;border:2px solid var(--ink)}
+.scard .x{position:absolute;top:2px;right:4px;font-size:12px;opacity:.7}
 .lrow{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:2px dashed var(--parch-dk)}
 .lrow:last-child{border-bottom:0}
 .lrow .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -114,6 +120,14 @@ label.s span{float:right;opacity:.8}
     </div>
     <div class="hint">Kies een lamp en tik op de kaart om hem op te hangen. Sleep om te verschuiven.</div>
   </div>
+</section>
+
+<section class="panel">
+  <h2>Scènes</h2>
+  <p>Vaste of langzaam bewegende kleuren, in plaats van de sync. Sync starten stopt de scène.</p>
+  <div class="sgrid" id="sgrid"></div>
+  <div class="row" style="margin-top:10px"><button class="btn" id="sceneStop">Scène stoppen</button></div>
+  <div class="row" style="margin-top:8px"><input type="text" id="sceneName" class="grow" placeholder="Naam voor je eigen scène"><button class="btn" id="sceneSave">Huidige kleuren opslaan</button></div>
 </section>
 
 <section class="panel">
@@ -443,6 +457,19 @@ $('cloudChange').onclick=()=>{$('cloudSetup').classList.remove('hidden');$('clou
 $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();
   const r=await fetch('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:t}).then(x=>x.json());toast(r.message);e.target.value='';load()};
 
+function sceneList(s){
+  const g=$('sgrid'),key=JSON.stringify([(s.scenes||[]).map(x=>x.id),s.activeScene]);if(g.dataset.k===key)return;g.dataset.k=key;g.innerHTML='';
+  for(const sc of (s.scenes||[])){const b=document.createElement('button');b.className='btn scard'+(s.activeScene===sc.id?' on':'');
+    b.innerHTML='<span></span><div class="sw">'+(sc.preview||[]).map(c=>`<i style="background:${c}"></i>`).join('')+'</div>'+(sc.builtin?'':'<span class="x">✕</span>');
+    b.querySelector('span').textContent=t(sc.name);
+    b.onclick=async ev=>{if(ev.target.classList.contains('x')){if(!confirm(t('Scène "{n}" verwijderen?',{n:sc.name})))return;toast((await api('/api/scene/delete',{id:sc.id})).message);poll();return}
+      toast((await api('/api/scene',{id:sc.id})).message);poll()};
+    g.append(b)}
+  $('sceneStop').classList.toggle('hidden',!s.activeScene);
+}
+$('sceneStop').onclick=async()=>{toast((await api('/api/scene',{id:''})).message);poll()};
+$('sceneSave').onclick=async()=>{const n=$('sceneName').value.trim();if(!n){toast(t('Geef de scène eerst een naam'));return}
+  toast((await api('/api/scene/save',{name:n})).message);$('sceneName').value='';poll()};
 function hiddenList(s){
   const h=s.hidden||[];$('hiddenBox').classList.toggle('hidden',!h.length);
   const key=h.map(x=>x.id).join();if($('hiddenList').dataset.k===key)return;$('hiddenList').dataset.k=key;$('hiddenList').innerHTML='';
@@ -451,7 +478,7 @@ function hiddenList(s){
     r.querySelector('.btn').onclick=async()=>{const res=await api('/api/lamp/restore',{id:x.id});toast(res.message);load()};$('hiddenList').append(r)}
 }
 function liveFrom(s){
-  hiddenList(s);
+  hiddenList(s);sceneList(s);
   live={};for(const l of s.lamps)live[l.id]=l;
   $('syncBtn').textContent=t(s.sync?'Sync stoppen':'Sync starten');
   if(s.update){$('updBtn').classList.toggle('hidden',!s.update.available);$('updBtn').textContent=t('Update {v}',{v:s.update.latest})}

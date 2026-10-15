@@ -104,6 +104,7 @@ object Store {
     val lamps = mutableListOf<Lamp>()
     val settings = Settings()
     @Volatile var groups: List<Group> = emptyList()
+    @Volatile var customScenes: List<Scene> = emptyList()
 
     /** Instellingen die voor deze lamp gelden: die van zijn groepje, anders de algemene. */
     fun settingsFor(l: Lamp): Settings = groups.firstOrNull { it.id == l.group }?.settings ?: settings
@@ -132,6 +133,7 @@ object Store {
             lamps.clear()
             o.optJSONArray("lamps")?.let { a -> for (i in 0 until a.length()) lamps += Lamp.fromJson(a.getJSONObject(i)) }
             o.optJSONObject("settings")?.let { settings.apply(it) }
+            customScenes = o.optJSONArray("scenes")?.let { a -> (0 until a.length()).map { Scene.fromStore(a.getJSONObject(it)) } } ?: emptyList()
             groups = o.optJSONArray("groups")?.let { a -> (0 until a.length()).map { Group.fromJson(a.getJSONObject(it)) } } ?: emptyList()
             tvHost = o.optString("tvHost", tvHost)
             tvUser = o.optString("tvUser").ifBlank { null }
@@ -154,6 +156,7 @@ object Store {
             put("lamps", JSONArray().apply { lamps.forEach { put(it.toJson(true)) } })
             put("settings", settings.toJson())
             put("groups", JSONArray().apply { groups.forEach { put(it.toJson()) } })
+            put("scenes", JSONArray().apply { customScenes.forEach { put(it.toStore()) } })
             put("tvHost", tvHost)
             put("tvUser", tvUser ?: ""); put("tvPass", tvPass ?: "")
             put("syncWanted", syncWanted)
