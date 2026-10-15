@@ -8,7 +8,13 @@
 <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/ui.css">
 <style>
-body{padding-bottom:40px}
+body{padding-bottom:84px}
+.tabbar{position:fixed;left:0;right:0;bottom:0;padding-left:max(6px,calc(50% - 314px))!important;padding-right:max(6px,calc(50% - 314px))!important;z-index:6;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:var(--wood);border-top:4px solid var(--ink);box-shadow:inset 0 3px 0 var(--wood-lt)}
+.tabbar .btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:12px}
+.tabbar .ic{font-size:18px;line-height:1}
+.btn.big{display:block;width:100%;font-size:20px;padding:14px}
+.lrow.sel{background:var(--parch-dk)}
+.lrow .name{cursor:pointer;text-decoration:underline dotted}
 header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--wood);border-bottom:4px solid var(--ink);box-shadow:inset 0 -3px 0 var(--wood-dk),inset 0 3px 0 var(--wood-lt)}
 header h1{font-size:20px;margin:0;flex:1;color:var(--cream);text-shadow:2px 2px 0 var(--ink)}
 #saved{font-size:13px;color:var(--cream);opacity:.85}
@@ -50,10 +56,11 @@ label.s span{float:right;opacity:.8}
   <h1>Ambilight Lampen</h1>
   <span id="saved"></span>
   <button id="updBtn" class="btn hidden">Update</button>
-  <button id="syncBtn" class="btn gold">Sync starten</button>
 </header>
 <main>
 
+<!-- Tabblad: Bediening -->
+<div class="page" id="page-home">
 <section class="panel hidden" id="pairCard">
   <h2>Tv koppelen</h2>
   <p>De app heeft eenmalig toestemming nodig om de kleuren van het beeld te lezen. Druk op de knop, dan verschijnt er een pincode op de tv.</p>
@@ -62,6 +69,23 @@ label.s span{float:right;opacity:.8}
   <div class="hint">Op de tv zelf laat je 127.0.0.1 staan.</div>
 </section>
 
+<section class="panel">
+  <h2>Bediening</h2>
+  <button id="syncBtn" class="btn gold big">Sync starten</button>
+  <div id="homeStatus" class="hint"></div>
+</section>
+
+<section class="panel">
+  <h2>Scènes</h2>
+  <p>Vaste of langzaam bewegende kleuren, in plaats van de sync. Sync starten stopt de scène.</p>
+  <div class="sgrid" id="sgrid"></div>
+  <div class="row" style="margin-top:10px"><button class="btn" id="sceneStop">Scène stoppen</button></div>
+  <div class="row" style="margin-top:8px"><input type="text" id="sceneName" class="grow" placeholder="Naam voor je eigen scène"><button class="btn" id="sceneSave">Huidige kleuren opslaan</button></div>
+</section>
+</div>
+
+<!-- Tabblad: Kamer -->
+<div class="page hidden" id="page-room">
 <section class="panel">
   <h2>Je kamer</h2>
   <p id="toolHelp"></p>
@@ -93,7 +117,25 @@ label.s span{float:right;opacity:.8}
   </div>
   <div id="panelLamp" class="hidden" style="margin-top:12px">
     <div class="chips" id="chips"></div>
-    <div id="lampDetail" class="hidden">
+    <div class="row hidden" id="roomLampRow" style="margin-bottom:6px"><b class="grow" id="roomLampName"></b><button class="btn" id="roomLampSettings">Instellingen van deze lamp</button></div>
+    <div class="hint">Kies een lamp en tik op de kaart om hem op te hangen. Sleep om te verschuiven.</div>
+  </div>
+</section>
+</div>
+
+<!-- Tabblad: Lampen -->
+<div class="page hidden" id="page-lamps">
+<section class="panel">
+  <h2>Je lampen</h2>
+  <p class="hint" style="margin:0 0 8px">Tik op de naam van een lamp om hem in te stellen.</p>
+  <p>Knipper laat een lamp aan en uit gaan zodat je hem vindt. Test laat hem rood, groen, blauw en wit zien en zet hem daarna terug. Met het kleurvakje kies je zelf een kleur.</p>
+  <div id="lampList"></div>
+  <button class="btn" id="testAll" style="margin-top:8px">Alle lampen na elkaar testen</button>
+</section>
+
+<section class="panel hidden" id="lampDetailPanel">
+  <h2 id="lampDetailTitle"></h2>
+    <div id="lampDetail">
       <div class="row"><input type="text" id="lampName" class="grow" placeholder="Naam"><button class="btn" id="blinkBtn">Knipper</button></div>
       <div class="seg" id="shapeSeg" style="margin-top:8px">
         <button class="btn" data-s="bulb">Lamp of spot</button><button class="btn" data-s="rod">Staaflamp</button>
@@ -118,25 +160,33 @@ label.s span{float:right;opacity:.8}
       <div class="row" style="margin-top:8px"><label class="grow"><input type="checkbox" id="lampEnabled"> Doet mee met sync</label><span id="lampIp" style="font-size:13px"></span></div>
       <div class="row" style="margin-top:6px"><span>Ip-adres</span><input type="text" id="lampIpEdit" class="grow" placeholder="wordt vanzelf gevonden" inputmode="decimal"></div>
     </div>
-    <div class="hint">Kies een lamp en tik op de kaart om hem op te hangen. Sleep om te verschuiven.</div>
+</section>
+
+<section class="panel">
+  <h2>Lampen toevoegen</h2>
+  <div id="cloudOn" class="hidden">
+    <p data-en="New lamp? First pair it in the &lt;b&gt;Smart Life&lt;/b&gt; app, then press here. The name and key come from your Tuya project, the TV finds the address itself.">Nieuwe lamp? Koppel hem eerst in de <b>Smart Life</b>-app en druk dan hier. Naam en sleutel komen uit je Tuya-project, het adres vindt de tv zelf.</p>
+    <button class="btn gold" id="cloudRefresh">Nieuwe lampen zoeken</button>
+    <button class="btn" id="cloudChange" style="margin-left:6px">Andere sleutels</button>
   </div>
+  <div id="cloudSetup">
+    <p>Eenmalig: vul de Access ID en het Access Secret in van je project op iot.tuya.com (Cloud, je project, Overview). Ze blijven op de tv.</p>
+    <input type="text" id="cloudId" placeholder="Access ID" autocomplete="off" autocapitalize="off">
+    <input type="text" id="cloudSecret" placeholder="Access Secret" autocomplete="off" autocapitalize="off" style="margin-top:6px">
+    <div class="row" style="margin-top:6px"><select id="cloudRegion" class="grow">
+      <option value="eu">Central Europe (Nederland)</option><option value="eu-w">Western Europe</option>
+      <option value="us">Western America</option><option value="us-e">Eastern America</option><option value="in">India</option><option value="cn">China</option>
+    </select><button class="btn gold" id="cloudSave">Opslaan en zoeken</button></div>
+  </div>
+  <div id="hiddenBox" class="hidden" style="margin-top:12px"><b>Verwijderde lampen</b><div id="hiddenList"></div></div>
+  <details style="margin-top:12px"><summary>Of: devices.json van tinytuya uploaden</summary>
+    <input type="file" id="importFile" accept=".json,application/json" style="margin-top:8px">
+  </details>
 </section>
+</div>
 
-<section class="panel">
-  <h2>Scènes</h2>
-  <p>Vaste of langzaam bewegende kleuren, in plaats van de sync. Sync starten stopt de scène.</p>
-  <div class="sgrid" id="sgrid"></div>
-  <div class="row" style="margin-top:10px"><button class="btn" id="sceneStop">Scène stoppen</button></div>
-  <div class="row" style="margin-top:8px"><input type="text" id="sceneName" class="grow" placeholder="Naam voor je eigen scène"><button class="btn" id="sceneSave">Huidige kleuren opslaan</button></div>
-</section>
-
-<section class="panel">
-  <h2>Je lampen</h2>
-  <p>Knipper laat een lamp aan en uit gaan zodat je hem vindt. Test laat hem rood, groen, blauw en wit zien en zet hem daarna terug. Met het kleurvakje kies je zelf een kleur.</p>
-  <div id="lampList"></div>
-  <button class="btn" id="testAll" style="margin-top:8px">Alle lampen na elkaar testen</button>
-</section>
-
+<!-- Tabblad: Instellingen -->
+<div class="page hidden" id="page-settings">
 <section class="panel">
   <h2>Instellingen</h2>
   <div class="row"><span>Voor</span><select id="setTarget" class="grow"></select></div>
@@ -160,28 +210,18 @@ label.s span{float:right;opacity:.8}
 </section>
 
 <section class="panel">
-  <h2>Lampen toevoegen</h2>
-  <div id="cloudOn" class="hidden">
-    <p data-en="New lamp? First pair it in the &lt;b&gt;Smart Life&lt;/b&gt; app, then press here. The name and key come from your Tuya project, the TV finds the address itself.">Nieuwe lamp? Koppel hem eerst in de <b>Smart Life</b>-app en druk dan hier. Naam en sleutel komen uit je Tuya-project, het adres vindt de tv zelf.</p>
-    <button class="btn gold" id="cloudRefresh">Nieuwe lampen zoeken</button>
-    <button class="btn" id="cloudChange" style="margin-left:6px">Andere sleutels</button>
-  </div>
-  <div id="cloudSetup">
-    <p>Eenmalig: vul de Access ID en het Access Secret in van je project op iot.tuya.com (Cloud, je project, Overview). Ze blijven op de tv.</p>
-    <input type="text" id="cloudId" placeholder="Access ID" autocomplete="off" autocapitalize="off">
-    <input type="text" id="cloudSecret" placeholder="Access Secret" autocomplete="off" autocapitalize="off" style="margin-top:6px">
-    <div class="row" style="margin-top:6px"><select id="cloudRegion" class="grow">
-      <option value="eu">Central Europe (Nederland)</option><option value="eu-w">Western Europe</option>
-      <option value="us">Western America</option><option value="us-e">Eastern America</option><option value="in">India</option><option value="cn">China</option>
-    </select><button class="btn gold" id="cloudSave">Opslaan en zoeken</button></div>
-  </div>
-  <div id="hiddenBox" class="hidden" style="margin-top:12px"><b>Verwijderde lampen</b><div id="hiddenList"></div></div>
-  <details style="margin-top:12px"><summary>Of: devices.json van tinytuya uploaden</summary>
-    <input type="file" id="importFile" accept=".json,application/json" style="margin-top:8px">
-  </details>
+  <h2>Status</h2>
   <div id="tvStatus" style="margin-top:10px;font-size:14px"></div>
 </section>
+</div>
 </main>
+
+<nav class="tabbar">
+  <button class="btn" data-tab="home"><span class="ic">▶</span>Bediening</button>
+  <button class="btn" data-tab="room"><span class="ic">▦</span>Kamer</button>
+  <button class="btn" data-tab="lamps"><span class="ic">✺</span>Lampen</button>
+  <button class="btn" data-tab="settings"><span class="ic">⚙</span>Instellingen</button>
+</nav>
 <div id="toast"></div>
 
 <script src="/i18n.js"></script>
@@ -353,7 +393,7 @@ function lampList(){
     for(const l of lamps){
       const r=document.createElement('div');r.className='lrow';r.dataset.id=l.id;
       r.innerHTML=`<span class="dot"></span><span class="name"></span><button class="btn" data-a="blink">${t('Knipper')}</button><button class="btn" data-a="test">${t('Test')}</button><input type="color" value="#ffb050"><button class="btn red" data-a="del">${t('Weg')}</button>`;
-      r.querySelector('.name').textContent=l.name;
+      r.querySelector('.name').textContent=l.name;r.querySelector('.name').onclick=()=>{selectLamp(l.id);setTimeout(()=>$('lampDetailPanel').scrollIntoView({behavior:'smooth'}),50)};
       r.querySelector('[data-a=blink]').onclick=async()=>toast((await api('/api/identify',{id:l.id})).message);
       r.querySelector('[data-a=test]').onclick=async()=>toast((await api('/api/test',{id:l.id})).message);
       r.querySelector('[data-a=del]').onclick=async()=>{if(!confirm(t('"{n}" verwijderen? Je kunt hem later terugzetten onder Lampen toevoegen.',{n:l.name})))return;
@@ -365,6 +405,7 @@ function lampList(){
   for(const r of box.children){const lv=live[r.dataset.id];if(!lv)continue;
     r.querySelector('.dot').style.background=lv.online?(lv.color&&lv.color!=='#555555'?lv.color:'#ffd696'):'#6a6070';
     r.querySelector('.name').title=lv.online?t('bereikbaar'):t('niet bereikbaar')}
+  for(const r of box.children)r.classList.toggle('sel',r.dataset.id===selLamp);
 }
 $('testAll').onclick=async()=>toast((await api('/api/test',{})).message);
 function selectLamp(id){selLamp=id;chips();showLamp();draw()}
@@ -384,7 +425,9 @@ function follows(l){
   return t('Volgt {e}, {s}',{e:t(l.height==='ceiling'?'de bovenrand':(l.height==='table'||l.height==='sill')?'de zijkanten':'de onderkant'),s:t(side)});
 }
 function showLamp(){
-  const l=lamps.find(l=>l.id===selLamp);$('lampDetail').classList.toggle('hidden',!l);if(!l)return;
+  const l=lamps.find(l=>l.id===selLamp);$('lampDetailPanel').classList.toggle('hidden',!l);$('roomLampRow').classList.toggle('hidden',!l);
+  for(const r of $('lampList').children)r.classList.toggle('sel',r.dataset.id===selLamp);if(!l)return;
+  $('lampDetailTitle').textContent=l.name;$('roomLampName').textContent=l.name;
   if(document.activeElement!==$('lampName'))$('lampName').value=l.name;
   document.querySelectorAll('#heightSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.h===l.height));
   const rod=(l.shape||'bulb')==='rod';
@@ -487,6 +530,7 @@ function liveFrom(s){
   if(!$('tvHost').value)$('tvHost').value=s.tv.host;
   const on=s.lamps.filter(l=>l.online).length;
   $('tvStatus').innerHTML=`${t('Tv')}: ${s.tv.paired?'<span class="ok">'+t('gekoppeld')+'</span>':'<span class="bad">'+t('niet gekoppeld')+'</span>'} | ${t('Lampen: {a} van {b} bereikbaar',{a:on,b:s.lamps.length})}`;
+  $('homeStatus').innerHTML=$('tvStatus').innerHTML;
 }
 async function load(){
   S=await api('/api/state');
@@ -498,7 +542,16 @@ async function load(){
   chips();showLamp();lampList();draw();
 }
 async function poll(){try{const s=await api('/api/state');S=s;liveFrom(s);chips();showLamp();lampList();draw()}catch(e){}}
-(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang)}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');load()})();
+(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang)}catch(e){}I18N.apply();tvSizes();// Tabbladen
+function showTab(n){
+  document.querySelectorAll('.page').forEach(p=>p.classList.toggle('hidden',p.id!=='page-'+n));
+  document.querySelectorAll('.tabbar .btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===n));
+  try{localStorage.setItem('tab',n)}catch(e){}
+  window.scrollTo(0,0);if(n==='room')setTimeout(draw,0);
+}
+document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+$('roomLampSettings').onclick=()=>{showTab('lamps');setTimeout(()=>$('lampDetailPanel').scrollIntoView({behavior:'smooth'}),50)};
+buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';showTab(tb);load()})();
 setInterval(()=>{if(S&&S.sync)poll()},500);
 setInterval(()=>{if(!(S&&S.sync))poll()},1500);
 window.addEventListener('resize',draw);
