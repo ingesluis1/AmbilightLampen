@@ -148,7 +148,7 @@ function status(){
       b.addEventListener('focus',()=>b.classList.add('focus'));b.addEventListener('blur',()=>b.classList.remove('focus'));
     });
   }
-  for(const b of $('legend').querySelectorAll('.lamp')){const l=s.lamps.find(x=>x.id===b.dataset.id);if(l)b.querySelector('.sq').style.background=l.online?(l.color&&l.color!=='#555555'?l.color:'#ffd696'):'#6a6070'}
+  for(const b of $('legend').querySelectorAll('.lamp')){const l=s.lamps.find(x=>x.id===b.dataset.id);if(l)b.querySelector('.sq').style.background=!l.online?'#6a6070':l.on===false?'#2a2230':(l.color&&l.color!=='#555555'?l.color:'#ffd696')}
   if(s.update){const u=s.update;$('updBtn').classList.toggle('hidden',!u.available);$('updBtn').textContent=t('Update naar {v}',{v:u.latest});
     $('ver').textContent=t('Versie {v}',{v:u.current})+(u.status?' | '+u.status:'')}
   if(s.link&&$('url').textContent!==s.link){$('url').textContent=s.link;$('qr').src='/qr.png?'+encodeURIComponent(s.link)}

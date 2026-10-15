@@ -362,8 +362,8 @@ const Room = (() => {
       if (l.x < 0) continue;
       const lv = live[l.id] || {};
       if (!lv.online) continue;
-      if (sync && lv.color === '#555555') continue;
-      const col = sync ? (lv.color || '#ffd696') : '#ffd696';
+      if ((sync && lv.color === '#555555') || lv.on === false) continue;
+      const col = lv.color && lv.color !== '#555555' ? lv.color : '#ffd696';
       const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
       const big = l.height === 'ceiling' || l.shape === 'rod' ? 1 : 0.75;
       const rings = sync ? [[30, 0.06], [22, 0.07], [14, 0.09], [7, 0.12]] : [[14, 0.05], [7, 0.06]];
@@ -378,7 +378,7 @@ const Room = (() => {
     for (const l of lamps) {
       if (l.x < 0) continue;
       const lv = live[l.id] || {};
-      lampFixture(g, l, !lv.online || (sync && lv.color === '#555555') ? '#55505a' : sync ? (lv.color || '#ffd696') : '#ffe2a8');
+      lampFixture(g, l, !lv.online || lv.on === false || (sync && lv.color === '#555555') ? '#55505a' : lv.color && lv.color !== '#555555' ? lv.color : '#ffe2a8');
     }
     return c;
   }

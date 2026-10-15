@@ -182,6 +182,38 @@ class TuyaLamp(val lamp: Lamp) {
         private set
     /** Laatst verstuurde kleur, voor de weergave op het scherm en de telefoon. */
     @Volatile var shownColor: Int = 0xFF555555.toInt()
+    /** Laatst bekende stand van de lamp (functies 20..24), uit wat we sturen en wat de lamp meldt. */
+    private val known = HashMap<String, Any>()
+    /** Staat de lamp aan? null = nog onbekend. */
+    @Volatile var powered: Boolean? = null
+        private set
+
+    fun noteState(d: Map<String, Any?>) {
+        synchronized(known) { for (k in listOf("20", "21", "22", "23", "24")) d[k]?.let { known[k] = it } }
+        powered = known["20"] as? Boolean
+    }
+    private fun noteState(d: JSONObject) = noteState(d.keys().asSequence().associateWith { d.opt(it) })
+
+    /** Kleur die de lamp nu (buiten de sync) laat zien, of null als dat onbekend is of hij uit staat. */
+    fun idleColor(): Int? {
+        val st = synchronized(known) { HashMap(known) }
+        if (st["20"] == false) return null
+        return when (st["21"]) {
+            "colour" -> (st["24"] as? String)?.let { c ->
+                val (h, s, v) = when (c.length) {
+                    12 -> Triple(c.substring(0, 4).toInt(16), c.substring(4, 8).toInt(16) / 1000f, c.substring(8, 12).toInt(16) / 1000f)
+                    14 -> Triple(c.substring(6, 10).toInt(16), c.substring(10, 12).toInt(16) / 255f, c.substring(12, 14).toInt(16) / 255f)
+                    else -> return null
+                }
+                android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), s.coerceIn(0f, 1f), 0.45f + 0.55f * v.coerceIn(0f, 1f)))
+            }
+            "white" -> {
+                val t = ((st["23"] as? Number)?.toInt() ?: 500) / 1000f
+                android.graphics.Color.rgb((255 - 35 * t).toInt(), (190 + 50 * t).toInt(), (110 + 145 * t).toInt())
+            }
+            else -> null
+        }
+    }
 
     private val localKey = lamp.key.toByteArray(Charsets.UTF_8)
     private val ver = lamp.version
@@ -211,6 +243,7 @@ class TuyaLamp(val lamp: Lamp) {
 
     fun send(dps: Map<String, Any>) {
         synchronized(lock) { pending.putAll(dps); lock.notifyAll() }
+        noteState(dps)
     }
 
     /** Eén laag een kleur geven (h 0..360, s en v 0..1000). Alleen de nieuwste kleur per laag wordt verstuurd. */
@@ -331,7 +364,7 @@ class TuyaLamp(val lamp: Lamp) {
                 if (queryWanted || lastBeat == 0L) {
                     queryWanted = false; lastBeat = now
                     exchange("getPilot", null, 600)?.optJSONObject("result")?.let { r ->
-                        val d = Wiz.dps(r); mode = d.optString("21", mode); statusResult = d
+                        val d = Wiz.dps(r); mode = d.optString("21", mode); statusResult = d; noteState(d)
                     }
                     continue
                 }
@@ -351,7 +384,9 @@ class TuyaLamp(val lamp: Lamp) {
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
                 } else if (now - lastBeat > 5000) {
                     lastBeat = now
-                    if (exchange("getPilot", null, 600) == null && now - lastRx > 12_000) online = false
+                    val r = exchange("getPilot", null, 600)
+                    r?.optJSONObject("result")?.let { noteState(Wiz.dps(it)) }
+                    if (r == null && now - lastRx > 12_000) online = false
                 } else {
                     synchronized(lock) { if (pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(40) }
                 }
@@ -476,6 +511,7 @@ class TuyaLamp(val lamp: Lamp) {
             if (f.cmd == TuyaCodec.DP_QUERY || f.cmd == TuyaCodec.DP_QUERY_NEW || f.cmd == TuyaCodec.STATUS) {
                 val dps = TuyaCodec.jsonOf(f.plain)?.let { TuyaCodec.dpsOf(it) } ?: continue
                 (dps.opt("24") as? String)?.let { colourV1 = it.length == 14 }
+                noteState(dps)
                 if (dps.has("20") && dps.has("21")) statusResult = dps
             }
         }

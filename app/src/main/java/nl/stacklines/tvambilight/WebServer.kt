@@ -215,7 +215,10 @@ class WebServer(private val ctx: Context) {
             val w = Engine.workers[l.id]
             lamps.put(l.toJson(false).apply {
                 put("online", w?.online == true)
-                put("color", "#%06x".format((w?.shownColor ?: 0x555555) and 0xffffff))
+                val live = Engine.running || SceneEngine.active != null
+                val col = (if (live) w?.shownColor else w?.idleColor()) ?: 0x555555
+                put("color", "#%06x".format(col and 0xffffff))
+                put("on", w?.powered != false)
                 put("supported", l.supported)
                 put("error", w?.lastFail ?: ""); put("reconnects", w?.reconnects ?: 0)
             })

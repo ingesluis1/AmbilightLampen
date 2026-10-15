@@ -431,7 +431,9 @@ function lampList(){
     }
   }
   for(const r of box.children){const lv=live[r.dataset.id];if(!lv)continue;
-    r.querySelector('.dot').style.background=lv.online?(lv.color&&lv.color!=='#555555'?lv.color:'#ffd696'):'#6a6070';
+    const off=lv.online&&lv.on===false,d=r.querySelector('.dot');
+    d.style.background=!lv.online?'#6a6070':off?'#2a2230':(lv.color&&lv.color!=='#555555'?lv.color:'#ffd696');
+    d.title=!lv.online?t('niet bereikbaar'):off?t('uit'):t('aan');
     r.querySelector('.name').title=lv.online?t('bereikbaar'):t('niet bereikbaar')}
   for(const r of box.children)r.classList.toggle('sel',r.dataset.id===selLamp);
 }
