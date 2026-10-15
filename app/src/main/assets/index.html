@@ -69,6 +69,10 @@ label.s span{float:right;opacity:.8}
   <div class="hint">Op de tv zelf laat je 127.0.0.1 staan.</div>
 </section>
 
+<section class="panel" id="homeMapPanel">
+  <div id="homeMapSlot"></div>
+</section>
+
 <section class="panel">
   <h2>Bediening</h2>
   <button id="syncBtn" class="btn gold big">Sync starten</button>
@@ -91,7 +95,7 @@ label.s span{float:right;opacity:.8}
   <h2>Je kamer</h2>
   <p id="toolHelp"></p>
   <div class="tools" id="tools"></div>
-  <div class="mapwrap" id="mapwrap"><canvas id="map"></canvas></div>
+  <div id="roomMapSlot"><div class="mapwrap" id="mapwrap"><canvas id="map"></canvas></div></div>
 
   <div id="panelFloor" style="margin-top:12px">
     <div class="palette" id="floors" style="grid-template-columns:repeat(4,1fr)"></div>
@@ -231,7 +235,7 @@ label.s span{float:right;opacity:.8}
 const $ = id => document.getElementById(id);
 let S = null, L = null, lamps = [], settings = {}, live = {};
 let groups = [], setTarget = '', cloudShown = false, floorMat = '1', tool = 'floor', selLamp = null, selItem = null, newItemType = null;
-let dirty = false, saveTimer = null, baseImg = null, baseKey = '', view = null;
+let dirty = false, saveTimer = null, baseImg = null, baseKey = '', view = null, curTab = 'home';
 const TOOLS = [['floor','Vloer'],['erase','Gum'],['item','Meubels'],['tv','Tv'],['lamp','Lampen']];
 const HELP = {floor:'Leg vloer door over de vakjes te vegen. De muren komen er vanzelf omheen. 1 vakje is 1 meter.',
   erase:'Veeg over vakjes om ze weg te halen, bijvoorbeeld voor een L-vormige kamer.',
@@ -304,12 +308,15 @@ function draw(){
   if(!L)return;
   const key=JSON.stringify(L);
   if(key!==baseKey){baseImg=Room.base(L,lamps);baseKey=key}
-  const img=Room.frame(baseImg,L,lamps,live,S&&S.sync,S&&S.top);
+  const img=Room.frame(baseImg,L,lamps,live,S&&(S.sync||!!S.activeScene||S.lampsOff),S&&S.sync&&S.top);
   const maxW=Math.min($('mapwrap').clientWidth,document.documentElement.clientWidth-56)-20;
-  view=Room.present($("map"),img,maxW,Math.max(window.innerHeight*0.8,maxW*0.75),true);
+  const ro=curTab==='home';
+  view=Room.present($("map"),img,maxW,ro?window.innerHeight*0.42:Math.max(window.innerHeight*0.8,maxW*0.75),true);
   const g=view.g,k=view.scale;
   const sc=(x,y)=>[(x+1)*k,(y+1)*k];
   g.lineWidth=2;g.setLineDash([6,4]);g.strokeStyle='#ffe08a';
+  $('wv').textContent=L.w;$('hv').textContent=L.h;
+  if(ro)return;
   if(tool==='item'&&L.items[selItem]){const it=L.items[selItem],def=Room.ITEMS[it.type],rot=((it.dir||90)/90)%2===0;
     const w=(rot?(it.d||def.d):(it.w||def.w))*k,d=(rot?(it.w||def.w):(it.d||def.d))*k,[x,y]=sc(it.x,it.y);g.strokeRect(x-w/2-3,y-d/2-3,w+6,d+6)}
   if(tool==='tv'&&L.tv){const t=L.tv,rot=(t.dir/90)%2===0,w=(rot?.45:t.w+.4)*k,d=(rot?t.w+.4:.45)*k,[x,y]=sc(t.x,t.y);g.strokeRect(x-w/2-3,y-d/2-3,w+6,d+6)}
@@ -331,7 +338,7 @@ function paint(mx,my){const x=Math.floor(mx),y=Math.floor(my);if(x<0||y<0||x>=L.
 function itemAt(mx,my){for(let i=L.items.length-1;i>=0;i--){const it=L.items[i],def=Room.ITEMS[it.type],rot=((it.dir||90)/90)%2===0;
   const w=rot?(it.d||def.d):(it.w||def.w),d=rot?(it.w||def.w):(it.d||def.d);if(Math.abs(mx-it.x)<=w/2&&Math.abs(my-it.y)<=d/2)return i}return -1}
 const cv=$('map');
-cv.addEventListener('pointerdown',e=>{if(!L||!view)return;cv.setPointerCapture(e.pointerId);const [mx,my]=pos(e);
+cv.addEventListener('pointerdown',e=>{if(!L||!view||curTab!=='room')return;cv.setPointerCapture(e.pointerId);const [mx,my]=pos(e);
   if(tool==='floor'||tool==='erase'){painting=true;paint(mx,my)}
   else if(tool==='tv'){L.tv.x=snap(mx);L.tv.y=snap(my);drag='tv';changed()}
   else if(tool==='item'){
@@ -545,18 +552,20 @@ async function load(){
   chips();showLamp();lampList();draw();
 }
 async function poll(){try{const s=await api('/api/state');S=s;liveFrom(s);chips();showLamp();lampList();draw()}catch(e){}}
-(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang)}catch(e){}I18N.apply();tvSizes();// Tabbladen
+// Tabbladen
 function showTab(n){
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('hidden',p.id!=='page-'+n));
   document.querySelectorAll('.tabbar .btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===n));
   try{localStorage.setItem('tab',n)}catch(e){}
-  window.scrollTo(0,0);if(n==='room')setTimeout(draw,0);
+  curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);
 }
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
 $('roomLampSettings').onclick=()=>{showTab('lamps');setTimeout(()=>$('lampDetailPanel').scrollIntoView({behavior:'smooth'}),50)};
-buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';showTab(tb);load()})();
-setInterval(()=>{if(S&&S.sync)poll()},500);
-setInterval(()=>{if(!(S&&S.sync))poll()},1500);
+(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang)}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';showTab(tb);load()})();
+const fast=()=>S&&(S.sync||S.activeScene);
+setInterval(()=>{if(fast())poll()},500);
+setInterval(()=>{if(!fast())poll()},1500);
 window.addEventListener('resize',draw);
 document.fonts&&document.fonts.ready.then(draw);
 </script>

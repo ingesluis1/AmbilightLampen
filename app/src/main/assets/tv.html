@@ -124,7 +124,7 @@ function render(){
   const key=JSON.stringify(L)+JSON.stringify(S.lamps.map(l=>[l.x,l.y,l.height]));
   if(key!==baseKey){baseImg=Room.base(L,S.lamps);baseKey=key}
   const live={};for(const l of S.lamps)live[l.id]=l;
-  const img=Room.frame(baseImg,L,S.lamps,live,S.sync,S.top);
+  const img=Room.frame(baseImg,L,S.lamps,live,S.sync||!!S.activeScene||S.lampsOff,S.sync&&S.top);
   const st=$('stage');Room.present($('map'),img,st.clientWidth-14,st.clientHeight-14,true);
 }
 function status(){
