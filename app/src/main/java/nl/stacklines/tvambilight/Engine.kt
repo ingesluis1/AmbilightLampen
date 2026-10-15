@@ -143,9 +143,30 @@ object Engine {
         }.start()
     }
 
+    /** Staan alle lampen uit via de knop "Lampen uit"? */
+    @Volatile var lampsOff = false
+
+    /** Sync en scène stoppen en alle lampen uit (of weer aan in warm wit). */
+    fun allLamps(on: Boolean) {
+        if (!on) {
+            val busy = running || SceneEngine.active != null
+            Store.syncWanted = false; Store.save(); stop(); SceneEngine.stop()
+            // Eerst het terugzetten van de sync of scène laten versturen, anders mengt het met "uit"
+            if (busy) Thread.sleep(600)
+        }
+        syncWorkers()
+        for (l in Store.lampsSnapshot().filter { it.enabled }) {
+            val w = workers[l.id] ?: continue
+            w.send(if (on) mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 300) else mapOf("20" to false))
+            w.shownColor = if (on) 0xFFFFE1B4.toInt() else 0xFF555555.toInt()
+        }
+        lampsOff = !on
+    }
+
     @Synchronized
     fun start() {
         if (running) return
+        lampsOff = false
         SceneEngine.stop()
         syncWorkers()
         running = true

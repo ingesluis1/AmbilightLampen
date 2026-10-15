@@ -72,6 +72,7 @@ label.s span{float:right;opacity:.8}
 <section class="panel">
   <h2>Bediening</h2>
   <button id="syncBtn" class="btn gold big">Sync starten</button>
+  <button id="offBtn" class="btn big" style="margin-top:8px">Lampen uit</button>
   <div id="homeStatus" class="hint"></div>
 </section>
 
@@ -489,6 +490,7 @@ async function save(){
 }
 $('updBtn').onclick=async()=>{const u=S.update,n=I18N.notes(u.notes);if(!confirm(t('Wat is er nieuw in {v}',{v:u.latest})+':\n\n'+(n.length?'- '+n.join('\n- '):t('Geen beschrijving.'))+'\n\n'+t('Nu updaten?')))return;toast((await api('/api/update',{})).message+t('. Kijk op de tv.'))};
 $('syncBtn').onclick=async()=>{const on=!(S&&S.sync);$('syncBtn').disabled=true;const r=await api('/api/sync',{on});toast(r.message);setTimeout(()=>{$('syncBtn').disabled=false;poll()},on?2500:3500)};
+$('offBtn').onclick=async()=>{const on=!!(S&&S.lampsOff);$('offBtn').disabled=true;toast((await api('/api/lamps/power',{on})).message);setTimeout(()=>{$('offBtn').disabled=false;poll()},on?500:3500)};
 $('pairBtn').onclick=async()=>{const r=await api('/api/pair/request',{host:$('tvHost').value.trim()});toast(r.message);if(r.ok){$('pinRow').classList.remove('hidden');$('pin').focus()}};
 $('grantBtn').onclick=async()=>{const r=await api('/api/pair/grant',{pin:$('pin').value});toast(r.message);if(r.ok)poll()};
 $('cloudSave').onclick=async()=>{const b=$('cloudSave');b.disabled=true;b.textContent=t('Zoeken...');
@@ -524,6 +526,7 @@ function liveFrom(s){
   hiddenList(s);sceneList(s);
   live={};for(const l of s.lamps)live[l.id]=l;
   $('syncBtn').textContent=t(s.sync?'Sync stoppen':'Sync starten');
+  $('offBtn').textContent=t(s.lampsOff?'Lampen aan':'Lampen uit');
   if(s.update){$('updBtn').classList.toggle('hidden',!s.update.available);$('updBtn').textContent=t('Update {v}',{v:s.update.latest})}
   $('pairCard').classList.toggle('hidden',s.tv.paired);
   if(s.cloud&&!cloudShown){cloudShown=true;$('cloudOn').classList.toggle('hidden',!s.cloud.configured);$('cloudSetup').classList.toggle('hidden',s.cloud.configured);$('cloudRegion').value=s.cloud.region}

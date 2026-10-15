@@ -76,6 +76,7 @@ object SceneEngine {
     @Synchronized
     fun start(scene: Scene) {
         stop()
+        Engine.lampsOff = false
         if (Engine.running) { Store.syncWanted = false; Store.save(); Engine.stop() }
         Engine.syncWorkers()
         active = scene

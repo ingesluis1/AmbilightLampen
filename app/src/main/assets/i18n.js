@@ -57,6 +57,7 @@ const I18N = (() => {
     'Zonsondergang': 'Sunset', 'Roze & blauw': 'Pink & blue', 'Noorderlicht': 'Northern lights', 'Oceaan': 'Ocean', 'Haardvuur': 'Fireplace',
     'Regenboog': 'Rainbow', 'Warme gloed': 'Warm glow', 'Lentebloesem': 'Spring blossom', 'Filmavond': 'Movie night', 'Nachtlampje': 'Night light',
     'Ontspannen': 'Relax', 'Lezen': 'Read', 'Concentratie': 'Concentrate',
+    'Lampen uit': 'Lamps off', 'Lampen aan': 'Lamps on',
     'Bediening': 'Control', 'Kamer': 'Room', 'Status': 'Status', 'Instellingen van deze lamp': 'Settings for this lamp',
     'Tik op de naam van een lamp om hem in te stellen.': 'Tap the name of a lamp to set it up.',
     'Bovenrand': 'Top edge', 'Groep': 'Group', 'Voor': 'For', 'Nieuwe groep': 'New group', 'Verwijderen': 'Delete',

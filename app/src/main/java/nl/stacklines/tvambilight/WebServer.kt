@@ -121,6 +121,11 @@ class WebServer(private val ctx: Context) {
                         if (on) Engine.start() else Engine.stop()
                         msg(true, if (on) tr("Sync gestart", "Sync started") else tr("Sync gestopt", "Sync stopped"))
                     }
+                    path == "/api/lamps/power" && method == "POST" -> {
+                        val on = JSONObject(req).optBoolean("on")
+                        Engine.allLamps(on)
+                        msg(true, if (on) tr("Lampen aan", "Lamps on") else tr("Lampen uit", "Lamps off"))
+                    }
                     path == "/api/pair/request" && method == "POST" -> {
                         JSONObject(req).optString("host").ifBlank { null }?.let { Store.tvHost = it; Store.save() }
                         val r = PhilipsTv.pairRequest()
@@ -205,6 +210,7 @@ class WebServer(private val ctx: Context) {
             put("groups", JSONArray().apply { Store.groups.forEach { put(it.toJson()) } })
             put("tv", JSONObject().put("paired", Store.tvPaired).put("host", Store.tvHost).put("status", Engine.tvStatus))
             put("sync", Engine.running)
+            put("lampsOff", Engine.lampsOff)
             put("scenes", JSONArray().apply { SceneEngine.all().forEach { put(it.toJson()) } })
             put("activeScene", SceneEngine.active?.id ?: "")
             put("update", JSONObject().put("current", Updater.current(ctx)).put("latest", Updater.latest ?: "")

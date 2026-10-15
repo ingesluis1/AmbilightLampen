@@ -72,6 +72,7 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
       <div class="stat"><i id="iLamps"></i><span id="tLamps"></span></div>
       <div class="btns">
         <button class="btn gold" id="syncBtn">Sync starten</button>
+        <button class="btn" id="offBtn">Lampen uit</button>
         <button class="btn" id="sceneBtn">Scènes</button>
         <button class="btn" id="testBtn">Kleurtest (alle lampen na elkaar)</button>
         <button class="btn" id="rainbowBtn">Testbeeld (regenboog)</button>
@@ -137,6 +138,7 @@ function status(){
   $('iLamps').className=!s.lamps.length?'off':on===s.lamps.length?'on':'warn';
   $('tLamps').textContent=s.lamps.length?t('Lampen: {a} van {b} bereikbaar',{a:on,b:s.lamps.length}):t('Nog geen lampen, voeg ze toe via de telefoon');
   $('syncBtn').textContent=t(s.sync?'Sync stoppen':'Sync starten');
+  $('offBtn').textContent=t(s.lampsOff?'Lampen aan':'Lampen uit');
   const ids=s.lamps.map(l=>l.id+l.name+(l.x<0)).join();
   if($('legend').dataset.ids!==ids){
     $('legend').dataset.ids=ids;
@@ -156,6 +158,7 @@ async function poll(){
   setTimeout(poll,S&&S.sync?150:500);
 }
 $('syncBtn').onclick=async()=>{if(busy)return;busy=true;const on=!(S&&S.sync);toast(t(on?'Sync start...':'Sync stopt...'));await api('/api/sync',{on});busy=false};
+$('offBtn').onclick=async()=>{if(busy)return;busy=true;const on=!!(S&&S.lampsOff);toast((await api('/api/lamps/power',{on})).message);busy=false};
 $('testBtn').onclick=async()=>toast((await api('/api/test',{})).message);
 
 // Instellingen met de afstandsbediening
