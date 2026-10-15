@@ -162,7 +162,8 @@ object Engine {
 
     /** Lamp met aparte lagen: per laag gladstrijken, opvoeren en alleen versturen als hij genoeg veranderd is. */
     private fun syncLayers(l: Lamp, worker: TuyaLamp, sample: ZoneSample, s: Settings, alpha: Double,
-                           smooth: HashMap<String, DoubleArray>, last: HashMap<String, IntArray>, lampOn: HashMap<String, Boolean>) {
+                           smooth: HashMap<String, DoubleArray>, last: HashMap<String, IntArray>, lampOn: HashMap<String, Boolean>,
+                           donor: DoubleArray) {
         if (lampOn[l.id] != true) { worker.send(mapOf("20" to true, "21" to "colour")); lampOn[l.id] = true }
         val cols = Mixer.layers(Store.layout, l, sample, l.layers)
         var shown = 0
@@ -177,10 +178,10 @@ object Engine {
             val raw = ((hsv[2] - black(s)) / (1 - black(s))).coerceAtLeast(0.0)
             val v = max(s.minLight, min(1.0, raw * s.brightness))
             val dk = darkMix(s, raw)
-            val h = if (dk > 0.5) DARK_H else hsv[0].roundToInt() % 360
+            val h = if (dk > 0.5) donor[0].roundToInt() % 360 else hsv[0].roundToInt() % 360
             // Laag zwart: helderheid 0 (de lamp blijft aan, alleen die laag gaat uit)
             val vv = if (s.minLight <= 0.001 && raw * s.brightness < 0.02) 0 else max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
-            val sv = (min(1.0, (sat * (1 - dk) + DARK_S * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
+            val sv = (min(1.0, (sat * (1 - dk) + donor[1] * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
             if (i == cols.size / 2) shown = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
             val prev = last[key]
             val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
@@ -233,6 +234,32 @@ object Engine {
                 w.send(restore)
                 w.shownColor = 0xFF555555.toInt()
             }
+    }
+
+    /** Lampen met kleur in deze meting: x, y, tint, verzadiging. */
+    private val lit = ArrayList<DoubleArray>()
+    /** Tint en verzadiging van het hele beeld, of null als het beeld (bijna) zwart is. */
+    private var screenHS: DoubleArray? = null
+    /** Per lamp de gladgestreken donor-kleur als vector (cos·s, sin·s), zodat de tint niet verspringt. */
+    private val donorSmooth = HashMap<String, DoubleArray>()
+
+    /**
+     * Kleur voor een lamp die op "Licht bij zwart beeld" staat: de tint van de dichtstbijzijnde lamp die nog kleur heeft,
+     * anders het gemiddelde van het hele beeld, anders de zacht warme tint. Geeft (tint 0..360, verzadiging 0..1).
+     */
+    private fun donorFor(l: Lamp, alpha: Double): DoubleArray {
+        val near = lit.filter { !(it[0] == l.x && it[1] == l.y) }.minByOrNull { (it[0] - l.x) * (it[0] - l.x) + (it[1] - l.y) * (it[1] - l.y) }
+        val hs = when {
+            near != null -> doubleArrayOf(near[2], near[3])
+            screenHS != null -> screenHS!!
+            else -> doubleArrayOf(DARK_H.toDouble(), DARK_S)
+        }
+        val a = Math.toRadians(hs[0])
+        val target = doubleArrayOf(cos(a) * hs[1], sin(a) * hs[1])
+        val sm = donorSmooth[l.id]?.let { o -> doubleArrayOf(o[0] + alpha * (target[0] - o[0]), o[1] + alpha * (target[1] - o[1])) } ?: target
+        donorSmooth[l.id] = sm
+        val h = (Math.toDegrees(Math.atan2(sm[1], sm[0])) + 360) % 360
+        return doubleArrayOf(h, Math.sqrt(sm[0] * sm[0] + sm[1] * sm[1]).coerceIn(0.0, 1.0))
     }
 
     private fun loop() {
@@ -289,6 +316,23 @@ object Engine {
                     val topX = topLamps.withIndex().associate { (k, l) -> l.id to (-1 + (2.0 * k + 1) / topLamps.size) }
                     for (l in Store.lampsSnapshot()) weights[l.id] = Mixer.weights(Store.layout, l, Store.settingsFor(l).spread, zc.first, zc.second, zc.third, topX[l.id])
                 }
+                // Voorronde voor donker beeld: welke lampen hebben nog kleur (tint + verzadiging), en wat is het gemiddelde van het hele beeld
+                lit.clear()
+                for (l in Store.lampsSnapshot()) {
+                    if (!l.enabled || !l.placed || l.layers > 0) continue
+                    val ls = Store.settingsFor(l)
+                    val tgt = Mixer.mix(weights[l.id] ?: continue, sample)
+                    val hv = FloatArray(3)
+                    Color.RGBToHSV(tgt[0].roundToInt().coerceIn(0, 255), tgt[1].roundToInt().coerceIn(0, 255), tgt[2].roundToInt().coerceIn(0, 255), hv)
+                    val raw = ((hv[2] - black(ls)) / (1 - black(ls))).coerceAtLeast(0.0)
+                    if (raw * ls.brightness > ls.minLight * 2 && hv[1] > 0.08)
+                        lit += doubleArrayOf(l.x, l.y, hv[0].toDouble(), min(1.0, hv[1] * satF(ls) + satAdd(ls)))
+                }
+                val all = sample.left + sample.top + sample.right
+                val avg = DoubleArray(3) { k -> all.sumOf { it[k].toDouble() } / max(1, all.size) }
+                val ah = FloatArray(3)
+                Color.RGBToHSV(avg[0].roundToInt(), avg[1].roundToInt(), avg[2].roundToInt(), ah)
+                screenHS = if (ah[2] > 0.03 && ah[1] > 0.08) doubleArrayOf(ah[0].toDouble(), min(1.0, ah[1] * s.saturation + 0.1)) else null
                 // Elke ronde opnieuw: lampen die tijdens de sync zijn toegevoegd doen meteen mee
                 for (l in Store.lampsSnapshot()) {
                     val id = l.id
@@ -297,7 +341,7 @@ object Engine {
                     val ls = Store.settingsFor(l)
                     val la = 1 - Math.pow(1 - ls.smooth.coerceIn(0.01, 1.0), 15.0 / hzEff)
                     if (touched.add(id)) syncWorkers()
-                    if (l.layers > 0) { syncLayers(l, worker, sample, ls, la, smooth, last, lampOn); continue }
+                    if (l.layers > 0) { syncLayers(l, worker, sample, ls, la, smooth, last, lampOn, donorFor(l, la)); continue }
                     val target = Mixer.mix(weights[id] ?: continue, sample)
                     // Grote, plotselinge verandering (scènewissel): direct springen; kleine: gladstrijken en overvloeien
                     val cut = smooth[id]?.let { o -> (ls.cuts && rgbDist(o, target) > CUT_DIST) } ?: true
@@ -316,8 +360,9 @@ object Engine {
                         continue
                     }
                     val dk = darkMix(ls, rawV)
-                    val h = if (dk > 0.5) DARK_H else hsv[0].roundToInt() % 360
-                    val sv = (min(1.0, (sat * (1 - dk) + DARK_S * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
+                    val dn = donorFor(l, la)
+                    val h = if (dk > 0.5) dn[0].roundToInt() % 360 else hsv[0].roundToInt() % 360
+                    val sv = (min(1.0, (sat * (1 - dk) + dn[1] * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
                     val vv = max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
                     val prev = last[id]
                     val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
