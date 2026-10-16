@@ -278,7 +278,10 @@ function changeSetting(dir){
   renderSettings();clearTimeout(setTimer);
   setTimer=setTimeout(async()=>{
     const g=tgtGroup();
-    const body=g?{groups:(S.groups||[]).map(x=>x.id===g.id?{id:x.id,name:x.name,settings:setVals}:{id:x.id,name:x.name})}:{settings:setVals};
+    // Alle lampen: de gewijzigde instelling ook in elke groep zetten, zodat echt alle lampen hem krijgen
+    const all=GLOBAL_ONLY.includes(r.k)?(S.groups||[]).map(x=>({id:x.id,name:x.name})):(S.groups||[]).map(x=>({id:x.id,name:x.name,settings:{...x.settings,[r.k]:setVals[r.k]}}));
+    if(!g)(S.groups||[]).forEach(x=>{if(!GLOBAL_ONLY.includes(r.k))x.settings[r.k]=setVals[r.k]});
+    const body=g?{groups:(S.groups||[]).map(x=>x.id===g.id?{id:x.id,name:x.name,settings:setVals}:{id:x.id,name:x.name})}:{settings:setVals,groups:all};
     const res=await api('/api/save',body);if(!res.ok)toast(res.message);else if(r.reload)location.reload()},r.reload?50:350);
 }
 $('setBtn').onclick=openSettings;

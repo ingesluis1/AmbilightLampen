@@ -75,7 +75,7 @@ const I18N = (() => {
     'Naam van de groep': 'Name of the group', 'Alle lampen (standaard)': 'All lamps (default)', 'Geen (standaard)': 'None (default)',
     'Instellingen voor': 'Settings for', 'Groep {n}': 'Group {n}',
     'Deze instellingen gelden voor de lampen in "{n}". Kies de groep bij een lamp onder Lampen.': 'These settings apply to the lamps in "{n}". Choose the group for a lamp under Lamps.',
-    'Lampen zonder groep gebruiken deze instellingen.': 'Lamps without a group use these settings.',
+    'Geldt voor alle lampen, ook die in een groep. Kies een groep om die apart in te stellen.': 'Applies to all lamps, including those in a group. Choose a group to set it separately.',
     'Groep "{n}" verwijderen? De lampen erin gaan terug naar de standaardinstellingen.': 'Remove group "{n}"? Its lamps go back to the default settings.', 'Volgt de bovenrand, {s}': 'Follows the top edge, {s}',
     'Lampen terug als de tv uit staat': 'Lamps back to normal when the TV is off',
     'Lampen terug als de tv uit staat (20 seconden zwart beeld)': 'Lamps back to normal when the TV is off (20 seconds of black picture)',

@@ -562,18 +562,20 @@ $('reviveBtn').onclick=async()=>{if(!selLamp)return;const b=$('reviveBtn');b.dis
 const SL=['smooth','saturation','brightness','minLight','spread'];
 const fmt={smooth:v=>Math.round(v*100)+'%',saturation:v=>v.toFixed(2)+'x',brightness:v=>v.toFixed(2)+'x',minLight:v=>v==0?t('uit'):Math.round(v*100)+'%',spread:v=>v.toFixed(2)+'x'};
 function tgt(){const g=groups.find(g=>g.id===setTarget);return g?g.settings:settings}
+// Bij "Alle lampen" geldt een wijziging ook voor de lampen in groepen; bij een groep alleen voor die groep
+function setVal(k,v){const g=groups.find(g=>g.id===setTarget);if(g)g.settings[k]=v;else{settings[k]=v;for(const x of groups)x.settings[k]=v}}
 function groupUI(){
   const sel=$('setTarget');sel.innerHTML='<option value="">'+t('Alle lampen (standaard)')+'</option>'+groups.map(g=>`<option value="${g.id}"></option>`).join('');
   [...sel.options].forEach((o,i)=>{if(i>0)o.textContent=groups[i-1].name});sel.value=setTarget;
   const g=groups.find(g=>g.id===setTarget);
   $('globalOnly').classList.toggle('hidden',!!g);
-  $('grpHint').textContent=g?t('Deze instellingen gelden voor de lampen in "{n}".',{n:g.name}):t('Lampen zonder groep gebruiken deze instellingen.');
+  $('grpHint').textContent=g?t('Deze instellingen gelden voor de lampen in "{n}".',{n:g.name}):t('Geldt voor alle lampen, ook die in een groep. Kies een groep om die apart in te stellen.');
   groupList();
   const lg=$('lampGroup');if(lg){const v=(lamps.find(l=>l.id===selLamp)||{}).group||'';lg.innerHTML='<option value="">'+t('Geen (standaard)')+'</option>'+groups.map(g=>`<option value="${g.id}"></option>`).join('')+'<option value="__new"></option>';[...lg.options].forEach((o,i)=>{if(i>0&&i<=groups.length)o.textContent=groups[i-1].name});lg.options[lg.options.length-1].textContent='+ '+t('Nieuwe groep');lg.value=v;$('lampGroupSet').classList.toggle('hidden',!groups.some(g=>g.id===v))}
 }
 function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('darkColor').value=settings.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('whiteLeds').checked=!!settings.whiteLeds;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
 $('lang').onchange=async e=>{settings.lang=e.target.value;await api('/api/save',{settings});location.reload()};
-for(const k of SL)$(k).oninput=e=>{tgt()[k]=+e.target.value;$('v_'+k).textContent=fmt[k](tgt()[k]);changed(true)};
+for(const k of SL)$(k).oninput=e=>{setVal(k,+e.target.value);$('v_'+k).textContent=fmt[k](tgt()[k]);changed(true)};
 $('setTarget').onchange=e=>{setTarget=e.target.value;groupUI();showSettings()};
 /* Groepen beheren (tabblad Lampen) */
 function groupList(){
@@ -606,11 +608,11 @@ $('lampGroupSet').onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l&&l.gro
 function closeLamp(){if(lowOpen){api('/api/lowcal',{id:lowOpen,on:false});lowOpen=null}selLamp=null;chips();showLamp();lampList();draw()}
 $('lampClose').onclick=()=>{closeLamp();$('lampList').scrollIntoView({behavior:'smooth',block:'center'})};
 $('after').onchange=e=>{settings.after=e.target.value;changed(true)};
-$('darkColor').onchange=e=>{tgt().darkColor=e.target.value;changed(true)};
+$('darkColor').onchange=e=>{setVal('darkColor',e.target.value);changed(true)};
 $('autostart').onchange=e=>{settings.autostart=e.target.checked;changed(true)};
-$('fade').onchange=e=>{tgt().fade=e.target.checked;changed(true)};
-$('cuts').onchange=e=>{tgt().cuts=e.target.checked;changed(true)};
-$('whiteLeds').onchange=e=>{tgt().whiteLeds=e.target.checked;changed(true)};
+$('fade').onchange=e=>{setVal('fade',e.target.checked);changed(true)};
+$('cuts').onchange=e=>{setVal('cuts',e.target.checked);changed(true)};
+$('whiteLeds').onchange=e=>{setVal('whiteLeds',e.target.checked);changed(true)};
 $('followAmbi').onchange=e=>{settings.followAmbi=e.target.checked;changed(true)};
 
 /* ---------- opslaan en live ---------- */
