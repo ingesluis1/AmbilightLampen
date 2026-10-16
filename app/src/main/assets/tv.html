@@ -48,7 +48,15 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
 .scard .sw{display:flex;gap:3px;margin-top:.8vh;height:1.6vh}
 .scard .sw i{flex:1;border:2px solid var(--ink)}
 #settings{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:center;justify-content:center;z-index:8}
-#settings .panel{width:58vw;margin:0}
+#settings .panel{width:58vw;margin:0;max-height:92vh;overflow-y:auto}
+/* Tijdens een demo: geen donkere waas, paneel smal en onderaan (daar zitten geen Ambilight-leds) */
+#settings.demo{background:transparent;align-items:flex-end;padding-bottom:3vh}
+#settings.demo .panel{width:44vw;max-height:58vh;overflow-y:auto}
+#settings.demo .srow{padding:.5vh 1vw;margin-bottom:.3vh}
+#settings.demo .srow .top{font-size:1.8vh}
+#demo{position:fixed;inset:0;z-index:7}
+#demo canvas{width:100%;height:100%;display:block}
+#demoCap{position:fixed;left:50%;bottom:64vh;transform:translateX(-50%);background:#000;color:#eee;padding:1.2vh 1.6vw;font-size:2.2vh;max-width:44vw;text-align:center;z-index:9}
 #settings h2{font-size:3vh;margin:0 0 1.4vh}
 .srow{padding:1vh 1.2vw;margin-bottom:.8vh;border:3px solid transparent}
 .srow.focus{background:var(--gold);border-color:var(--ink)}
@@ -116,6 +124,8 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
   <div id="lowrefWhite" style="background:#000;color:#ddd;padding:1.6vh 2vw;margin-bottom:6vh;font-size:2.4vh;text-align:center;max-width:60vw">De lamp wisselt tussen wit licht en kleurlicht. Schuif op je telefoon tot je geen verschil in tint meer ziet. Terug: stoppen.</div>
   <div id="lowrefBlue" style="background:#000;color:#ddd;padding:1.6vh 2vw;margin-bottom:6vh;font-size:2.4vh;text-align:center;max-width:60vw">Vergelijk de lamp met deze kleur. Let op de tint, niet op hoe fel hij is. Terug: stoppen.</div>
 </div>
+<div id="demo" class="hidden"><canvas id="demoCv"></canvas></div>
+<div id="demoCap" class="hidden"></div>
 <div id="toast"></div>
 <script src="/i18n.js"></script>
 <script src="/room.js"></script>
@@ -206,9 +216,49 @@ const ROWS=[
 let setOpen=false,setIdx=0,setVals=null,setTimer=null,setTgt='';
 const GLOBAL_ONLY=['after','autostart','followAmbi','lang'];
 function rows(){return ROWS.filter(r=>!(setTgt&&GLOBAL_ONLY.includes(r.k)))}
+
+/* ---------- demo per instelling: testbeeld waarop je ziet wat de instelling met de lampen doet ---------- */
+const hsl=(h,s,l)=>`hsl(${h},${s}%,${l}%)`;
+const DEMOS={
+  smooth:{cap:'Vlammen die snel veranderen. Hoger: de lampen volgen sneller. Lager: rustiger.',
+    draw(g,W,H,t){const k=Math.floor(t*4);const r=x=>{const v=Math.sin(k*12.9898+x*78.233)*43758.5453;return v-Math.floor(v)};g.fillStyle=hsl(10+r(1)*30,100,25+r(2)*30);g.fillRect(0,0,W,H)}},
+  saturation:{cap:'Zachte, flauwe kleuren. Hoger: de lampen maken ze voller.',
+    draw(g,W,H,t){g.fillStyle=hsl((t*25)%360,30,50);g.fillRect(0,0,W,H)}},
+  brightness:{cap:'Het beeld wordt stap voor stap feller. Hoger: de lampen branden feller bij hetzelfde beeld.',
+    draw(g,W,H,t){const l=[8,20,35,55][Math.floor(t/2.5)%4];g.fillStyle=hsl(35,60,l);g.fillRect(0,0,W,H)}},
+  minLight:{cap:'Zwart beeld met af en toe een donkere scène. Dit bepaalt hoe fel de lampen blijven bij zwart.',
+    draw(g,W,H,t){g.fillStyle=(t%6)<4?'#000':hsl(220,60,10);g.fillRect(0,0,W,H)}},
+  spread:{cap:'Links rood, boven groen, rechts blauw. Hoger: elke lamp neemt meer van de andere kanten mee.',
+    draw(g,W,H){const gr=g.createLinearGradient(0,0,W,0);gr.addColorStop(0,'#e00');gr.addColorStop(.33,'#e00');gr.addColorStop(.67,'#00e');gr.addColorStop(1,'#00e');
+      g.fillStyle=gr;g.fillRect(0,0,W,H);g.fillStyle='#0c0';g.fillRect(W*.3,0,W*.4,H*.35)}},
+  darkColor:{cap:'Donker beeld: links donkerblauw, rechts donkerrood. Schermhelft: elke lamp volgt zijn eigen kant.',
+    draw(g,W,H){g.fillStyle=hsl(225,70,7);g.fillRect(0,0,W/2,H);g.fillStyle=hsl(355,70,7);g.fillRect(W/2,0,W/2,H)}},
+  fade:{cap:'Kleine kleurstapjes. Aan: de lampen vloeien mee. Uit: ze springen.',
+    draw(g,W,H,t){g.fillStyle=hsl(200+(Math.floor(t/1.2)%4)*25,80,45);g.fillRect(0,0,W,H)}},
+  cuts:{cap:'Harde scènewissels. Aan: de lampen springen direct mee. Uit: ze vloeien ook hier.',
+    draw(g,W,H,t){g.fillStyle=['#e00','#00d','#0b0','#dd0'][Math.floor(t/2.5)%4];g.fillRect(0,0,W,H)}},
+  whiteLeds:{cap:'',
+    draw(g,W,H,t){const i=Math.floor(t/3)%6;const c=['#fff','#777','#e8c060','#2a2a2a','#e00','#00d'][i];
+      DEMOS.whiteLeds.now=['Wit','Grijs','Warmgeel','Donkergrijs','Rood','Blauw'][i];g.fillStyle=c;g.fillRect(0,0,W,H)}},
+};
+let demoShown='',demoT0=0;
+function demoKey(){const r=setOpen&&rows()[setIdx];if(r&&DEMOS[r.k])return r.k;return S&&S.demo&&DEMOS[S.demo]?S.demo:''}
+function demoFrame(){
+  const k=demoKey(),box=$('demo'),cap=$('demoCap');
+  if(k!==demoShown){demoShown=k;demoT0=performance.now();box.classList.toggle('hidden',!k);cap.classList.toggle('hidden',!k);$('settings').classList.toggle('demo',!!k&&setOpen)}
+  if(k){const cv=$('demoCv'),W=cv.width=innerWidth/4|0,H=cv.height=innerHeight/4|0,t=(performance.now()-demoT0)/1000;
+    DEMOS[k].draw(cv.getContext('2d'),W,H,t);
+    cap.textContent=k==='whiteLeds'?t2('Nu: {c}. Aan: wit, grijs, geel en donker met de witte leds; rood en blauw blijven kleurlicht.',{c:t2(DEMOS.whiteLeds.now)}):t2(DEMOS[k].cap)}
+  requestAnimationFrame(demoFrame);
+}
+const t2=(s,a)=>t(s,a);
+let demoAsked='';
+function demoAsk(){const r=setOpen&&rows()[setIdx];const k=r&&DEMOS[r.k]?r.k:'';if(k!==demoAsked){demoAsked=k;api('/api/demo',{k})}}
+setInterval(()=>{if(demoAsked&&setOpen){api('/api/demo',{k:demoAsked})}},20000);
+requestAnimationFrame(demoFrame);
 function tgtGroup(){return (S.groups||[]).find(g=>g.id===setTgt)}
 function openSettings(){if(!S)return;setTgt='';setVals={...S.settings};setOpen=true;setIdx=0;$('settings').classList.remove('hidden');renderSettings()}
-function closeSettings(){setOpen=false;$('settings').classList.add('hidden');$('setBtn').focus()}
+function closeSettings(){setOpen=false;$('settings').classList.add('hidden');$('settings').classList.remove('demo');$('setBtn').focus();demoAsked='';api('/api/demo',{k:''})}
 let rbOpen=false,rbStartedSync=false,rbSpeed=8,rbSel=-1,rbSave=null,rbLamps=null;
 function rbHint(){
   const l=rbLamps&&rbLamps[rbSel];
@@ -260,6 +310,7 @@ document.addEventListener('keydown',e=>{
 },true);
 window.onBack=()=>{if(S&&S.calib){closeCalib();return true}if(S&&S.lowRef){closeLowRef();return true}if(rbOpen){closeRainbow();return true}if(setOpen){closeSettings();return true}return false};
 function renderSettings(){
+  demoAsk();
   $('srows').innerHTML=rows().map((r,i)=>{
     const v=setVals[r.k];let val,bar='';
     if(r.target){const g=tgtGroup();val=g?g.name:t('Alle lampen (standaard)')}
@@ -267,6 +318,7 @@ function renderSettings(){
     else if(r.options){const o=(r.options.find(o=>o[0]===v)||r.options[0])[1];val=r.raw?o:t(o)}
     else{val=r.fmt(+v);const n=20,f=Math.round((v-r.min)/(r.max-r.min)*n);bar='<div class="bar">'+Array.from({length:n},(_,j)=>`<i class="${j<f?'on':''}"></i>`).join('')+'</div>'}
     return `<div class="srow${i===setIdx?' focus':''}"><div class="top"><span>${t(r.label)}</span><span><span class="arrows">${r.bool?'OK ':'&lt; '}</span>${val}<span class="arrows">${r.bool?'':' &gt;'}</span></span></div>${bar}</div>`}).join('');
+  const f=$('srows').querySelector('.srow.focus');if(f)f.scrollIntoView({block:'nearest'});
 }
 function changeSetting(dir){
   const r=rows()[setIdx];

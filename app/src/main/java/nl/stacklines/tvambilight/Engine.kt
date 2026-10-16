@@ -137,7 +137,27 @@ object Engine {
         if (calibStartedSync) { calibStartedSync = false; if (!Store.syncWanted) stop() }
     }
 
-    fun checkCalib() { if (calibUntil != 0L && !calibrating) endCalib() }
+    fun checkCalib() { if (calibUntil != 0L && !calibrating) endCalib(); checkDemo() }
+
+    /** Demo van een instelling: de tv toont een bewegend testbeeld zolang je die instelling aanpast (30 s na de laatste wijziging). */
+    @Volatile var demoKey = ""
+        private set
+    @Volatile private var demoUntil = 0L
+    @Volatile private var demoStartedSync = false
+
+    fun demo(key: String) {
+        if (key.isBlank()) { endDemo(); return }
+        demoKey = key
+        demoUntil = SystemClock.elapsedRealtime() + 30_000
+        if (!running) { demoStartedSync = true; start() }
+    }
+
+    private fun endDemo() {
+        demoKey = ""; demoUntil = 0L
+        if (demoStartedSync) { demoStartedSync = false; if (!Store.syncWanted && !calibrating) stop() }
+    }
+
+    private fun checkDemo() { if (demoUntil != 0L && demoUntil < SystemClock.elapsedRealtime()) endDemo() }
     private var thread: Thread? = null
 
     /** Houdt de verbindingen in lijn met de lampenlijst (nieuw, verwijderd, ander ip-adres). */

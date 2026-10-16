@@ -128,6 +128,7 @@ class WebServer(private val ctx: Context) {
                         else { Engine.previewLow(id, j.optDouble("level", 0.05), j.optDouble("hue", 190.0), j.optDouble("strength", 0.0), j.optString("base", "grey")); msg(true, "") }
                     }
                     path == "/api/lamp/revive" && method == "POST" -> msg(true, Engine.revive(JSONObject(req).getString("id")))
+                    path == "/api/demo" && method == "POST" -> { Engine.demo(JSONObject(req).optString("k")); msg(true, "") }
                     path == "/api/calib" && method == "POST" -> {
                         val on = JSONObject(req).optBoolean("on")
                         Engine.calib(on)
@@ -240,6 +241,7 @@ class WebServer(private val ctx: Context) {
         return JSONObject().apply {
             put("calib", Engine.calibrating); put("calibBands", Engine.calibBands())
             put("lowRef", Engine.previewRef ?: "")
+            put("demo", Engine.demoKey)
             put("layout", Store.layout)
             put("lamps", lamps)
             put("settings", Store.settings.toJson())
