@@ -47,16 +47,16 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
 .scard.on{box-shadow:inset 0 0 0 3px var(--wood-dk)}
 .scard .sw{display:flex;gap:3px;margin-top:.8vh;height:1.6vh}
 .scard .sw i{flex:1;border:2px solid var(--ink)}
-#settings{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:center;justify-content:center;z-index:8}
-#settings .panel{width:58vw;margin:0;max-height:92vh;overflow-y:auto}
+#settings{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:flex-end;justify-content:center;padding-bottom:3vh;z-index:8;transition:background .3s}
+/* Altijd dezelfde maat en plek (smal, onderaan: daar zitten geen Ambilight-leds), zodat er niets verspringt bij een demo */
+#settings .panel{width:46vw;margin:0}
+#srows{max-height:56vh;overflow-y:auto;padding:0 .3vw}
+#setCap{min-height:5.4vh;font-size:1.9vh;margin:0 0 1vh;opacity:.85}
 /* Tijdens een demo: geen donkere waas, paneel smal en onderaan (daar zitten geen Ambilight-leds) */
-#settings.demo{background:transparent;align-items:flex-end;padding-bottom:3vh}
-#settings.demo .panel{width:44vw;max-height:58vh;overflow-y:auto}
-#settings.demo .srow{padding:.5vh 1vw;margin-bottom:.3vh}
-#settings.demo .srow .top{font-size:1.8vh}
+#settings.demo{background:transparent}
 #demo{position:fixed;inset:0;z-index:7}
 #demo canvas{width:100%;height:100%;display:block}
-#demoCap{position:fixed;left:50%;bottom:64vh;transform:translateX(-50%);background:#000;color:#eee;padding:1.2vh 1.6vw;font-size:2.2vh;max-width:44vw;text-align:center;z-index:9}
+#demoCap{position:fixed;left:50%;bottom:4vh;transform:translateX(-50%);background:#000;color:#eee;padding:1.2vh 1.6vw;font-size:2.2vh;max-width:44vw;text-align:center;z-index:9}
 #settings h2{font-size:3vh;margin:0 0 1.4vh}
 .srow{padding:1vh 1.2vw;margin-bottom:.8vh;border:3px solid transparent}
 .srow.focus{background:var(--gold);border-color:var(--ink)}
@@ -108,6 +108,7 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
 </section></div>
 <div id="settings" class="hidden"><section class="panel">
   <h2>Instellingen</h2>
+  <div id="setCap"></div>
   <div id="srows"></div>
   <div class="shint">Omhoog en omlaag: kiezen. Links en rechts: aanpassen. OK: aan of uit. Terug: sluiten.</div>
 </section></div>
@@ -245,10 +246,13 @@ let demoShown='',demoT0=0;
 function demoKey(){const r=setOpen&&rows()[setIdx];if(r&&DEMOS[r.k])return r.k;return S&&S.demo&&DEMOS[S.demo]?S.demo:''}
 function demoFrame(){
   const k=demoKey(),box=$('demo'),cap=$('demoCap');
-  if(k!==demoShown){demoShown=k;demoT0=performance.now();box.classList.toggle('hidden',!k);cap.classList.toggle('hidden',!k);$('settings').classList.toggle('demo',!!k&&setOpen)}
+  if(k!==demoShown){demoShown=k;demoT0=performance.now();box.classList.toggle('hidden',!k);$('settings').classList.toggle('demo',!!k&&setOpen)}
+  // Uitleg: in het instellingenpaneel als dat open is, anders los onderin beeld
+  cap.classList.toggle('hidden',!k||setOpen);if(!k)$('setCap').textContent='';
   if(k){const cv=$('demoCv'),W=cv.width=innerWidth/4|0,H=cv.height=innerHeight/4|0,t=(performance.now()-demoT0)/1000;
     DEMOS[k].draw(cv.getContext('2d'),W,H,t);
-    cap.textContent=k==='whiteLeds'?t2('Nu: {c}. Aan: wit, grijs, geel en donker met de witte leds; rood en blauw blijven kleurlicht.',{c:t2(DEMOS.whiteLeds.now)}):t2(DEMOS[k].cap)}
+    const txt=k==='whiteLeds'?t2('Nu: {c}. Aan: wit, grijs, geel en donker met de witte leds; rood en blauw blijven kleurlicht.',{c:t2(DEMOS.whiteLeds.now)}):t2(DEMOS[k].cap);
+    if(setOpen){if($('setCap').textContent!==txt)$('setCap').textContent=txt}else cap.textContent=txt}
   requestAnimationFrame(demoFrame);
 }
 const t2=(s,a)=>t(s,a);
