@@ -248,6 +248,7 @@ label.s span{float:right;opacity:.8}
   <label class="s"><input type="checkbox" id="fade"> Vloeiende overgangen</label>
   <label class="s"><input type="checkbox" id="cuts"> Scènewissels direct (uit = alles vloeit)</label>
   <label class="s"><input type="checkbox" id="whiteLeds"> Witte leds gebruiken voor witte, gele en donkere tinten (beter wit en geel, minder roze; kan bij wisselen kort knipperen)</label>
+  <label class="s">Helderheid witte leds <span id="v_whiteLevel"></span></label><input type="range" id="whiteLevel" min="0.1" max="1" step="0.05">
   <div id="globalOnly">
   <label class="s">Na stoppen</label>
   <select id="after"><option value="restore">Terug naar hoe ze stonden</option><option value="white">Warm wit</option><option value="off">Uit</option></select>
@@ -560,8 +561,8 @@ $('reviveBtn').onclick=async()=>{if(!selLamp)return;const b=$('reviveBtn');b.dis
   try{toast((await api('/api/lamp/revive',{id:selLamp})).message)}finally{b.disabled=false}};
 
 /* ---------- instellingen ---------- */
-const SL=['smooth','saturation','brightness','minLight','spread'];
-const fmt={smooth:v=>Math.round(v*100)+'%',saturation:v=>v.toFixed(2)+'x',brightness:v=>v.toFixed(2)+'x',minLight:v=>v==0?t('uit'):Math.round(v*100)+'%',spread:v=>v.toFixed(2)+'x'};
+const SL=['smooth','saturation','brightness','minLight','spread','whiteLevel'];
+const fmt={smooth:v=>Math.round(v*100)+'%',saturation:v=>v.toFixed(2)+'x',brightness:v=>v.toFixed(2)+'x',minLight:v=>v==0?t('uit'):Math.round(v*100)+'%',spread:v=>v.toFixed(2)+'x',whiteLevel:v=>Math.round(v*100)+'%'};
 function tgt(){const g=groups.find(g=>g.id===setTarget);return g?g.settings:settings}
 // Bij "Alle lampen" geldt een wijziging ook voor de lampen in groepen; bij een groep alleen voor die groep
 // Demo op de tv bij elke wijziging, zodat je ziet wat de instelling doet

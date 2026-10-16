@@ -109,6 +109,8 @@ const I18N = (() => {
     'Harde scènewissels. Aan: de lampen springen direct mee. Uit: ze vloeien ook hier.': 'Hard scene changes. On: the lamps jump right away. Off: they fade here too.',
     'Nu: {c}. Aan: wit, grijs, geel en donker met de witte leds; rood en blauw blijven kleurlicht.': 'Now: {c}. On: white, grey, yellow and dark use the white LEDs; red and blue stay colour light.',
     'Warmgeel': 'Warm yellow', 'Donkergrijs': 'Dark grey', 'Rood': 'Red', 'Blauw': 'Blue',
+    'Helderheid witte leds': 'White LED brightness',
+    'Wisselt tussen lichtgeel (witte leds) en oranje (kleurleds). Zet hem zo dat ze even fel lijken.': 'Switches between light yellow (white LEDs) and orange (colour LEDs). Set it so they look equally bright.',
     'Kalibreren': 'Calibrate', 'Hoogte': 'Height', 'Kleur bij weinig licht': 'Colour in low light', 'Wit': 'White',
     'Hoogte kalibreren': 'Calibrate height', 'Klaar': 'Done', 'Boven de tv': 'Above the TV', 'Onder de tv': 'Below the TV',
     'Of stel de hoogte precies af met kleuren op de tv.': 'Or set the height precisely with colours on the TV.',

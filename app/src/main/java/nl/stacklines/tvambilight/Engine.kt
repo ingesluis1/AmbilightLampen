@@ -617,9 +617,11 @@ object Engine {
                         val dps = LinkedHashMap<String, Any>()
                         if (lampOn[id] != true) { dps["20"] = true; lampOn[id] = true }
                         if (whiteMode[id] != true) { dps["21"] = "white"; whiteMode[id] = true }
-                        dps["22"] = vv.coerceIn(10, 1000); dps["23"] = wt
+                        // Witte leds zijn veel feller dan de kleurleds bij dezelfde stand: terugschalen
+                        val wv = (vv * ls.whiteLevel).roundToInt().coerceIn(10, 1000)
+                        dps["22"] = wv; dps["23"] = wt
                         worker.send(dps)
-                        worker.shownColor = whiteRgb(wt, vv)
+                        worker.shownColor = whiteRgb(wt, wv)
                         continue
                     }
                     val backToColour = whiteMode[id] == true

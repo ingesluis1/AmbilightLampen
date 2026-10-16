@@ -210,6 +210,7 @@ const ROWS=[
   {k:'fade',label:'Vloeiende overgangen',bool:true},
   {k:'cuts',label:'Scènewissels direct',bool:true},
   {k:'whiteLeds',label:'Witte leds voor wit, geel en donker',bool:true},
+  {k:'whiteLevel',label:'Helderheid witte leds',min:0.1,max:1,step:0.05,fmt:v=>Math.round(v*100)+'%'},
   {k:'followAmbi',label:'Lampen terug als de tv uit staat',bool:true},
   {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
   {k:'lang',label:'Taal',options:[['nl','Nederlands'],['en','English']],reload:true,raw:true},
@@ -238,8 +239,10 @@ const DEMOS={
     draw(g,W,H,t){g.fillStyle=hsl(200+(Math.floor(t/1.2)%4)*25,80,45);g.fillRect(0,0,W,H)}},
   cuts:{cap:'Harde scènewissels. Aan: de lampen springen direct mee. Uit: ze vloeien ook hier.',
     draw(g,W,H,t){g.fillStyle=['#e00','#00d','#0b0','#dd0'][Math.floor(t/2.5)%4];g.fillRect(0,0,W,H)}},
+  whiteLevel:{cap:'Wisselt tussen lichtgeel (witte leds) en oranje (kleurleds). Zet hem zo dat ze even fel lijken.',
+    draw(g,W,H,t){g.fillStyle=(t%4)<2?'#f0d8a0':'#f09030';g.fillRect(0,0,W,H)}},
   whiteLeds:{cap:'',
-    draw(g,W,H,t){const i=Math.floor(t/3)%6;const c=['#fff','#777','#e8c060','#2a2a2a','#e00','#00d'][i];
+    draw(g,W,H,t){const i=Math.floor(t/3)%6;const c=['#fff','#777','#f0d8a0','#2a2a2a','#e00','#00d'][i];
       DEMOS.whiteLeds.now=['Wit','Grijs','Warmgeel','Donkergrijs','Rood','Blauw'][i];g.fillStyle=c;g.fillRect(0,0,W,H)}},
 };
 let demoShown='',demoT0=0;
