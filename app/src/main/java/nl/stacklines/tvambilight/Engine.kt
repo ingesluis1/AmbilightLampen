@@ -33,7 +33,7 @@ object Mixer {
         val lateral = dx * rx + dy * ry
         val depth = max(0.0, dx * fx + dy * fy)
         val xs = (lateral / (w / 2)).coerceIn(-1.8, 1.8)
-        val ys = when (lamp.height) { "ceiling" -> 1.0; "sill" -> 0.4; "table" -> 0.1; else -> -0.7 }
+        val ys = lamp.heightY ?: when (lamp.height) { "ceiling" -> 1.0; "sill" -> 0.4; "table" -> 0.1; else -> -0.7 }
         return doubleArrayOf(xs, ys, depth)
     }
 
@@ -115,6 +115,29 @@ object Engine {
         private set
     @Volatile var lastSample: ZoneSample? = null
         private set
+
+    /** Kalibratie: de tv toont gekleurde banden; tot dit tijdstip (elapsedRealtime) staat hij aan. */
+    @Volatile private var calibUntil = 0L
+    @Volatile private var calibStartedSync = false
+    val calibrating get() = calibUntil > SystemClock.elapsedRealtime()
+
+    /** Aantal banden = aantal zones aan de zijkant, zodat elke band precies één zone vult. */
+    fun calibBands() = (lastSample?.left?.size ?: 0).let { if (it in 3..9) it else 5 }
+
+    fun calib(on: Boolean) {
+        if (on) {
+            calibUntil = SystemClock.elapsedRealtime() + 10 * 60_000
+            if (!running) { calibStartedSync = true; start() }
+        } else endCalib()
+    }
+
+    /** Stopt de kalibratie, ook als de telefoon is weggelegd (na tien minuten). */
+    fun endCalib() {
+        calibUntil = 0L
+        if (calibStartedSync) { calibStartedSync = false; if (!Store.syncWanted) stop() }
+    }
+
+    fun checkCalib() { if (calibUntil != 0L && !calibrating) endCalib() }
     private var thread: Thread? = null
 
     /** Houdt de verbindingen in lijn met de lampenlijst (nieuw, verwijderd, ander ip-adres). */
@@ -128,10 +151,131 @@ object Engine {
         for (l in lamps.values) if (!workers.containsKey(l.id) && l.ip.isNotBlank()) workers[l.id] = TuyaLamp(l)
     }
 
+    /**
+     * Kleurcorrectie bij weinig licht: veel RGB-lampen worden roze als ze zacht branden (de rode led overheerst).
+     * Onder LOW_REF helderheid schuiven we de kleur geleidelijk naar de ingestelde tegenkleur (optellen in het tint/verzadiging-vlak).
+     */
+    fun lowCorrect(hue: Double, strength: Double, h: Int, sv: Int, vv: Int): IntArray {
+        if (strength <= 0.001) return intArrayOf(h, sv, vv)
+        val w = ((LOW_REF - vv) / LOW_REF.toDouble()).coerceIn(0.0, 1.0)
+        if (w <= 0.0) return intArrayOf(h, sv, vv)
+        val s = sv / 1000.0; val a = Math.toRadians(h.toDouble()); val c = Math.toRadians(hue)
+        val x = cos(a) * s + cos(c) * strength * w
+        val y = sin(a) * s + sin(c) * strength * w
+        val nh = ((Math.toDegrees(Math.atan2(y, x)) + 360) % 360).roundToInt() % 360
+        return intArrayOf(nh, (Math.sqrt(x * x + y * y).coerceAtMost(1.0) * 1000).roundToInt(), vv)
+    }
+    private fun lowCorrect(l: Lamp, h: Int, sv: Int, vv: Int) = lowCorrect(l.lowHue, l.lowStrength, h, sv, vv)
+    private const val LOW_REF = 350
+
+    /** Lampen die nu een kalibratievoorbeeld tonen; de sync laat ze zolang met rust. */
+    private val preview = ConcurrentHashMap<String, Long>()
+    private val previewSaved = ConcurrentHashMap<String, JSONObject>()
+    private fun inPreview(id: String) = (preview[id] ?: 0L) > SystemClock.elapsedRealtime()
+    @Volatile private var previewBase = "grey"
+    /** Voorbeeldkleur die de tv laat zien zolang er een lamp gekalibreerd wordt (grey/blue), anders null. */
+    val previewRef get() = if (preview.keys.any { inPreview(it) }) previewBase else null
+
+    /** Instellingen van het lopende voorbeeld per lamp: helderheid (0..1000), tint, sterkte, soort (white/blue). */
+    private class Preview(val vv: Int, val hue: Double, val strength: Double, val base: String)
+    private val previewArgs = ConcurrentHashMap<String, Preview>()
+    @Volatile private var previewThread: Thread? = null
+
+    /**
+     * Kalibratievoorbeeld. "white": de lamp wisselt elke 1,5 seconde tussen zijn eigen witte leds (neutraal) en
+     * kleurlicht zonder kleur met de correctie; goed ingesteld zie je geen verschil meer. "blue": donkerblauw, de tv toont hetzelfde.
+     */
+    fun previewLow(id: String, level: Double, hue: Double, strength: Double, base: String) {
+        syncWorkers()
+        val w = workers[id] ?: return
+        if (!inPreview(id) && !running) w.queryStatus()?.let { previewSaved[id] = it }
+        preview[id] = SystemClock.elapsedRealtime() + 5 * 60_000
+        previewBase = base
+        previewArgs[id] = Preview((level * 1000).roundToInt().coerceIn(10, 1000), hue, strength, base)
+        showPreview(id, colour = true)
+        synchronized(this) {
+            if (previewThread?.isAlive != true) previewThread = Thread({
+                var colour = true
+                while (previewArgs.isNotEmpty()) {
+                    try { Thread.sleep(1500) } catch (_: InterruptedException) { break }
+                    colour = !colour
+                    for (pid in previewArgs.keys) {
+                        if (!inPreview(pid)) { endPreview(pid); continue }
+                        if (previewArgs[pid]?.base == "white") showPreview(pid, colour)
+                    }
+                }
+            }, "preview").apply { isDaemon = true; start() }
+        }
+    }
+
+    private fun showPreview(id: String, colour: Boolean) {
+        val p = previewArgs[id] ?: return
+        val w = workers[id] ?: return
+        if (!colour) {
+            w.send(mapOf("20" to true, "21" to "white", "22" to max(10, p.vv), "23" to WHITE_REF))
+            w.shownColor = Color.rgb(255, 244, 229)
+            return
+        }
+        val (bh, bs) = if (p.base == "blue") 220 to 450 else 0 to 0
+        val c = lowCorrect(p.hue, p.strength, bh, bs, p.vv)
+        w.send(mapOf("20" to true, "21" to "colour", "24" to TuyaLamp.hsvHex(c[0], c[1], c[2])))
+        w.shownColor = Color.HSVToColor(floatArrayOf(c[0].toFloat(), c[1] / 1000f, max(0.15f, p.vv / 1000f)))
+    }
+    /** Kleurtemperatuur van het witte vergelijkingslicht (0 = warm, 1000 = koel); 600 is ongeveer 5000 K, neutraal wit. */
+    private const val WHITE_REF = 600
+
+    fun endPreview(id: String) {
+        preview.remove(id); previewArgs.remove(id)
+        val saved = previewSaved.remove(id)
+        if (!running) workers[id]?.restore(saved)
+    }
+
+    fun endAllPreviews() { for (id in preview.keys.toList()) endPreview(id) }
+
     /** Gebruikt de nieuwste plek/hoogte van een lamp (de verbinding blijft dezelfde). */
     private fun current(id: String) = Store.lampsSnapshot().firstOrNull { it.id == id }
 
     fun blink(id: String) { syncWorkers(); workers[id]?.blink() }
+
+    /**
+     * Lamp die niet reageert opnieuw oppakken: sleutel opnieuw uit de Tuya-cloud (verandert na opnieuw koppelen),
+     * het adres opnieuw zoeken, een verse verbinding maken en hem aanzetten. Geeft terug wat er gebeurd is.
+     */
+    fun revive(id: String): String {
+        val before = Store.lampsSnapshot().firstOrNull { it.id == id } ?: return tr("Lamp niet gevonden", "Lamp not found")
+        val notes = mutableListOf<String>()
+        if (before.version == Wiz.VERSION) {
+            try { Wiz.scan(2000) } catch (_: Exception) { }
+        } else {
+            if (Store.cloudId != null && Store.cloudSecret != null) {
+                try { TuyaCloud.refresh() } catch (_: Exception) { notes += tr("cloud niet bereikbaar", "cloud not reachable") }
+            }
+            Discovery.ask()
+            Thread.sleep(1500)
+        }
+        val l = Store.lampsSnapshot().firstOrNull { it.id == id } ?: return tr("Lamp niet gevonden", "Lamp not found")
+        if (l.key != before.key) notes += tr("nieuwe sleutel", "new key")
+        if (l.ip != before.ip) notes += tr("nieuw adres ", "new address ") + l.ip
+        synchronized(this) { workers.remove(id)?.stop() }
+        syncWorkers()
+        val w = workers[id] ?: return tr("Geen ip-adres bekend", "No IP address known")
+        val until = SystemClock.elapsedRealtime() + 6000
+        while (!w.online && SystemClock.elapsedRealtime() < until) Thread.sleep(100)
+        val extra = if (notes.isEmpty()) "" else " (" + notes.joinToString(", ") + ")"
+        if (!w.online) {
+            // Lokaal hangt hij (komt voor bij Tuya-lampen): via de cloud aanzetten, dat lukt vaak nog wel
+            if (l.version != Wiz.VERSION && Store.cloudId != null && Store.cloudSecret != null) {
+                val viaCloud = try { TuyaCloud.powerOn(id) } catch (_: Exception) { null }
+                if (viaCloud == true) return tr("Lokaal reageert hij niet, maar via de cloud is hij aangezet. Meekleuren lukt pas weer na stroom eraf en erop.",
+                    "Not responding locally, but switched on via the cloud. Following the picture only works again after a power cycle.") + extra
+                if (viaCloud == false) return tr("Lamp is ook in de cloud offline. Haal de stroom er even af.", "Lamp is offline in the cloud too. Switch the power off and on.") + extra
+            }
+            return tr("Lamp reageert nog steeds niet. Haal de stroom er even af.", "Lamp still not responding. Switch the power off and on.") + extra
+        }
+        // Tijdens de sync weer op kleur zetten; de lus stuurt daarna vanzelf de juiste kleur
+        w.send(if (running) mapOf("20" to true, "21" to "colour") else mapOf("20" to true))
+        return tr("Lamp weer verbonden", "Lamp connected again") + extra
+    }
     fun test(id: String) { syncWorkers(); workers[id]?.test() }
     fun setColor(id: String, rgb: Int) { syncWorkers(); workers[id]?.setColor(rgb) }
 
@@ -196,14 +340,15 @@ object Engine {
             smooth[key] = sm
             val hsv = FloatArray(3)
             Color.RGBToHSV(sm[0].roundToInt().coerceIn(0, 255), sm[1].roundToInt().coerceIn(0, 255), sm[2].roundToInt().coerceIn(0, 255), hsv)
-            var sat = hsv[1].toDouble(); if (sat > 0.08) sat = min(1.0, sat * satF(s) + satAdd(s))
+            var sat = boostSat(hsv, s)
             val raw = ((hsv[2] - black(s)) / (1 - black(s))).coerceAtLeast(0.0)
             val v = max(s.minLight, min(1.0, raw * s.brightness))
             val dk = darkMix(s, raw)
-            val h = if (dk > 0.5) donor[0].roundToInt() % 360 else hsv[0].roundToInt() % 360
+            val h0 = if (dk > 0.5) donor[0].roundToInt() % 360 else hsv[0].roundToInt() % 360
             // Laag zwart: helderheid 0 (de lamp blijft aan, alleen die laag gaat uit)
             val vv = if (s.minLight <= 0.001 && raw * s.brightness < 0.02) 0 else max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
-            val sv = (min(1.0, (sat * (1 - dk) + donor[1] * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
+            val sv0 = (min(1.0, (sat * (1 - dk) + donor[1] * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
+            val corr = lowCorrect(l, h0, sv0, vv); val h = corr[0]; val sv = corr[1]
             if (i == cols.size / 2) shown = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
             val prev = last[key]
             val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
@@ -216,6 +361,41 @@ object Engine {
             worker.sendLayer(i + 1, h, sv, vv, prio)
         }
         if (shown != 0) worker.shownColor = shown
+    }
+
+    /**
+     * Kleuren voller maken, maar minder naarmate het beeld donkerder is: bij bijna zwart is de tint vooral ruis
+     * (een vleug paars wordt anders fel roze).
+     */
+    private fun boostSat(hsv: FloatArray, s: Settings): Double {
+        val sat = hsv[1].toDouble()
+        if (sat <= 0.08) return sat
+        val boosted = min(1.0, sat * satF(s) + satAdd(s))
+        val g = (hsv[2] / 0.25).coerceIn(0.0, 1.0)
+        return sat + (boosted - sat) * g
+    }
+
+    /**
+     * Witmodus kiezen? Geeft de kleurtemperatuur (0 = warm, 1000 = koel) of null voor kleurmodus.
+     * Grijs en bijna-wit: neutraal (blauwig grijs iets koeler). Geel en oranje met weinig verzadiging: warm wit.
+     * Met een marge (wasWhite) zodat de lamp niet heen en weer springt tussen de twee modi.
+     */
+    private fun whiteTemp(hue: Double, sat: Double, wasWhite: Boolean): Int? {
+        val warm = hue in 15.0..75.0
+        val limit = if (warm) (if (wasWhite) 0.55 else 0.45) else (if (wasWhite) 0.26 else 0.18)
+        if (sat > limit) return null
+        return when {
+            warm -> (WHITE_NEUTRAL * (1 - sat / 0.55)).roundToInt().coerceIn(0, WHITE_NEUTRAL)
+            hue in 170.0..270.0 -> (WHITE_NEUTRAL + (1000 - WHITE_NEUTRAL) * (sat / 0.26)).roundToInt().coerceIn(WHITE_NEUTRAL, 1000)
+            else -> WHITE_NEUTRAL
+        }
+    }
+    private const val WHITE_NEUTRAL = 600
+
+    /** Hoe witlicht met deze temperatuur en helderheid eruitziet, voor de kaart en de telefoon. */
+    private fun whiteRgb(temp: Int, vv: Int): Int {
+        val t = temp / 1000f; val k = max(0.15f, vv / 1000f)
+        return Color.rgb(((255 - 35 * t) * k).roundToInt(), ((190 + 50 * t) * k).roundToInt(), ((110 + 145 * t) * k).roundToInt())
     }
 
     /** Afstand tussen twee kleuren (0..441); boven CUT_DIST telt het als scènewissel. */
@@ -262,16 +442,33 @@ object Engine {
     private val lit = ArrayList<DoubleArray>()
     /** Tint en verzadiging van het hele beeld, of null als het beeld (bijna) zwart is. */
     private var screenHS: DoubleArray? = null
+    /** Zelfde voor de linker- en rechterhelft (zijkant plus die helft van de bovenrand). */
+    private var leftHS: DoubleArray? = null
+    private var rightHS: DoubleArray? = null
+
+    /** Gemiddelde tint en verzadiging van een stel zones, of null als het daar zwart of grijs is. */
+    private fun avgHS(zones: List<IntArray>, s: Settings, minV: Float = 0.03f): DoubleArray? {
+        if (zones.isEmpty()) return null
+        val avg = DoubleArray(3) { k -> zones.sumOf { it[k].toDouble() } / zones.size }
+        val hv = FloatArray(3)
+        Color.RGBToHSV(avg[0].roundToInt(), avg[1].roundToInt(), avg[2].roundToInt(), hv)
+        return if (hv[2] > minV && hv[1] > 0.08) doubleArrayOf(hv[0].toDouble(), min(1.0, hv[1] * s.saturation + 0.1)) else null
+    }
     /** Per lamp de gladgestreken donor-kleur als vector (cos·s, sin·s), zodat de tint niet verspringt. */
     private val donorSmooth = HashMap<String, DoubleArray>()
 
     /**
-     * Kleur voor een lamp die op "Licht bij zwart beeld" staat: de tint van de dichtstbijzijnde lamp die nog kleur heeft,
-     * anders het gemiddelde van het hele beeld, anders de zacht warme tint. Geeft (tint 0..360, verzadiging 0..1).
+     * Kleur voor een lamp die op "Licht bij zwart beeld" staat. Instelling "half": het gemiddelde van de schermhelft
+     * aan zijn kant. Instelling "lamp": de tint van de dichtstbijzijnde lamp die nog kleur heeft.
+     * Lukt dat niet: het gemiddelde van het hele beeld, anders de zacht warme tint. Geeft (tint 0..360, verzadiging 0..1).
      */
     private fun donorFor(l: Lamp, alpha: Double): DoubleArray {
-        val near = lit.filter { !(it[0] == l.x && it[1] == l.y) }.minByOrNull { (it[0] - l.x) * (it[0] - l.x) + (it[1] - l.y) * (it[1] - l.y) }
+        val half = if (Store.settingsFor(l).darkColor == "half")
+            Mixer.project(Store.layout, l)?.let { p -> if (p[0] < 0) leftHS else rightHS } else null
+        val near = if (Store.settingsFor(l).darkColor == "half") null
+            else lit.filter { !(it[0] == l.x && it[1] == l.y) }.minByOrNull { (it[0] - l.x) * (it[0] - l.x) + (it[1] - l.y) * (it[1] - l.y) }
         val hs = when {
+            half != null -> half
             near != null -> doubleArrayOf(near[2], near[3])
             screenHS != null -> screenHS!!
             else -> doubleArrayOf(DARK_H.toDouble(), DARK_S)
@@ -289,6 +486,8 @@ object Engine {
         val smooth = HashMap<String, DoubleArray>()
         val last = HashMap<String, IntArray>()
         val lampOn = HashMap<String, Boolean>()
+        val whiteMode = HashMap<String, Boolean>()          // lamp staat nu in witmodus (witte leds)
+        val lastWhite = HashMap<String, IntArray>()         // laatst gestuurde kleurtemperatuur en helderheid
         var weightsVersion = -1
         var weights = HashMap<String, Mixer.Weights>()
         var zoneCount = Triple(0, 0, 0)
@@ -350,16 +549,18 @@ object Engine {
                     if (raw * ls.brightness > ls.minLight * 2 && hv[1] > 0.08)
                         lit += doubleArrayOf(l.x, l.y, hv[0].toDouble(), min(1.0, hv[1] * satF(ls) + satAdd(ls)))
                 }
-                val all = sample.left + sample.top + sample.right
-                val avg = DoubleArray(3) { k -> all.sumOf { it[k].toDouble() } / max(1, all.size) }
-                val ah = FloatArray(3)
-                Color.RGBToHSV(avg[0].roundToInt(), avg[1].roundToInt(), avg[2].roundToInt(), ah)
-                screenHS = if (ah[2] > 0.03 && ah[1] > 0.08) doubleArrayOf(ah[0].toDouble(), min(1.0, ah[1] * s.saturation + 0.1)) else null
+                screenHS = avgHS(sample.left + sample.top + sample.right, s)
+                // Helften: bij donker beeld zijn de randen vaak bijna zwart, dus hier een lagere drempel
+                val nt = sample.top.size
+                leftHS = avgHS(sample.left + sample.top.take(nt / 2), s, 0.015f)
+                rightHS = avgHS(sample.right + sample.top.drop(nt - nt / 2), s, 0.015f)
                 // Elke ronde opnieuw: lampen die tijdens de sync zijn toegevoegd doen meteen mee
                 for (l in Store.lampsSnapshot()) {
                     val id = l.id
                     val worker = workers[id] ?: continue
                     if (!l.enabled) continue
+                    // Lamp toont een kalibratievoorbeeld: niet overschrijven, en daarna opnieuw sturen
+                    if (inPreview(id)) { last.remove(id); (0..5).forEach { last.remove("$id#$it") }; continue }
                     val ls = Store.settingsFor(l)
                     val la = 1 - Math.pow(1 - ls.smooth.coerceIn(0.01, 1.0), 15.0 / hzEff)
                     if (touched.add(id)) syncWorkers()
@@ -371,8 +572,7 @@ object Engine {
                     smooth[id] = sm
                     val hsv = FloatArray(3)
                     Color.RGBToHSV(sm[0].roundToInt().coerceIn(0, 255), sm[1].roundToInt().coerceIn(0, 255), sm[2].roundToInt().coerceIn(0, 255), hsv)
-                    var sat = hsv[1].toDouble()
-                    if (sat > 0.08) sat = min(1.0, sat * satF(ls) + satAdd(ls))
+                    val sat = boostSat(hsv, ls)
                     // Zwartgrens zoals Ambilight: bijna-zwart telt als zwart, de rest wordt opnieuw verdeeld
                     val rawV = ((hsv[2] - black(ls)) / (1 - black(ls))).coerceAtLeast(0.0)
                     val v = max(ls.minLight, min(1.0, rawV * ls.brightness))
@@ -383,9 +583,27 @@ object Engine {
                     }
                     val dk = darkMix(ls, rawV)
                     val dn = donorFor(l, la)
-                    val h = if (dk > 0.5) dn[0].roundToInt() % 360 else hsv[0].roundToInt() % 360
-                    val sv = (min(1.0, (sat * (1 - dk) + dn[1] * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
                     val vv = max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
+                    val corr = lowCorrect(l, if (dk > 0.5) dn[0].roundToInt() % 360 else hsv[0].roundToInt() % 360,
+                        (min(1.0, (sat * (1 - dk) + dn[1] * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000), vv)
+                    val h = corr[0]; val sv = corr[1]
+                    // Witte leds: bij (bijna) wit, grijs, warmgeel en donker beeld de witmodus van de lamp gebruiken
+                    val wt = if (ls.whiteLeds && l.category != "dd") whiteTemp(
+                        if (dk > 0.5) dn[0] else hsv[0].toDouble(), if (dk > 0.5) dn[1] else hsv[1].toDouble(), whiteMode[id] == true) else null
+                    if (wt != null) {
+                        val pw = lastWhite[id]
+                        if (pw != null && whiteMode[id] == true && lampOn[id] == true && abs(wt - pw[0]) < 20 && abs(vv - pw[1]) < (if (ls.fade) 10 else 25)) continue
+                        lastWhite[id] = intArrayOf(wt, vv); last.remove(id)
+                        val dps = LinkedHashMap<String, Any>()
+                        if (lampOn[id] != true) { dps["20"] = true; lampOn[id] = true }
+                        if (whiteMode[id] != true) { dps["21"] = "white"; whiteMode[id] = true }
+                        dps["22"] = vv.coerceIn(10, 1000); dps["23"] = wt
+                        worker.send(dps)
+                        worker.shownColor = whiteRgb(wt, vv)
+                        continue
+                    }
+                    val backToColour = whiteMode[id] == true
+                    if (backToColour) { whiteMode[id] = false; lastWhite.remove(id); last.remove(id) }
                     val prev = last[id]
                     val dh = prev?.let { abs(h - it[0]).let { d -> min(d, 360 - d) } } ?: 999
                     val fine = ls.fade
@@ -393,6 +611,7 @@ object Engine {
                     last[id] = intArrayOf(h, sv, vv)
                     val dps = LinkedHashMap<String, Any>()
                     if (lampOn[id] != true) { dps["20"] = true; dps["21"] = "colour"; lampOn[id] = true }
+                    if (backToColour) dps["21"] = "colour"
                     if (l.category == "dd") {
                         // Ledstrips (zoals de Wall Washer) faden zelf bij functie 24; het schilderbericht wisselt direct
                         if (dps.isNotEmpty()) worker.send(dps)

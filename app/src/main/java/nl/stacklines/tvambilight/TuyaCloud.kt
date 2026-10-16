@@ -24,12 +24,12 @@ object TuyaCloud {
 
     private fun sha256(s: String) = MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
 
-    private fun call(method: String, path: String, token: String?): JSONObject {
+    private fun call(method: String, path: String, token: String?, body: String = ""): JSONObject {
         val id = Store.cloudId ?: throw IllegalStateException("geen Access ID")
         val secret = Store.cloudSecret ?: throw IllegalStateException("geen Access Secret")
         val host = HOSTS[Store.cloudRegion] ?: HOSTS.getValue("eu")
         val t = System.currentTimeMillis().toString()
-        val stringToSign = "$method\n${sha256("")}\n\n$path"
+        val stringToSign = "$method\n${sha256(body)}\n\n$path"
         val mac = Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(secret.toByteArray(), "HmacSHA256")) }
         val sign = mac.doFinal((id + (token ?: "") + t + stringToSign).toByteArray()).joinToString("") { "%02X".format(it) }
         val c = URL(host + path).openConnection() as HttpURLConnection
@@ -37,11 +37,29 @@ object TuyaCloud {
         c.setRequestProperty("client_id", id); c.setRequestProperty("sign", sign); c.setRequestProperty("t", t)
         c.setRequestProperty("sign_method", "HMAC-SHA256"); c.setRequestProperty("nonce", "")
         if (token != null) c.setRequestProperty("access_token", token)
+        if (body.isNotEmpty()) {
+            c.doOutput = true; c.setRequestProperty("Content-Type", "application/json")
+            c.outputStream.use { it.write(body.toByteArray()) }
+        }
         val code = c.responseCode
-        val body = (if (code < 400) c.inputStream else c.errorStream)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: "{}"
-        val j = JSONObject(body)
+        val resp = (if (code < 400) c.inputStream else c.errorStream)?.use { it.readBytes().toString(Charsets.UTF_8) } ?: "{}"
+        val j = JSONObject(resp)
         if (!j.optBoolean("success")) throw IllegalStateException(j.optString("msg", "fout $code"))
         return j
+    }
+
+    /**
+     * Laatste redmiddel als de lamp lokaal niet reageert: via de cloud aanzetten.
+     * Geeft terug of de cloud de lamp online ziet (de opdracht gaat dan via Tuya's eigen verbinding met de lamp).
+     */
+    fun powerOn(deviceId: String): Boolean {
+        val token = call("GET", "/v1.0/token?grant_type=1", null).getJSONObject("result").getString("access_token")
+        val online = call("GET", "/v1.0/devices/$deviceId", token).optJSONObject("result")?.optBoolean("online") == true
+        if (online) {
+            val cmd = JSONObject().put("commands", JSONArray().put(JSONObject().put("code", "switch_led").put("value", true))).toString()
+            call("POST", "/v1.0/devices/$deviceId/commands", token, cmd)
+        }
+        return online
     }
 
     /** Haalt alle lampen op en voegt nieuwe toe of werkt sleutels bij. Geeft een melding voor de gebruiker. */

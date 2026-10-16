@@ -21,7 +21,10 @@ class Lamp(
     var layers: Int = 0,              // 0 = één kleur; 2..5 = lagen apart (Tuya functie 61, segment 1 = onder)
     var category: String = "",        // Tuya-categorie uit de cloud: dj = lamp, dd = ledstrip
     var satBoost: Double = -1.0,      // kleur per lamp: <0 = standaard (ledstrip 1.4, lamp 1.0)
-    var group: String = ""            // id van het groepje; leeg = algemene instellingen
+    var group: String = "",           // id van het groepje; leeg = algemene instellingen
+    var heightY: Double? = null,      // gekalibreerde hoogte op het tv-vlak (-1 = onderrand, 1 = bovenrand); null = vaste hoogte
+    var lowHue: Double = 190.0,       // kleurcorrectie bij weinig licht: richting (tint 0..360) waarheen bijgestuurd wordt
+    var lowStrength: Double = 0.0     // en hoe sterk (0 = geen correctie, 0.6 = veel)
 ) {
     /** Ledstrips tonen kleuren witter dan lampen; die standaard iets voller. */
     val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
@@ -31,6 +34,8 @@ class Lamp(
     fun toJson(withKey: Boolean) = JSONObject().apply {
         put("id", id); put("name", name); put("ip", ip); put("version", version)
         put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers); put("category", category); put("satBoost", satBoost); put("satFactor", satFactor); put("group", group)
+        heightY?.let { put("heightY", it) }
+        put("lowHue", lowHue); put("lowStrength", lowStrength)
         if (withKey) put("key", key)
     }
 
@@ -41,7 +46,9 @@ class Lamp(
             o.optDouble("x", -1.0), o.optDouble("y", -1.0),
             o.optString("height", "ceiling"), o.optBoolean("enabled", true), o.optString("shape", "bulb"),
             o.optString("follow", "auto"), o.optInt("layers", 0), o.optString("category"),
-            o.optDouble("satBoost", -1.0), o.optString("group")
+            o.optDouble("satBoost", -1.0), o.optString("group"),
+            if (o.has("heightY")) o.optDouble("heightY") else null,
+            o.optDouble("lowHue", 190.0), o.optDouble("lowStrength", 0.0)
         )
     }
 }
@@ -60,11 +67,13 @@ class Settings {
     var cuts = true          // scènewissels direct doorgeven (springen) in plaats van vloeien
     var source = "screen"    // screen = randen van het beeld | ambilight = wat de Ambilight-leds uitstralen
     var followAmbi = true    // Ambilight van de tv uit (ook standby) = lampen terug en sync pauzeren
+    var whiteLeds = false    // witte, gele en donkere tinten met de witte leds van de lamp (witmodus) in plaats van RGB
+    var darkColor = "half"   // kleur bij donker beeld: half = gemiddelde van de schermhelft aan de kant van de lamp | lamp = dichtstbijzijnde lamp met kleur
 
     fun toJson() = JSONObject().apply {
         put("smooth", smooth); put("saturation", saturation); put("brightness", brightness)
         put("minLight", minLight); put("spread", spread); put("hz", hz)
-        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("source", source)
+        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds)
     }
 
     fun apply(o: JSONObject) {
@@ -81,6 +90,8 @@ class Settings {
         cuts = o.optBoolean("cuts", cuts)
         followAmbi = o.optBoolean("followAmbi", followAmbi)
         source = if (o.optString("source", source) == "ambilight") "ambilight" else "screen"
+        darkColor = if (o.optString("darkColor", darkColor) == "lamp") "lamp" else "half"
+        whiteLeds = o.optBoolean("whiteLeds", whiteLeds)
     }
 }
 

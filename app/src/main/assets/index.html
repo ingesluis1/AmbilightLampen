@@ -144,6 +144,7 @@ label.s span{float:right;opacity:.8}
   <div class="row" style="margin-bottom:8px"><b id="lampDetailTitle" class="grow" style="font-size:17px"></b><button class="btn" id="lampClose">Sluiten</button></div>
     <div id="lampDetail">
       <div class="row"><input type="text" id="lampName" class="grow" placeholder="Naam"><button class="btn" id="blinkBtn">Knipper</button></div>
+      <div class="row" id="reviveRow" style="margin-top:6px"><span class="grow" style="font-size:14px">Reageert deze lamp niet?</span><button class="btn gold" id="reviveBtn">Opnieuw verbinden</button></div>
       <div class="seg" id="shapeSeg" style="margin-top:8px">
         <button class="btn" data-s="bulb">Lamp of spot</button><button class="btn" data-s="rod">Staaflamp</button>
       </div>
@@ -162,6 +163,23 @@ label.s span{float:right;opacity:.8}
       <div style="margin-top:8px;font-size:14px">Kleur</div>
       <div class="seg" id="satSeg" style="margin-top:3px">
         <button class="btn" data-k="0.8">Zwakker</button><button class="btn" data-k="1">Normaal</button><button class="btn" data-k="1.4">Sterker</button><button class="btn" data-k="1.8">Veel sterker</button>
+      </div>
+      <div style="margin-top:8px;font-size:14px">Kalibreren</div>
+      <div class="row" style="margin-top:3px"><button class="btn" id="calibBtn">Hoogte</button><button class="btn" id="lowBtn">Kleur bij weinig licht</button></div>
+      <div id="calibState" style="font-size:14px;margin-top:4px"></div>
+      <div id="lowState" style="font-size:14px;margin-top:2px"></div>
+      <div id="calibPick" class="hidden" style="margin-top:6px">
+          <p class="hint" style="margin:0 0 6px">De tv toont nu gekleurde banden. Tik de kleur die op dezelfde hoogte staat als deze lamp. De lamp neemt die kleur dan over, zo zie je meteen of het klopt.</p>
+          <div id="calibBands" style="display:flex;flex-direction:column;gap:3px"></div>
+          <button class="btn gold" id="calibDone" style="margin-top:6px">Klaar</button>
+        </div>
+      <div id="lowPick" class="hidden" style="margin-top:6px">
+        <p class="hint" style="margin:0 0 6px">Bij Wit wisselt de lamp steeds tussen zijn eigen witte licht en kleurlicht. Schuif de tegenkleur en de sterkte tot je bij het wisselen geen verschil in tint meer ziet. Is het kleurlicht roze, schuif dan naar cyaan of groen. Bij Donkerblauw laat de tv dezelfde kleur zien om mee te vergelijken. De correctie werkt alleen als de lamp zacht brandt.</p>
+        <div class="seg" id="lowBase"><button class="btn" data-b="white">Wit</button><button class="btn" data-b="blue">Donkerblauw</button></div>
+        <label class="s">Helderheid voor de test <span id="v_lowLevel"></span></label><input type="range" id="lowLevel" min="0.01" max="0.3" step="0.01" value="0.05">
+        <label class="s">Tegenkleur</label><input type="range" id="lowHue" min="0" max="359" step="1" style="height:18px;background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)">
+        <label class="s">Sterkte <span id="v_lowStrength"></span></label><input type="range" id="lowStrength" min="0" max="0.6" step="0.01">
+        <div class="row" style="margin-top:6px"><button class="btn gold" id="lowDone">Klaar</button><button class="btn" id="lowReset">Geen correctie</button></div>
       </div>
       <div class="row" style="margin-top:8px"><span class="grow" id="follows"></span><button class="btn" id="unplaceBtn">Van kaart</button></div>
       <div class="row" style="margin-top:8px"><label class="grow"><input type="checkbox" id="lampEnabled"> Doet mee met sync</label><span id="lampIp" style="font-size:13px"></span></div>
@@ -224,8 +242,11 @@ label.s span{float:right;opacity:.8}
   <label class="s">Helderheid <span id="v_brightness"></span></label><input type="range" id="brightness" min="0.5" max="2.6" step="0.05">
   <label class="s">Licht bij zwart beeld <span id="v_minLight"></span></label><input type="range" id="minLight" min="0" max="0.3" step="0.01">
   <label class="s">Hoe breed lampen meekijken <span id="v_spread"></span></label><input type="range" id="spread" min="0.4" max="2.5" step="0.05">
+  <label class="s">Kleur bij donker beeld</label>
+  <select id="darkColor"><option value="half">Gemiddelde van de schermhelft aan de kant van de lamp</option><option value="lamp">Kleur van de dichtstbijzijnde lamp</option></select>
   <label class="s"><input type="checkbox" id="fade"> Vloeiende overgangen</label>
   <label class="s"><input type="checkbox" id="cuts"> Scènewissels direct (uit = alles vloeit)</label>
+  <label class="s"><input type="checkbox" id="whiteLeds"> Witte leds gebruiken voor witte, gele en donkere tinten (beter wit en geel, minder roze; kan bij wisselen kort knipperen)</label>
   <div id="globalOnly">
   <label class="s">Na stoppen</label>
   <select id="after"><option value="restore">Terug naar hoe ze stonden</option><option value="white">Warm wit</option><option value="off">Uit</option></select>
@@ -462,8 +483,10 @@ function showLamp(){
   for(const r of $('lampList').children)r.classList.toggle('sel',r.dataset.id===selLamp);if(!l)return;
   $('lampDetailTitle').textContent=l.name;$('roomLampName').textContent=l.name;
   if(document.activeElement!==$('lampName'))$('lampName').value=l.name;
-  document.querySelectorAll('#heightSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.h===l.height));
+  const cal=l.heightY!=null;
+  document.querySelectorAll('#heightSeg .btn').forEach(b=>b.classList.toggle('on',!cal&&b.dataset.h===l.height));
   const rod=(l.shape||'bulb')==='rod';
+  calibUI(l);lowUI(l);if(rod){$('calibBtn').classList.add('hidden');$('calibState').textContent=''}
   document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.s===(l.shape||'bulb')));
   $('heightSeg').classList.toggle('hidden',rod);
   groupUI();
@@ -480,11 +503,60 @@ document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.onclick=()=>{const l=la
 document.querySelectorAll('#satSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.satBoost=+b.dataset.k;changed();showLamp()}});
 document.querySelectorAll('#layerSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.layers=+b.dataset.n;changed();showLamp()}});
 document.querySelectorAll('#followSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.follow=b.dataset.f;changed();showLamp()}});
-document.querySelectorAll('#heightSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.height=b.dataset.h;changed();showLamp()}});
+document.querySelectorAll('#heightSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.height=b.dataset.h;l.heightY=null;changed();showLamp()}});
+
+/* ---------- kleurcorrectie bij weinig licht ---------- */
+let lowOpen=null,lowBase='white',lowTimer=null;
+function lowUI(l){
+  if(lowOpen&&lowOpen!==l.id){api('/api/lowcal',{id:lowOpen,on:false});lowOpen=null}
+  const st=l.lowStrength||0;
+  $('lowState').textContent=st<0.005?t('Geen correctie'):t('Naar {c}, sterkte {s}%',{c:t(hueName(l.lowHue??190)),s:Math.round(st*100)});
+  $('lowPick').classList.toggle('hidden',lowOpen!==l.id);$('lowBtn').classList.toggle('hidden',lowOpen===l.id);
+  if(lowOpen!==l.id)return;
+  if(document.activeElement!==$('lowHue'))$('lowHue').value=l.lowHue??190;
+  if(document.activeElement!==$('lowStrength'))$('lowStrength').value=st;
+  $('v_lowStrength').textContent=Math.round(st*100)+'%';$('v_lowLevel').textContent=Math.round(+$('lowLevel').value*100)+'%';
+  $('lowHue').style.accentColor='hsl('+(l.lowHue??190)+',100%,45%)';
+  document.querySelectorAll('#lowBase .btn').forEach(b=>b.classList.toggle('on',b.dataset.b===lowBase));
+}
+function hueName(h){return h<20||h>=340?'rood':h<50?'oranje':h<75?'geel':h<160?'groen':h<200?'cyaan':h<260?'blauw':h<300?'paars':'roze'}
+function lowSend(){const l=lamps.find(l=>l.id===lowOpen);if(!l)return;clearTimeout(lowTimer);
+  lowTimer=setTimeout(()=>api('/api/lowcal',{id:l.id,level:+$('lowLevel').value,hue:l.lowHue??190,strength:l.lowStrength||0,base:lowBase}),120)}
+$('lowBtn').onclick=()=>{lowOpen=selLamp;showLamp();lowSend()};
+$('lowDone').onclick=async()=>{const id=lowOpen;lowOpen=null;showLamp();if(id)toast((await api('/api/lowcal',{id,on:false})).message)};
+$('lowReset').onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.lowStrength=0;changed(true);showLamp();lowSend()}};
+document.querySelectorAll('#lowBase .btn').forEach(b=>b.onclick=()=>{lowBase=b.dataset.b;showLamp();lowSend()});
+$('lowLevel').oninput=()=>{showLamp();lowSend()};
+$('lowHue').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.lowHue=+e.target.value;changed(true);showLamp();lowSend()}};
+$('lowStrength').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.lowStrength=+e.target.value;changed(true);showLamp();lowSend()}};
+
+/* ---------- hoogte kalibreren met kleurbanden op de tv ---------- */
+let calibOpen=false,calibN=5;
+function calibUI(l){
+  const n=calibN,b=Room.bandOf(l.heightY,n);
+  $('calibState').textContent=l.heightY==null?t('Of stel de hoogte precies af met kleuren op de tv.'):
+    b==='above'?t('Gekalibreerd: boven de tv'):b==='below'?t('Gekalibreerd: onder de tv'):t('Gekalibreerd: band {i} van {n} (van onder)',{i:b+1,n});
+  $('calibPick').classList.toggle('hidden',!calibOpen);$('calibBtn').classList.toggle('hidden',calibOpen);
+  if(!calibOpen)return;
+  const cols=Room.calibColors(n),opts=[['above',t('Boven de tv')],...cols.map((c,i)=>[i,'',c]).reverse(),['below',t('Onder de tv')]];
+  $('calibBands').innerHTML='';
+  for(const [v,label,c] of opts){const d=document.createElement('button');d.className='btn'+(v===b?' on':'');d.textContent=label||(v===b?'\u2713':'');
+    if(c)d.style.cssText='background:'+c+';height:30px;color:#000';d.onclick=()=>calibPick(v,n);$('calibBands').appendChild(d)}
+}
+function calibPick(v,n){
+  const l=lamps.find(l=>l.id===selLamp);if(!l)return;
+  l.heightY=v==='above'?1.15:v==='below'?-1.15:Room.bandY(v,n);l.height=Room.presetFor(l.heightY);
+  changed();showLamp();
+}
+$('calibBtn').onclick=async()=>{const r=await api('/api/calib',{on:true});toast(r.message);
+  try{const s=await api('/api/state');calibN=s.calibBands||5}catch(e){}calibOpen=true;showLamp()};
+$('calibDone').onclick=async()=>{calibOpen=false;toast((await api('/api/calib',{on:false})).message);showLamp()};
 $('lampIpEdit').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);const v=e.target.value.trim();if(l&&/^\d+\.\d+\.\d+\.\d+$/.test(v)){l.ip=v;changed(true)}};
 $('lampEnabled').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.enabled=e.target.checked;changed()}};
 $('unplaceBtn').onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.x=-1;l.y=-1;changed();showLamp();chips()}};
 $('blinkBtn').onclick=async()=>{if(selLamp)toast((await api('/api/identify',{id:selLamp})).message)};
+$('reviveBtn').onclick=async()=>{if(!selLamp)return;const b=$('reviveBtn');b.disabled=true;toast(t('Bezig, dit duurt een paar seconden...'));
+  try{toast((await api('/api/lamp/revive',{id:selLamp})).message)}finally{b.disabled=false}};
 
 /* ---------- instellingen ---------- */
 const SL=['smooth','saturation','brightness','minLight','spread'];
@@ -499,7 +571,7 @@ function groupUI(){
   groupList();
   const lg=$('lampGroup');if(lg){const v=(lamps.find(l=>l.id===selLamp)||{}).group||'';lg.innerHTML='<option value="">'+t('Geen (standaard)')+'</option>'+groups.map(g=>`<option value="${g.id}"></option>`).join('')+'<option value="__new"></option>';[...lg.options].forEach((o,i)=>{if(i>0&&i<=groups.length)o.textContent=groups[i-1].name});lg.options[lg.options.length-1].textContent='+ '+t('Nieuwe groep');lg.value=v;$('lampGroupSet').classList.toggle('hidden',!groups.some(g=>g.id===v))}
 }
-function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
+function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('darkColor').value=settings.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('whiteLeds').checked=!!settings.whiteLeds;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
 $('lang').onchange=async e=>{settings.lang=e.target.value;await api('/api/save',{settings});location.reload()};
 for(const k of SL)$(k).oninput=e=>{tgt()[k]=+e.target.value;$('v_'+k).textContent=fmt[k](tgt()[k]);changed(true)};
 $('setTarget').onchange=e=>{setTarget=e.target.value;groupUI();showSettings()};
@@ -531,18 +603,20 @@ $('lampGroup').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);if(!l)return;
   if(e.target.value==='__new'){const id=newGroup();l.group=id;changed(true);groupUI();showLamp();focusGroup(id);return}
   l.group=e.target.value;changed(true);showLamp()};
 $('lampGroupSet').onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l&&l.group)groupSettings(l.group)};
-function closeLamp(){selLamp=null;chips();showLamp();lampList();draw()}
+function closeLamp(){if(lowOpen){api('/api/lowcal',{id:lowOpen,on:false});lowOpen=null}selLamp=null;chips();showLamp();lampList();draw()}
 $('lampClose').onclick=()=>{closeLamp();$('lampList').scrollIntoView({behavior:'smooth',block:'center'})};
 $('after').onchange=e=>{settings.after=e.target.value;changed(true)};
+$('darkColor').onchange=e=>{tgt().darkColor=e.target.value;changed(true)};
 $('autostart').onchange=e=>{settings.autostart=e.target.checked;changed(true)};
 $('fade').onchange=e=>{tgt().fade=e.target.checked;changed(true)};
 $('cuts').onchange=e=>{tgt().cuts=e.target.checked;changed(true)};
+$('whiteLeds').onchange=e=>{tgt().whiteLeds=e.target.checked;changed(true)};
 $('followAmbi').onchange=e=>{settings.followAmbi=e.target.checked;changed(true)};
 
 /* ---------- opslaan en live ---------- */
 function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!noDraw)draw();clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}
 async function save(){
-  const r=await api('/api/save',{layout:L,settings,groups,lamps:lamps.map(l=>({group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,...(l.satBoost>0?{satBoost:l.satBoost}:{}),enabled:l.enabled,ip:l.ip}))});
+  const r=await api('/api/save',{layout:L,settings,groups,lamps:lamps.map(l=>({group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,heightY:l.heightY??null,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,...(l.satBoost>0?{satBoost:l.satBoost}:{}),lowHue:l.lowHue??190,lowStrength:l.lowStrength||0,enabled:l.enabled,ip:l.ip}))});
   dirty=false;$('saved').textContent=r.ok?t('opgeslagen'):t('niet opgeslagen');
 }
 $('updBtn').onclick=async()=>{const u=S.update,n=I18N.notes(u.notes);if(!confirm(t('Wat is er nieuw in {v}',{v:u.latest})+':\n\n'+(n.length?'- '+n.join('\n- '):t('Geen beschrijving.'))+'\n\n'+t('Nu updaten?')))return;toast((await api('/api/update',{})).message+t('. Kijk op de tv.'))};

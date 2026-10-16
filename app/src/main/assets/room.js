@@ -405,5 +405,15 @@ const Room = (() => {
     return L;
   }
 
-  return { PPM, ITEMS, SPRITES, FLOORS, floorPixel, base, frame, present, migrate, isFloor, rotated };
+  /** Kalibratiebanden van onder naar boven: verzadigde kleuren met gelijke stappen op de kleurcirkel. */
+  function calibColors(n) {
+    return Array.from({ length: n }, (_, i) => `hsl(${Math.round(i * 300 / Math.max(1, n - 1))},100%,50%)`);
+  }
+  /** Hoogte op het tv-vlak (-1 = onderrand, 1 = bovenrand) die bij band i hoort, en terug. */
+  const bandY = (i, n) => -1 + (2 * i + 1) / n;
+  const bandOf = (y, n) => y == null ? null : y > 1.05 ? 'above' : y < -1.05 ? 'below' : Math.min(n - 1, Math.max(0, Math.floor((y + 1) / 2 * n)));
+  /** Vaste hoogte die het dichtst bij een gekalibreerde hoogte ligt (voor de tekening en de uitleg). */
+  const presetFor = y => y >= 0.7 ? 'ceiling' : y >= 0.25 ? 'sill' : y >= -0.3 ? 'table' : 'floor';
+
+  return { PPM, ITEMS, SPRITES, FLOORS, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandOf, presetFor };
 })();

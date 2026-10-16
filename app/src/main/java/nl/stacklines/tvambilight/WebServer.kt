@@ -121,6 +121,18 @@ class WebServer(private val ctx: Context) {
                         if (on) Engine.start() else Engine.stop()
                         msg(true, if (on) tr("Sync gestart", "Sync started") else tr("Sync gestopt", "Sync stopped"))
                     }
+                    path == "/api/lowcal" && method == "POST" -> {
+                        val j = JSONObject(req)
+                        val id = j.optString("id", "*")
+                        if (!j.optBoolean("on", true)) { if (id == "*") Engine.endAllPreviews() else Engine.endPreview(id); msg(true, tr("Klaar", "Done")) }
+                        else { Engine.previewLow(id, j.optDouble("level", 0.05), j.optDouble("hue", 190.0), j.optDouble("strength", 0.0), j.optString("base", "grey")); msg(true, "") }
+                    }
+                    path == "/api/lamp/revive" && method == "POST" -> msg(true, Engine.revive(JSONObject(req).getString("id")))
+                    path == "/api/calib" && method == "POST" -> {
+                        val on = JSONObject(req).optBoolean("on")
+                        Engine.calib(on)
+                        msg(true, if (on) tr("Kijk naar de tv", "Look at the TV") else tr("Kalibratie klaar", "Calibration done"))
+                    }
                     path == "/api/lamps/power" && method == "POST" -> {
                         val on = JSONObject(req).optBoolean("on")
                         Engine.allLamps(on)
@@ -224,7 +236,10 @@ class WebServer(private val ctx: Context) {
             })
         }
         val sample = Engine.lastSample
+        Engine.checkCalib()
         return JSONObject().apply {
+            put("calib", Engine.calibrating); put("calibBands", Engine.calibBands())
+            put("lowRef", Engine.previewRef ?: "")
             put("layout", Store.layout)
             put("lamps", lamps)
             put("settings", Store.settings.toJson())
@@ -267,10 +282,13 @@ class WebServer(private val ctx: Context) {
                     l.name = j.optString("name", l.name).ifBlank { l.name }
                     l.x = j.optDouble("x", l.x); l.y = j.optDouble("y", l.y)
                     l.height = j.optString("height", l.height)
+                    if (j.has("heightY")) l.heightY = if (j.isNull("heightY")) null else j.getDouble("heightY").coerceIn(-1.5, 1.5)
                     l.shape = j.optString("shape", l.shape)
                     l.follow = j.optString("follow", l.follow)
                     l.layers = j.optInt("layers", l.layers).coerceIn(0, 5)
                     if (j.has("satBoost")) l.satBoost = j.optDouble("satBoost", l.satBoost)
+                    if (j.has("lowHue")) l.lowHue = ((j.optDouble("lowHue", l.lowHue) % 360) + 360) % 360
+                    if (j.has("lowStrength")) l.lowStrength = j.optDouble("lowStrength", l.lowStrength).coerceIn(0.0, 0.8)
                     if (j.has("group")) l.group = j.optString("group")
                     l.enabled = j.optBoolean("enabled", l.enabled)
                     j.optString("ip").takeIf { it.isNotBlank() }?.let { l.ip = it }

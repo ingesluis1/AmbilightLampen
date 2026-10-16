@@ -109,6 +109,13 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
   <div id="updNotes" style="font-size:2.1vh;max-height:46vh;overflow:auto"></div>
   <div class="row" style="margin-top:2vh;gap:1vw"><button class="btn gold" id="updGo" style="font-size:2.3vh">Nu updaten</button><button class="btn" id="updLater" style="font-size:2.3vh">Later</button></div>
 </section></div>
+<div id="calib" class="hidden" style="position:fixed;inset:0;z-index:20;display:flex;flex-direction:column-reverse">
+  <div id="calibMsg" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);background:#000;color:#fff;padding:2vh 2.4vw;font-size:2.4vh;text-align:center;max-width:40vw">Hoogte kalibreren: kies op je telefoon de kleur die op dezelfde hoogte als de lamp staat. Terug: stoppen.</div>
+</div>
+<div id="lowref" class="hidden" style="position:fixed;inset:0;z-index:19;display:flex;align-items:flex-end;justify-content:center">
+  <div id="lowrefWhite" style="background:#000;color:#ddd;padding:1.6vh 2vw;margin-bottom:6vh;font-size:2.4vh;text-align:center;max-width:60vw">De lamp wisselt tussen wit licht en kleurlicht. Schuif op je telefoon tot je geen verschil in tint meer ziet. Terug: stoppen.</div>
+  <div id="lowrefBlue" style="background:#000;color:#ddd;padding:1.6vh 2vw;margin-bottom:6vh;font-size:2.4vh;text-align:center;max-width:60vw">Vergelijk de lamp met deze kleur. Let op de tint, niet op hoe fel hij is. Terug: stoppen.</div>
+</div>
 <div id="toast"></div>
 <script src="/i18n.js"></script>
 <script src="/room.js"></script>
@@ -153,8 +160,26 @@ function status(){
     $('ver').textContent=t('Versie {v}',{v:u.current})+(u.status?' | '+u.status:'')}
   if(s.link&&$('url').textContent!==s.link){$('url').textContent=s.link;$('qr').src='/qr.png?'+encodeURIComponent(s.link)}
 }
+// Kleurcorrectie: het hele scherm in de voorbeeldkleur, zodat je de lamp ernaast kunt houden
+function lowRefRender(){
+  const r=S&&S.lowRef,box=$('lowref');box.classList.toggle('hidden',!r);
+  if(!r)return;box.style.background=r==='blue'?'hsl(220,55%,22%)':'#000';
+  $('lowrefWhite').classList.toggle('hidden',r==='blue');$('lowrefBlue').classList.toggle('hidden',r!=='blue');
+}
+async function closeLowRef(){$('lowref').classList.add('hidden');if(S)S.lowRef='';await api('/api/lowcal',{id:'*',on:false})}
+document.addEventListener('keydown',e=>{
+  if(!S||!S.lowRef||(S&&S.calib))return;
+  if(e.key==='Escape'||e.key==='Backspace')closeLowRef();
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+// Kalibratie: gekleurde banden over het hele scherm, één per zone aan de zijkant (onderste band eerst)
+function calibRender(){
+  const on=!!(S&&S.calib),box=$('calib');box.classList.toggle('hidden',!on);if(!on)return;
+  const cols=Room.calibColors(S.calibBands),bands=[...box.querySelectorAll('.band')];
+  if(bands.length!==cols.length){bands.forEach(b=>b.remove());cols.forEach(c=>{const d=document.createElement('div');d.className='band';d.style.cssText='flex:1;background:'+c;box.insertBefore(d,$('calibMsg'))})}
+}
 async function poll(){
-  try{S=await api('/api/state');if(!langDone){langDone=true;I18N.set(S.settings.lang);I18N.apply()}status();render();rbRender()}catch(e){}
+  try{S=await api('/api/state');if(!langDone){langDone=true;I18N.set(S.settings.lang);I18N.apply()}status();render();rbRender();calibRender();lowRefRender()}catch(e){}
   setTimeout(poll,S&&S.sync?150:500);
 }
 $('syncBtn').onclick=async()=>{if(busy)return;busy=true;const on=!(S&&S.sync);toast(t(on?'Sync start...':'Sync stopt...'));await api('/api/sync',{on});busy=false};
@@ -169,9 +194,11 @@ const ROWS=[
   {k:'brightness',label:'Helderheid',min:0.5,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'minLight',label:'Licht bij zwart beeld',min:0,max:0.3,step:0.01,fmt:v=>v<0.005?t('uit'):Math.round(v*100)+'%'},
   {k:'spread',label:'Hoe breed lampen meekijken',min:0.4,max:2.5,step:0.1,fmt:v=>v.toFixed(1)+'x'},
+  {k:'darkColor',label:'Kleur bij donker beeld',options:[['half','Schermhelft'],['lamp','Dichtstbijzijnde lamp']]},
   {k:'after',label:'Na stoppen',options:[['restore','Terug naar hoe ze stonden'],['white','Warm wit'],['off','Uit']]},
   {k:'fade',label:'Vloeiende overgangen',bool:true},
   {k:'cuts',label:'Scènewissels direct',bool:true},
+  {k:'whiteLeds',label:'Witte leds voor wit, geel en donker',bool:true},
   {k:'followAmbi',label:'Lampen terug als de tv uit staat',bool:true},
   {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
   {k:'lang',label:'Taal',options:[['nl','Nederlands'],['en','English']],reload:true,raw:true},
@@ -225,7 +252,13 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='Escape'||e.key==='Backspace')closeRainbow();
   e.preventDefault();e.stopImmediatePropagation();
 },true);
-window.onBack=()=>{if(rbOpen){closeRainbow();return true}if(setOpen){closeSettings();return true}return false};
+async function closeCalib(){$('calib').classList.add('hidden');if(S)S.calib=false;await api('/api/calib',{on:false})}
+document.addEventListener('keydown',e=>{
+  if(!S||!S.calib)return;
+  if(e.key==='Escape'||e.key==='Backspace')closeCalib();
+  e.preventDefault();e.stopImmediatePropagation();
+},true);
+window.onBack=()=>{if(S&&S.calib){closeCalib();return true}if(S&&S.lowRef){closeLowRef();return true}if(rbOpen){closeRainbow();return true}if(setOpen){closeSettings();return true}return false};
 function renderSettings(){
   $('srows').innerHTML=rows().map((r,i)=>{
     const v=setVals[r.k];let val,bar='';
