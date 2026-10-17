@@ -572,7 +572,7 @@ object Engine {
                 // Startscherm, schermbeveiliging of tv-instellingen: niets te kijken, lampen in hun gewone stand.
                 // Demo en kalibratie draaien in deze app zelf en tellen dus als "kijken".
                 val home = s.pauseHome && Foreground.idle()
-                val sample = if (home) null else PhilipsTv.measured()
+                val sample = if (home) null else PhilipsTv.measured()?.let { Bars.fix(it, s.fixBars) }
                 // Tv uit of standby: de API van sommige tv's meldt Ambilight altijd uit, dus we kijken naar het beeld zelf.
                 // Langer dan 20 seconden volledig zwart = tv uit: lampen terug naar hun gewone stand, tot er weer beeld is.
                 if (s.followAmbi && sample != null) {

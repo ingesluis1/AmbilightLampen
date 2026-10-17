@@ -271,6 +271,7 @@ label.s span{float:right;opacity:.8}
   <label class="s">Na stoppen</label>
   <select id="after"><option value="restore">Terug naar hoe ze stonden</option><option value="white">Warm wit</option><option value="off">Uit</option></select>
   <label class="s"><input type="checkbox" id="followAmbi"> Lampen terug als de tv uit staat (20 seconden zwart beeld)</label>
+  <label class="s"><input type="checkbox" id="fixBars"> Zwarte balken opvangen (films in breedbeeld): lampen bij de lege rand nemen de kleur van de randen ernaast over</label>
   <label class="s"><input type="checkbox" id="pauseHome"> Pauzeren op het startscherm (ook bij schermbeveiliging en tv-instellingen); verder zodra je een app opent</label>
   <div class="hint hidden" id="pauseHomeHint">Hiervoor heeft de app "Gebruikstoegang" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.</div>
   <label class="s"><input type="checkbox" id="autostart"> Automatisch starten als de tv aangaat</label>
@@ -609,7 +610,7 @@ function groupUI(){
   groupList();
   const lg=$('lampGroup');if(lg){const v=(lamps.find(l=>l.id===selLamp)||{}).group||'';lg.innerHTML='<option value="">'+t('Geen (standaard)')+'</option>'+groups.map(g=>`<option value="${esc(g.id)}"></option>`).join('')+'<option value="__new"></option>';[...lg.options].forEach((o,i)=>{if(i>0&&i<=groups.length)o.textContent=groups[i-1].name});lg.options[lg.options.length-1].textContent='+ '+t('Nieuwe groep');lg.value=v;$('lampGroupSet').classList.toggle('hidden',!groups.some(g=>g.id===v))}
 }
-function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('darkColor').value=settings.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('whiteLeds').checked=!!settings.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
+function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('darkColor').value=settings.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('whiteLeds').checked=!!settings.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;$('fixBars').checked=settings.fixBars!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
 $('lang').onchange=async e=>{settings.lang=e.target.value;await api('/api/save',{settings});location.reload()};
 for(const k of SL)$(k).oninput=e=>{setVal(k,+e.target.value);$('v_'+k).textContent=fmt[k](tgt()[k]);changed(true)};
 $('setTarget').onchange=e=>{setTarget=e.target.value;groupUI();showSettings()};
@@ -651,6 +652,7 @@ $('cuts').onchange=e=>{setVal('cuts',e.target.checked);changed(true)};
 $('whiteLeds').onchange=e=>{setVal('whiteLeds',e.target.checked);changed(true)};
 $('followAmbi').onchange=e=>{settings.followAmbi=e.target.checked;changed(true)};
 $('pauseHome').onchange=e=>{settings.pauseHome=e.target.checked;changed(true)};
+$('fixBars').onchange=e=>{demoPing('fixBars');settings.fixBars=e.target.checked;changed(true)};
 
 /* ---------- opslaan en live ---------- */
 function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!noDraw)draw();clearTimeout(saveTimer);saveTimer=setTimeout(save,500)}

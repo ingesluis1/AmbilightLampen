@@ -213,11 +213,12 @@ const ROWS=[
   {k:'whiteLevel',label:'Helderheid witte leds',min:0.1,max:1,step:0.05,fmt:v=>Math.round(v*100)+'%'},
   {k:'followAmbi',label:'Lampen terug als de tv uit staat',bool:true},
   {k:'pauseHome',label:'Pauzeren op het startscherm',bool:true},
+  {k:'fixBars',label:'Zwarte balken opvangen',bool:true},
   {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
   {k:'lang',label:'Taal',options:[['nl','Nederlands'],['en','English']],reload:true,raw:true},
 ];
 let setOpen=false,setIdx=0,setVals=null,setTimer=null,setTgt='';
-const GLOBAL_ONLY=['after','autostart','followAmbi','pauseHome','lang'];
+const GLOBAL_ONLY=['after','autostart','followAmbi','pauseHome','fixBars','lang'];
 function rows(){return ROWS.filter(r=>!(setTgt&&GLOBAL_ONLY.includes(r.k)))}
 
 /* ---------- demo per instelling: testbeeld waarop je ziet wat de instelling met de lampen doet ---------- */
@@ -240,6 +241,10 @@ const DEMOS={
     draw(g,W,H,t){g.fillStyle=hsl(200+(Math.floor(t/1.2)%4)*25,80,45);g.fillRect(0,0,W,H)}},
   cuts:{cap:'Harde scènewissels. Aan: de lampen springen direct mee. Uit: ze vloeien ook hier.',
     draw(g,W,H,t){g.fillStyle=['#e00','#00d','#0b0','#dd0'][Math.floor(t/2.5)%4];g.fillRect(0,0,W,H)}},
+  fixBars:{cap:'Film in breedbeeld met zwarte balken. Aan: lampen bij de bovenrand nemen de kleur van de zijkanten over.',
+    draw(g,W,H,t){const bar=Math.round(H*0.125);g.fillStyle='#000';g.fillRect(0,0,W,H);
+      const gr=g.createLinearGradient(0,0,W,0);gr.addColorStop(0,hsl((t*20)%360,80,45));gr.addColorStop(1,hsl((t*20+120)%360,80,45));
+      g.fillStyle=gr;g.fillRect(0,bar,W,H-2*bar)}},
   whiteLevel:{cap:'Wisselt tussen lichtgeel (witte leds) en oranje (kleurleds). Zet hem zo dat ze even fel lijken.',
     draw(g,W,H,t){g.fillStyle=(t%4)<2?'#f0d8a0':'#f09030';g.fillRect(0,0,W,H)}},
   whiteLeds:{cap:'',
