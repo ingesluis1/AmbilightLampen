@@ -348,6 +348,7 @@ object Engine {
     fun allLamps(on: Boolean) {
         if (!on) {
             val busy = running || SceneEngine.active != null
+            AutoDark.userStopped()
             Store.syncWanted = false; Store.save(); stop(); SceneEngine.stop()
             // Eerst het terugzetten van de sync of scène laten versturen, anders mengt het met "uit"
             if (busy) Thread.sleep(600)

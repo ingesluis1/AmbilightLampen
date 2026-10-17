@@ -77,7 +77,7 @@ object SceneEngine {
     fun start(scene: Scene) {
         stop()
         Engine.lampsOff = false
-        if (Engine.running) { Store.syncWanted = false; Store.save(); Engine.stop() }
+        if (Engine.running) { AutoDark.userStopped(); Store.syncWanted = false; Store.save(); Engine.stop() }
         Engine.syncWorkers()
         active = scene
         thread = Thread({ loop(scene) }, "scene").apply { isDaemon = true; start() }

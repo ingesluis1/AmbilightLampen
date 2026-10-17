@@ -152,6 +152,7 @@ class WebServer(private val ctx: Context) {
                     }
                     path == "/api/sync" && method == "POST" -> {
                         val on = JSONObject(req).optBoolean("on")
+                        if (!on) AutoDark.userStopped()
                         Store.syncWanted = on; Store.save()
                         if (on) Engine.start() else Engine.stop()
                         msg(true, if (on) tr("Sync gestart", "Sync started") else tr("Sync gestopt", "Sync stopped"))
@@ -301,6 +302,7 @@ class WebServer(private val ctx: Context) {
                 .put("appAccess", Foreground.allowed()).put("app", Foreground.idle().let { Foreground.current } ?: ""))
             put("sync", Engine.running)
             put("lampsOff", Engine.lampsOff)
+            put("sun", AutoDark.info())
             put("scenes", JSONArray().apply { SceneEngine.all().forEach { put(it.toJson()) } })
             put("activeScene", SceneEngine.active?.id ?: "")
             put("update", JSONObject().put("current", Updater.current(ctx)).put("latest", Updater.latest ?: "")

@@ -18,6 +18,7 @@ class App : Application() {
         super.onCreate()
         Store.load(this)
         Foreground.init(this)
+        AutoDark.init(this)
         Discovery.start(this) { id, ip, version ->
             if (!ip.matches(WebServer.IPV4)) return@start
             val l = Store.lampsSnapshot().firstOrNull { it.id == id } ?: return@start
@@ -28,6 +29,7 @@ class App : Application() {
         }
         Wiz.startBackground()
         Hue.startBackground()
+        AutoDark.startBackground()
         Engine.syncWorkers()
     }
 
@@ -51,7 +53,10 @@ class SyncService : Service() {
             screenQueue.execute {
                 when (action) {
                     Intent.ACTION_SCREEN_OFF -> if (Engine.running) { pausedByScreen = true; Engine.stop() }
-                    Intent.ACTION_SCREEN_ON -> if (pausedByScreen) { pausedByScreen = false; if (Store.syncWanted) Engine.start() }
+                    Intent.ACTION_SCREEN_ON -> {
+                        if (pausedByScreen) { pausedByScreen = false; if (Store.syncWanted && AutoDark.mayAutostart()) Engine.start() }
+                        AutoDark.check()   // 's avonds aangezet: vanzelf syncen (als die instelling aan staat)
+                    }
                 }
             }
         }
@@ -77,7 +82,8 @@ class SyncService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.getBooleanExtra("boot", false) == true) {
-            if (Store.syncWanted && Store.settings.autostart) Engine.start()
+            if (Store.settings.autoDark) AutoDark.check()
+            else if (Store.syncWanted && Store.settings.autostart) Engine.start()
         }
         return START_STICKY
     }

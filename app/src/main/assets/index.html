@@ -276,6 +276,13 @@ label.s span{float:right;opacity:.8}
   <label class="s"><input type="checkbox" id="pauseHome"> Pauzeren op het startscherm (ook bij schermbeveiliging en tv-instellingen); verder zodra je een app opent</label>
   <div class="hint hidden" id="pauseHomeHint">Hiervoor heeft de app "Gebruikstoegang" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.</div>
   <label class="s"><input type="checkbox" id="autostart"> Automatisch starten als de tv aangaat</label>
+  <label class="s"><input type="checkbox" id="autoDark"> Alleen automatisch syncen na zonsondergang (overdag zet je hem zelf aan)</label>
+  <div id="autoDarkBox" class="hidden">
+    <label class="s">Starten <span id="v_darkOffset"></span></label><input type="range" id="darkOffset" min="-120" max="60" step="15">
+    <div class="hint" id="sunInfo"></div>
+    <div class="row" style="margin-top:6px"><span>Plek</span><input type="text" id="lat" inputmode="decimal" class="grow" placeholder="52.1"><input type="text" id="lon" inputmode="decimal" class="grow" placeholder="5.3"></div>
+    <div class="hint">Breedte- en lengtegraad voor de zonsondergang, standaard het midden van Nederland. Een paar tientallen kilometer verschil scheelt maar een paar minuten.</div>
+  </div>
   <label class="s">Taal</label>
   <select id="lang"><option value="nl">Nederlands</option><option value="en">English</option></select>
   </div>
@@ -611,7 +618,10 @@ function groupUI(){
   groupList();
   const lg=$('lampGroup');if(lg){const v=(lamps.find(l=>l.id===selLamp)||{}).group||'';lg.innerHTML='<option value="">'+t('Geen (standaard)')+'</option>'+groups.map(g=>`<option value="${esc(g.id)}"></option>`).join('')+'<option value="__new"></option>';[...lg.options].forEach((o,i)=>{if(i>0&&i<=groups.length)o.textContent=groups[i-1].name});lg.options[lg.options.length-1].textContent='+ '+t('Nieuwe groep');lg.value=v;$('lampGroupSet').classList.toggle('hidden',!groups.some(g=>g.id===v))}
 }
-function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('darkColor').value=settings.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('whiteLeds').checked=!!settings.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;$('fixBars').checked=settings.fixBars!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
+function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('darkColor').value=settings.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('whiteLeds').checked=!!settings.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;
+  $('autoDark').checked=!!S.settings.autoDark;$('autoDarkBox').classList.toggle('hidden',!S.settings.autoDark);
+  $('darkOffset').value=S.settings.darkOffset||0;$('v_darkOffset').textContent=offsetText(S.settings.darkOffset||0);
+  $('lat').value=S.settings.lat;$('lon').value=S.settings.lon;$('fixBars').checked=settings.fixBars!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
 $('lang').onchange=async e=>{settings.lang=e.target.value;await api('/api/save',{settings});location.reload()};
 for(const k of SL)$(k).oninput=e=>{setVal(k,+e.target.value);$('v_'+k).textContent=fmt[k](tgt()[k]);changed(true)};
 $('setTarget').onchange=e=>{setTarget=e.target.value;groupUI();showSettings()};
@@ -648,6 +658,10 @@ $('lampClose').onclick=()=>{closeLamp();$('lampList').scrollIntoView({behavior:'
 $('after').onchange=e=>{settings.after=e.target.value;changed(true)};
 $('darkColor').onchange=e=>{setVal('darkColor',e.target.value);changed(true)};
 $('autostart').onchange=e=>{settings.autostart=e.target.checked;changed(true)};
+function offsetText(v){v=+v;return v===0?t('bij zonsondergang'):v<0?t('{n} min voor zonsondergang',{n:-v}):t('{n} min na zonsondergang',{n:v})}
+$('autoDark').onchange=e=>{settings.autoDark=e.target.checked;$('autoDarkBox').classList.toggle('hidden',!settings.autoDark);changed(true)};
+$('darkOffset').oninput=e=>{settings.darkOffset=+e.target.value;$('v_darkOffset').textContent=offsetText(e.target.value);changed(true)};
+for(const k of ['lat','lon'])$(k).onchange=e=>{const v=parseFloat(e.target.value.replace(',','.'));if(!isNaN(v)){settings[k]=v;changed(true)}};
 $('fade').onchange=e=>{setVal('fade',e.target.checked);changed(true)};
 $('cuts').onchange=e=>{setVal('cuts',e.target.checked);changed(true)};
 $('whiteLeds').onchange=e=>{setVal('whiteLeds',e.target.checked);changed(true)};
@@ -748,6 +762,7 @@ function liveFrom(s){
   if(s.update){$('updBtn').classList.toggle('hidden',!s.update.available);$('updBtn').textContent=t('Update {v}',{v:s.update.latest})}
   $('pairCard').classList.toggle('hidden',s.tv.paired);
   $('pauseHomeHint').classList.toggle('hidden',!!s.tv.appAccess);
+  if(s.sun&&s.sun.sunset)$('sunInfo').textContent=t('Vandaag: zonsondergang {s}, de sync start om {b}. Zonsopkomst {r}.',{s:s.sun.sunset,b:s.sun.start,r:s.sun.sunrise});
   if(s.cloud&&!cloudShown){cloudShown=true;$('cloudOn').classList.toggle('hidden',!s.cloud.configured);$('cloudSetup').classList.toggle('hidden',s.cloud.configured);$('cloudRegion').value=s.cloud.region}
   if(!$('tvHost').value)$('tvHost').value=s.tv.host;
   const on=s.lamps.filter(l=>l.online).length;

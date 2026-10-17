@@ -69,6 +69,10 @@ class Settings {
     var cuts = true          // scènewissels direct doorgeven (springen) in plaats van vloeien
     var source = "screen"    // screen = randen van het beeld | ambilight = wat de Ambilight-leds uitstralen
     var followAmbi = true    // Ambilight van de tv uit (ook standby) = lampen terug en sync pauzeren
+    var autoDark = false     // alleen na zonsondergang vanzelf syncen (overdag met de hand)
+    var darkOffset = 0       // minuten t.o.v. zonsondergang (-30 = een half uur ervoor)
+    var lat = 52.1           // plek voor de zonsondergang; standaard het midden van Nederland
+    var lon = 5.3
     var fixBars = true       // zwarte balken (breedbeeldfilm, 4:3) opvangen met de kleuren van de randen ernaast
     var pauseHome = true     // startscherm, schermbeveiliging of tv-instellingen in beeld = lampen terug en sync pauzeren
     var whiteLevel = 0.5     // witte leds geven meer licht dan de kleurleds: hun helderheid hiermee vermenigvuldigen
@@ -78,7 +82,7 @@ class Settings {
     fun toJson() = JSONObject().apply {
         put("smooth", smooth); put("saturation", saturation); put("brightness", brightness)
         put("minLight", minLight); put("spread", spread); put("hz", hz)
-        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("pauseHome", pauseHome); put("fixBars", fixBars); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds); put("whiteLevel", whiteLevel)
+        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("pauseHome", pauseHome); put("fixBars", fixBars); put("autoDark", autoDark); put("darkOffset", darkOffset); put("lat", lat); put("lon", lon); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds); put("whiteLevel", whiteLevel)
     }
 
     fun apply(o: JSONObject) {
@@ -96,6 +100,10 @@ class Settings {
         followAmbi = o.optBoolean("followAmbi", followAmbi)
         pauseHome = o.optBoolean("pauseHome", pauseHome)
         fixBars = o.optBoolean("fixBars", fixBars)
+        autoDark = o.optBoolean("autoDark", autoDark)
+        darkOffset = o.optInt("darkOffset", darkOffset).coerceIn(-120, 120)
+        lat = o.optDouble("lat", lat).takeIf { !it.isNaN() }?.coerceIn(-66.0, 66.0) ?: lat
+        lon = o.optDouble("lon", lon).takeIf { !it.isNaN() }?.coerceIn(-180.0, 180.0) ?: lon
         source = if (o.optString("source", source) == "ambilight") "ambilight" else "screen"
         darkColor = if (o.optString("darkColor", darkColor) == "lamp") "lamp" else "half"
         whiteLeds = o.optBoolean("whiteLeds", whiteLeds)

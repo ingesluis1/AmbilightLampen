@@ -215,10 +215,12 @@ const ROWS=[
   {k:'pauseHome',label:'Pauzeren op het startscherm',bool:true},
   {k:'fixBars',label:'Zwarte balken opvangen',bool:true},
   {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
+  {k:'autoDark',label:'Alleen automatisch na zonsondergang',bool:true},
+  {k:'darkOffset',label:'Starten t.o.v. zonsondergang',min:-120,max:60,step:15,fmt:v=>v==0?t('bij zonsondergang'):(v<0?t('{n} min ervoor',{n:-v}):t('{n} min erna',{n:v}))},
   {k:'lang',label:'Taal',options:[['nl','Nederlands'],['en','English']],reload:true,raw:true},
 ];
 let setOpen=false,setIdx=0,setVals=null,setTimer=null,setTgt='';
-const GLOBAL_ONLY=['after','autostart','followAmbi','pauseHome','fixBars','lang'];
+const GLOBAL_ONLY=['after','autostart','autoDark','darkOffset','followAmbi','pauseHome','fixBars','lang'];
 function rows(){return ROWS.filter(r=>!(setTgt&&GLOBAL_ONLY.includes(r.k)))}
 
 /* ---------- demo per instelling: testbeeld waarop je ziet wat de instelling met de lampen doet ---------- */
