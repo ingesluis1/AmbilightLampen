@@ -81,7 +81,7 @@ object HueStream {
      * Alleen streamen als er echt beweging is: tijdens de sync (niet in de pauze bij zwart beeld) en bij bewegende scènes.
      * Vaste en witte scènes gaan via gewone opdrachten, dan krijgen witte lampen een echte kleurtemperatuur.
      */
-    private fun wanted() = !halt && ((Engine.running && !Engine.pausedTvOff) || SceneEngine.active?.kind.let { it == "drift" || it == "flicker" }) &&
+    private fun wanted() = !halt && ((Engine.running && !Engine.paused) || SceneEngine.active?.kind.let { it == "drift" || it == "flicker" }) &&
         Store.hueKey != null && Store.hueClientKey != null && Store.hueCert != null && areaId != null && channels.isNotEmpty()
 
     /** Hoort deze lamp bij de stream (zit hij in de Entertainment-ruimte)? */

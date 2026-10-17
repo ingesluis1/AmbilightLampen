@@ -69,6 +69,7 @@ class Settings {
     var cuts = true          // scènewissels direct doorgeven (springen) in plaats van vloeien
     var source = "screen"    // screen = randen van het beeld | ambilight = wat de Ambilight-leds uitstralen
     var followAmbi = true    // Ambilight van de tv uit (ook standby) = lampen terug en sync pauzeren
+    var pauseHome = true     // startscherm, schermbeveiliging of tv-instellingen in beeld = lampen terug en sync pauzeren
     var whiteLevel = 0.5     // witte leds geven meer licht dan de kleurleds: hun helderheid hiermee vermenigvuldigen
     var whiteLeds = false    // witte, gele en donkere tinten met de witte leds van de lamp (witmodus) in plaats van RGB
     var darkColor = "half"   // kleur bij donker beeld: half = gemiddelde van de schermhelft aan de kant van de lamp | lamp = dichtstbijzijnde lamp met kleur
@@ -76,7 +77,7 @@ class Settings {
     fun toJson() = JSONObject().apply {
         put("smooth", smooth); put("saturation", saturation); put("brightness", brightness)
         put("minLight", minLight); put("spread", spread); put("hz", hz)
-        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds); put("whiteLevel", whiteLevel)
+        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("pauseHome", pauseHome); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds); put("whiteLevel", whiteLevel)
     }
 
     fun apply(o: JSONObject) {
@@ -92,6 +93,7 @@ class Settings {
         fade = o.optBoolean("fade", fade)
         cuts = o.optBoolean("cuts", cuts)
         followAmbi = o.optBoolean("followAmbi", followAmbi)
+        pauseHome = o.optBoolean("pauseHome", pauseHome)
         source = if (o.optString("source", source) == "ambilight") "ambilight" else "screen"
         darkColor = if (o.optString("darkColor", darkColor) == "lamp") "lamp" else "half"
         whiteLeds = o.optBoolean("whiteLeds", whiteLeds)

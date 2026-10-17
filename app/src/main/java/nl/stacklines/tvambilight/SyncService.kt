@@ -17,6 +17,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         Store.load(this)
+        Foreground.init(this)
         Discovery.start(this) { id, ip, version ->
             if (!ip.matches(WebServer.IPV4)) return@start
             val l = Store.lampsSnapshot().firstOrNull { it.id == id } ?: return@start

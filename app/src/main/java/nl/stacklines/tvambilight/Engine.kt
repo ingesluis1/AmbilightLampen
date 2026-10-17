@@ -386,8 +386,8 @@ object Engine {
         if (t !== Thread.currentThread()) t.join(3000)
     }
 
-    /** Pauze omdat het beeld al 20 seconden zwart is (tv uit of standby); lampen staan dan in hun gewone stand. */
-    @Volatile var pausedTvOff = false
+    /** Pauze (tv uit of standby, of startscherm in beeld); lampen staan dan in hun gewone stand. */
+    @Volatile var paused = false
         private set
 
     /** Lamp met aparte lagen: per laag gladstrijken, opvoeren en alleen versturen als hij genoeg veranderd is. */
@@ -553,7 +553,7 @@ object Engine {
         val startLamps = Store.lampsSnapshot().filter { it.enabled && workers.containsKey(it.id) }
         val touched = LinkedHashSet<String>()
         var blackSince = 0L
-        pausedTvOff = false
+        paused = false
 
         try {
             // Binnen try: wordt de sync tijdens het opvragen al gestopt, dan worden de lampen toch teruggezet
@@ -569,21 +569,25 @@ object Engine {
                 val s = Store.settings
                 // Met vloeiende overgangen vaker meten; de gladheid per meting omrekenen zodat het even snel aanvoelt
                 val hzEff = if (s.fade || Store.groups.any { it.settings.fade }) maxOf(s.hz, 25) else s.hz
-                val sample = PhilipsTv.measured()
+                // Startscherm, schermbeveiliging of tv-instellingen: niets te kijken, lampen in hun gewone stand.
+                // Demo en kalibratie draaien in deze app zelf en tellen dus als "kijken".
+                val home = s.pauseHome && Foreground.idle()
+                val sample = if (home) null else PhilipsTv.measured()
                 // Tv uit of standby: de API van sommige tv's meldt Ambilight altijd uit, dus we kijken naar het beeld zelf.
                 // Langer dan 20 seconden volledig zwart = tv uit: lampen terug naar hun gewone stand, tot er weer beeld is.
                 if (s.followAmbi && sample != null) {
                     val maxC = (sample.left + sample.top + sample.right).maxOfOrNull { it.max() } ?: 0
                     if (maxC > 10) blackSince = 0L else if (blackSince == 0L) blackSince = t0
-                    if (blackSince != 0L && t0 - blackSince > 20_000) {
-                        if (!pausedTvOff) {
-                            pausedTvOff = true; restoreAll(touched, saved)
-                            lampOn.clear(); last.clear(); smooth.clear(); whiteMode.clear(); lastWhite.clear()
-                        }
-                        tvStatus = "Tv lijkt uit"; Thread.sleep(500); continue
-                    }
                 }
-                pausedTvOff = false
+                val tvOff = s.followAmbi && blackSince != 0L && t0 - blackSince > 20_000
+                if (home || tvOff) {
+                    if (!paused) {
+                        paused = true; restoreAll(touched, saved)
+                        lampOn.clear(); last.clear(); smooth.clear(); whiteMode.clear(); lastWhite.clear()
+                    }
+                    tvStatus = if (home) "Startscherm" else "Tv lijkt uit"; Thread.sleep(500); continue
+                }
+                paused = false
                 if (sample == null) {
                     tvStatus = if (Store.tvPaired) "Tv niet bereikbaar" else "Tv nog niet gekoppeld"
                     Thread.sleep(2000); continue
@@ -694,7 +698,7 @@ object Engine {
             }
         } catch (_: InterruptedException) {
         } finally {
-            pausedTvOff = false
+            paused = false
             restoreAll(touched, saved)
             tvStatus = "Gestopt"
         }
