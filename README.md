@@ -10,7 +10,12 @@ Android TV-app die gewone Tuya-wifilampen (Trust, LSC/Action en andere merken di
   <img src="docs/tv-testbeeld.png" width="49%" alt="Testbeeld met regenboog en je kamer">
   <img src="docs/tv-instellingen.png" width="49%" alt="Instellingen op de tv">
 </p>
-<p align="center"><img src="docs/editor.png" width="320" alt="Editor op de telefoon"></p>
+<p>
+  <img src="docs/telefoon-home.png" width="24%" alt="Telefoon: bediening met de kamer, sync en scènes">
+  <img src="docs/telefoon-room.png" width="24%" alt="Telefoon: kamer tekenen">
+  <img src="docs/telefoon-lamps.png" width="24%" alt="Telefoon: lampen">
+  <img src="docs/telefoon-settings.png" width="24%" alt="Telefoon: instellingen">
+</p>
 
 ## Wat de app doet
 

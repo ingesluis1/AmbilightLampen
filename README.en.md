@@ -10,7 +10,12 @@ Android TV app that makes ordinary Tuya Wi-Fi lamps (Trust, LSC/Action and other
   <img src="docs/tv-testbeeld.png" width="49%" alt="Rainbow test pattern with your room">
   <img src="docs/tv-instellingen.png" width="49%" alt="Settings on the TV">
 </p>
-<p align="center"><img src="docs/editor.png" width="320" alt="Editor on the phone"></p>
+<p>
+  <img src="docs/telefoon-home.png" width="24%" alt="Phone: controls with the room, sync and scenes">
+  <img src="docs/telefoon-room.png" width="24%" alt="Phone: draw your room">
+  <img src="docs/telefoon-lamps.png" width="24%" alt="Phone: lamps">
+  <img src="docs/telefoon-settings.png" width="24%" alt="Phone: settings">
+</p>
 
 ## What it does
 
