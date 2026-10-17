@@ -222,6 +222,7 @@ class TuyaLamp(val lamp: Lamp) {
     private val modern = ver == "3.4" || ver == "3.5"
     private val wiz = ver == Wiz.VERSION
     private val hue = ver == Hue.VERSION
+    private val ikea = ver == Dirigera.VERSION
     private var key = localKey
     private val ip = lamp.ip
     private val pending = LinkedHashMap<String, Any>()
@@ -416,19 +417,19 @@ class TuyaLamp(val lamp: Lamp) {
      * Hue: lampen in de Entertainment-ruimte gaan tijdens sync en scènes via de stream (HueStream);
      * de rest via gewone opdrachten aan de Bridge, met een gedeelde rem van ±10 per seconde voor alle Hue-lampen.
      */
-    private fun hueLoop() {
-        val hueId = lamp.id.removePrefix("hue-")
+    private fun hubLoop(hub: Hub) {
+        val hueId = lamp.id.removePrefix(hub.prefix)
         var mode = "white"
         var lastSend = 0L; var lastBeat = 0L
-        // De Bridge antwoordde; of de lamp zelf bereikbaar is, weet alleen de Zigbee-status
-        fun alive(t: Long) { lastRx = t; online = Hue.reachable(hueId) != false; lastError = null }
+        // De hub antwoordde; of de lamp zelf bereikbaar is, weet alleen de hub (Zigbee-status)
+        fun alive(t: Long) { lastRx = t; online = hub.reachable(hueId) != false; lastError = null }
         while (running) {
             try {
                 if (ip.isBlank()) { online = false; sleepQuiet(2000); continue }
                 val now = SystemClock.elapsedRealtime()
                 if (queryWanted || lastBeat == 0L) {
                     queryWanted = false; lastBeat = now
-                    val d = Hue.light(hueId)
+                    val d = hub.light(hueId)
                     if (d != null) { mode = d.optString("21", mode); statusResult = d; noteState(d); alive(now) }
                     else if (now - lastRx > 12_000) online = false
                     continue
@@ -437,27 +438,26 @@ class TuyaLamp(val lamp: Lamp) {
                 if (batch != null) {
                     val m = mode
                     (batch["21"] as? String)?.let { mode = it }
-                    if (HueStream.offer(lamp.id, batch, m)) {
-                        if (HueStream.live) alive(now)
+                    if (hub.offer(lamp.id, batch, m)) {
+                        if (hub.streaming()) alive(now)
                         lastSend = now; lastBeat = now
                         continue
                     }
-                    // Lamp die net nog gestreamd werd: eerst de stream laten stoppen, anders negeert de Bridge de opdracht
-                    if (HueStream.holds(lamp.id)) HueStream.awaitStop()
-                    Hue.waitTurn()
+                    hub.beforeSet(lamp.id)
+                    hub.waitTurn()
                     val t = SystemClock.elapsedRealtime()
                     // Overgang zo lang als de tijd sinds de vorige opdracht: dan loopt de kleur vloeiend door
                     val ms = if (Store.settingsFor(lamp).fade) (t - lastSend).coerceIn(100L, 800L) else 0L
-                    if (!Hue.setLight(hueId, Hue.body(batch, m, lamp.category, ms))) {
-                        // Bridge heeft het druk: opnieuw proberen, tenzij er intussen iets nieuwers klaarstaat
+                    if (!hub.setLight(hueId, batch, m, lamp.category, ms)) {
+                        // Hub heeft het druk: opnieuw proberen, tenzij er intussen iets nieuwers klaarstaat
                         synchronized(lock) { for ((k, v) in batch) pending.putIfAbsent(k, v) }
                         sleepQuiet(500); continue
                     }
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
                     alive(lastSend)
-                } else if (now - lastBeat > 5000 && !HueStream.live) {
+                } else if (now - lastBeat > 5000 && !hub.streaming()) {
                     lastBeat = now
-                    val d = Hue.light(hueId)
+                    val d = hub.light(hueId)
                     if (d != null) { noteState(d); alive(now) } else if (now - lastRx > 12_000) online = false
                 } else {
                     idleWait(5000 - (now - lastBeat))
@@ -472,7 +472,8 @@ class TuyaLamp(val lamp: Lamp) {
 
     private fun loop() {
         if (wiz) { wizLoop(); return }
-        if (hue) { hueLoop(); return }
+        if (hue) { hubLoop(Hue); return }
+        if (ikea) { hubLoop(Dirigera); return }
         var lastSend = 0L
         var lastBeat = 0L
         while (running) {

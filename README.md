@@ -2,7 +2,7 @@
 
 Nederlands | [English](README.en.md)
 
-Android TV-app die gewone Tuya-wifilampen (Trust, LSC/Action en andere merken die in Smart Life werken), WiZ-lampen en Philips Hue-lampen laat meekleuren met het beeld van een Philips Ambilight-tv, een beetje zoals Philips Hue Sync. De app draait op de tv zelf, dus er hoeft geen pc of extra kastje aan te staan.
+Android TV-app die gewone Tuya-wifilampen (Trust, LSC/Action en andere merken die in Smart Life werken), WiZ-lampen, Philips Hue-lampen en IKEA-lampen (via de DIRIGERA) laat meekleuren met het beeld van een Philips Ambilight-tv, een beetje zoals Philips Hue Sync. De app draait op de tv zelf, dus er hoeft geen pc of extra kastje aan te staan.
 
 <p>
   <img src="docs/tv-scherm.png" width="49%" alt="Tv-scherm overdag">
@@ -48,6 +48,7 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
    Alternatief zonder cloud-sleutels in de app: upload het `devices.json` van de [tinytuya](https://github.com/jasonacox/tinytuya)-wizard.
    **WiZ:** zet in de WiZ-app bij Instellingen, Beveiliging "Lokale communicatie" aan en druk op "WiZ-lampen zoeken".
    **Philips Hue:** druk bij Philips Hue op "Koppelen" en daarna op de grote knop op de Bridge. Lampen van andere merken die aan de Bridge gekoppeld zijn (zoals IKEA) komen ook mee. Maak voor de snelste reactie in de Hue-app een Entertainment-ruimte met je Hue-lampen: die krijgen dan de Entertainment-stream, net als bij Hue Sync.
+   **IKEA:** druk bij IKEA (DIRIGERA) op "Koppelen" en daarna op de actieknop onder op de hub.
 4. Teken je kamer, hang de lampen op en druk op "Sync starten".
 
 De ip-adressen van de lampen vindt de app zelf: Tuya-lampen roepen elke paar seconden hun adres om op het netwerk.

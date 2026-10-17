@@ -27,8 +27,13 @@ import kotlin.math.roundToInt
  * Daarom onthoudt de app bij het koppelen de vingerafdruk van dat certificaat en praat daarna alleen met
  * een Bridge die hetzelfde certificaat laat zien (anders gaat de sleutel niet mee).
  */
-object Hue {
+object Hue : Hub {
     const val VERSION = "hue"
+    override val prefix = "hue-"
+    override fun setLight(id: String, dps: Map<String, Any>, mode: String, category: String, ms: Long) = setLight(id, body(dps, mode, category, ms))
+    override fun offer(lampId: String, dps: Map<String, Any>, mode: String) = HueStream.offer(lampId, dps, mode)
+    override fun streaming() = HueStream.live
+    override fun beforeSet(lampId: String) { if (HueStream.holds(lampId)) HueStream.awaitStop() }
     /** De Bridge verwerkt ongeveer 10 lampopdrachten per seconde, voor alle lampen samen. */
     private const val SLOT_MS = 100L
 
@@ -98,7 +103,7 @@ object Hue {
     }
 
     /** Huidige stand van één lamp als Tuya-functies, of null als de Bridge niet antwoordt. */
-    fun light(id: String): JSONObject? {
+    override fun light(id: String): JSONObject? {
         val host = Store.hueIp ?: return null
         if (Store.hueCert == null) return null
         val (code, text) = bridge("GET", host, "/clip/v2/resource/light/$id", timeout = 2000)
@@ -134,7 +139,7 @@ object Hue {
     private val slotLock = Object()
     private var nextSlot = 0L
     /** Wacht op een vrij moment bij de Bridge (gedeeld door alle Hue-lampen). */
-    fun waitTurn() {
+    override fun waitTurn() {
         val wait = synchronized(slotLock) {
             val now = SystemClock.elapsedRealtime()
             val t = max(now, nextSlot); nextSlot = t + SLOT_MS; t - now
@@ -153,7 +158,8 @@ object Hue {
      * Kan de Bridge deze lamp bereiken? null = onbekend. De Bridge geeft ook van onbereikbare lampen gewoon
      * de laatst bekende stand terug, dus dit komt uit de Zigbee-status (hooguit eens per 10 seconden opgevraagd).
      */
-    fun reachable(lightId: String): Boolean? {
+    override fun reachable(id: String): Boolean? {
+        val lightId = id
         val now = SystemClock.elapsedRealtime()
         // Eén lampthread haalt de status op, de rest gebruikt die
         val fetch = synchronized(this) { (now - connectivityAt > 10_000).also { if (it) connectivityAt = now } }

@@ -235,6 +235,18 @@ label.s span{float:right;opacity:.8}
     </div>
     <p id="hueStatus" style="margin:6px 0 0"></p>
   </div>
+  <div style="margin-top:12px"><b>IKEA (DIRIGERA)</b>
+    <div id="ikeaSetup">
+      <p style="margin:4px 0 8px">Werkt met de IKEA DIRIGERA-hub. Laat het ip-adres leeg, dan zoekt de tv de hub zelf.</p>
+      <div class="row"><input type="text" id="ikeaIp" class="grow" placeholder="Ip-adres van de DIRIGERA (mag leeg)" autocomplete="off" autocapitalize="off"><button class="btn gold" id="ikeaPair">Koppelen</button></div>
+    </div>
+    <div id="ikeaOn" class="hidden">
+      <p id="ikeaInfo" style="margin:4px 0 8px"></p>
+      <button class="btn" id="ikeaRefresh">Nieuwe lampen zoeken</button>
+      <button class="btn" id="ikeaUnpair" style="margin-left:6px">Ontkoppelen</button>
+    </div>
+    <p id="ikeaStatus" style="margin:6px 0 0"></p>
+  </div>
   <details style="margin-top:12px"><summary>Of: devices.json van tinytuya uploaden</summary>
     <input type="file" id="importFile" accept=".json,application/json" style="margin-top:8px">
   </details>
@@ -771,8 +783,20 @@ $('hueRefresh').onclick=async()=>{const b=$('hueRefresh');b.disabled=true;b.text
 $('hueArea').onchange=async()=>{const r=await api('/api/hue/area',{id:$('hueArea').value});toast(r.message);$('hueArea').dataset.k='';poll()};
 $('hueUnpair').onclick=async()=>{if(!confirm(t('Bridge ontkoppelen? De Hue-lampen gaan naar Verwijderde lampen.')))return;
   const r=await api('/api/hue/unpair',{});toast(r.message);load()};
+function ikeaUI(s){
+  const k=s.ikea;if(!k)return;
+  $('ikeaSetup').classList.toggle('hidden',k.paired);$('ikeaOn').classList.toggle('hidden',!k.paired);
+  $('ikeaPair').disabled=k.pairing;$('ikeaPair').textContent=t(k.pairing?'Bezig...':'Koppelen');
+  $('ikeaInfo').textContent=t('DIRIGERA {ip}: {n} lamp(en).',{ip:k.ip,n:s.lamps.filter(l=>l.version==='dirigera').length});
+  $('ikeaStatus').textContent=k.status||'';
+}
+$('ikeaPair').onclick=async()=>{const r=await api('/api/ikea/pair',{ip:$('ikeaIp').value});toast(r.message);poll()};
+$('ikeaRefresh').onclick=async()=>{const b=$('ikeaRefresh');b.disabled=true;b.textContent=t('Zoeken...');
+  const r=await api('/api/ikea/refresh',{});b.disabled=false;b.textContent=t('Nieuwe lampen zoeken');toast(r.message);load()};
+$('ikeaUnpair').onclick=async()=>{if(!confirm(t('DIRIGERA ontkoppelen? De IKEA-lampen verdwijnen uit de lijst; opnieuw koppelen haalt ze terug.')))return;
+  const r=await api('/api/ikea/unpair',{});toast(r.message);load()};
 function liveFrom(s){
-  hiddenList(s);sceneList(s);hueUI(s);
+  hiddenList(s);sceneList(s);hueUI(s);ikeaUI(s);
   live={};for(const l of s.lamps)live[l.id]=l;
   $('syncBtn').textContent=t(s.sync?'Sync stoppen':'Sync starten');
   $('offBtn').textContent=t(s.lampsOff?'Lampen aan':'Lampen uit');

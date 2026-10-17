@@ -2,7 +2,7 @@
 
 [Nederlands](README.md) | English
 
-Android TV app that makes ordinary Tuya Wi-Fi lamps (Trust, LSC/Action and other brands that work with Smart Life), WiZ lamps and Philips Hue lamps follow the picture of a Philips Ambilight TV, a bit like Philips Hue Sync. The app runs on the TV itself, so no PC or extra box needs to be on.
+Android TV app that makes ordinary Tuya Wi-Fi lamps (Trust, LSC/Action and other brands that work with Smart Life), WiZ lamps, Philips Hue lamps and IKEA lamps (through the DIRIGERA) follow the picture of a Philips Ambilight TV, a bit like Philips Hue Sync. The app runs on the TV itself, so no PC or extra box needs to be on.
 
 <p>
   <img src="docs/tv-scherm.png" width="49%" alt="TV screen">
@@ -48,6 +48,7 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
    Without cloud keys in the app: upload the `devices.json` from the [tinytuya](https://github.com/jasonacox/tinytuya) wizard instead.
    **WiZ:** turn on "Local communication" in the WiZ app under Settings, Security and press "Find WiZ lamps".
    **Philips Hue:** press "Pair" under Philips Hue, then the big button on the Bridge. Lamps of other brands paired to the Bridge (such as IKEA) come along too. For the fastest response, create an entertainment area with your Hue lamps in the Hue app: those then get the entertainment stream, just like Hue Sync.
+   **IKEA:** press "Pair" under IKEA (DIRIGERA), then the action button on the bottom of the hub.
 4. Draw your room, place the lamps and press "Start sync".
 
 ## Privacy

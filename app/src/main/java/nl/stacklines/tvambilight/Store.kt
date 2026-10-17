@@ -31,7 +31,7 @@ class Lamp(
     /** Ledstrips tonen kleuren witter dan lampen; die standaard iets voller. */
     val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
     val placed get() = x >= 0 && y >= 0
-    val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5", Wiz.VERSION, Hue.VERSION)
+    val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5", Wiz.VERSION, Hue.VERSION, Dirigera.VERSION)
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
         put("id", id); put("name", name); put("ip", ip); put("version", version)
@@ -152,6 +152,10 @@ object Store {
     @Volatile var hueArea: String? = null
     /** Vingerafdruk (SHA-256) van het certificaat van de Bridge, vastgelegd bij het koppelen. */
     @Volatile var hueCert: String? = null
+    /** IKEA DIRIGERA: adres, sleutel (Bearer) en vingerafdruk van het certificaat. */
+    @Volatile var ikeaIp: String? = null
+    @Volatile var ikeaToken: String? = null
+    @Volatile var ikeaCert: String? = null
     /** Verwijderde lampen (id naar naam): komen bij zoeken in de cloud niet vanzelf terug. */
     val hidden = LinkedHashMap<String, String>()
     /** Definitief verwijderde lampen (id naar naam): niet meer in de lijst en ook niet terug bij zoeken; alleen via devices.json. */
@@ -197,6 +201,9 @@ object Store {
             hueClientKey = o.optString("hueClientKey").ifBlank { null }
             hueArea = o.optString("hueArea").ifBlank { null }
             hueCert = o.optString("hueCert").ifBlank { null }
+            ikeaIp = o.optString("ikeaIp").ifBlank { null }
+            ikeaToken = o.optString("ikeaToken").ifBlank { null }
+            ikeaCert = o.optString("ikeaCert").ifBlank { null }
         }
         hidden.clear(); forgotten.clear()
         part { o.optJSONObject("hidden")?.let { h -> h.keys().forEach { k -> hidden[k] = h.optString(k) } } }
@@ -211,7 +218,7 @@ object Store {
         o.remove("syncWanted")
         if (!withKeys) {
             o.optJSONArray("lamps")?.let { a -> for (i in 0 until a.length()) a.getJSONObject(i).remove("key") }
-            for (k in listOf("tvUser", "tvPass", "cloudId", "cloudSecret", "hueKey", "hueClientKey", "hueCert")) o.remove(k)
+            for (k in listOf("tvUser", "tvPass", "cloudId", "cloudSecret", "hueKey", "hueClientKey", "hueCert", "ikeaToken", "ikeaCert")) o.remove(k)
         }
         return JSONObject().put("app", "AmbilightLampen").put("created", System.currentTimeMillis()).put("withKeys", withKeys).put("config", o)
     }
@@ -221,7 +228,7 @@ object Store {
         val o = b.optJSONObject("config") ?: throw IllegalArgumentException(tr("Dit is geen backup van Ambilight Lampen", "This is not an Ambilight Lampen backup"))
         synchronized(this) {
             val oldKeys = lamps.associate { it.id to it.key }
-            val old = listOf(tvUser, tvPass, cloudId, cloudSecret, hueKey, hueClientKey, hueCert)
+            val old = listOf(tvUser, tvPass, cloudId, cloudSecret, hueKey, hueClientKey, hueCert, ikeaToken, ikeaCert)
             val wanted = syncWanted
             parse(o)
             syncWanted = wanted
@@ -230,6 +237,7 @@ object Store {
             cloudId = cloudId ?: old[2]; cloudSecret = cloudSecret ?: old[3]
             // Hue-sleutels horen bij elkaar (en bij het certificaat): alleen samen overnemen
             if (hueKey == null) { hueKey = old[4]; hueClientKey = old[5]; hueCert = old[6] }
+            if (ikeaToken == null) { ikeaToken = old[7]; ikeaCert = old[8] }
         }
         save()
         return lamps.size
@@ -265,6 +273,7 @@ object Store {
             put("forgotten", JSONObject(forgotten as Map<*, *>))
             put("cloudId", cloudId ?: ""); put("cloudSecret", cloudSecret ?: ""); put("cloudRegion", cloudRegion)
             put("hueIp", hueIp ?: ""); put("hueBridgeId", hueBridgeId ?: ""); put("hueKey", hueKey ?: ""); put("hueClientKey", hueClientKey ?: ""); put("hueArea", hueArea ?: ""); put("hueCert", hueCert ?: "")
+            put("ikeaIp", ikeaIp ?: ""); put("ikeaToken", ikeaToken ?: ""); put("ikeaCert", ikeaCert ?: "")
         }
     }
 

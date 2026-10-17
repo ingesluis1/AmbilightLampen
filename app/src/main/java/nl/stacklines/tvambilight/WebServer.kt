@@ -213,6 +213,14 @@ class WebServer(private val ctx: Context) {
                         else { Store.hueArea = JSONObject(req).optString("id").ifBlank { null }; Store.save(); msg(true, Hue.loadAreas()) }
                     }
                     path == "/api/hue/unpair" && method == "POST" -> msg(true, Hue.unpair())
+                    path == "/api/ikea/pair" && method == "POST" -> {
+                        Dirigera.startPair(JSONObject(req).optString("ip"))
+                        msg(true, tr("Bezig met koppelen", "Pairing"))
+                    }
+                    path == "/api/ikea/refresh" && method == "POST" -> {
+                        try { msg(true, Dirigera.refresh()) } catch (e: Exception) { msg(false, e.message ?: "") }
+                    }
+                    path == "/api/ikea/unpair" && method == "POST" -> msg(true, Dirigera.unpair())
                     path == "/api/cloud/refresh" && method == "POST" -> {
                         try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, tr("Ophalen mislukt: ", "Fetching failed: ") + e.message) }
                     }
@@ -259,13 +267,17 @@ class WebServer(private val ctx: Context) {
                         synchronized(Store) { Store.hidden.remove(id)?.let { Store.forgotten[id] = it } }
                         Store.save(); msg(true, tr("Lamp definitief verwijderd", "Lamp removed for good"))
                     }
+                    path == "/api/lamp/restore" && method == "POST" && JSONObject(req).getString("id").startsWith("ikea-") && Store.ikeaToken == null ->
+                        msg(false, tr("Koppel eerst de DIRIGERA, dan komt de lamp vanzelf terug", "Pair the DIRIGERA first, then the lamp comes back by itself"))
                     path == "/api/lamp/restore" && method == "POST" && JSONObject(req).getString("id").startsWith("hue-") && Store.hueKey == null ->
                         msg(false, tr("Koppel eerst de Hue Bridge, dan komt de lamp vanzelf terug", "Pair the Hue Bridge first, then the lamp comes back by itself"))
                     path == "/api/lamp/restore" && method == "POST" -> {
                         val id = JSONObject(req).getString("id")
                         synchronized(Store) { Store.hidden.remove(id) }
                         Store.save()
-                        if (id.startsWith("hue-")) {
+                        if (id.startsWith("ikea-")) {
+                            try { Dirigera.refresh(); msg(true, tr("Lamp teruggezet", "Lamp restored")) } catch (e: Exception) { msg(false, tr("Terugzetten mislukt: ", "Restoring failed: ") + e.message) }
+                        } else if (id.startsWith("hue-")) {
                             try { Hue.refresh(); msg(true, tr("Lamp teruggezet", "Lamp restored")) } catch (e: Exception) { msg(false, tr("Terugzetten mislukt: ", "Restoring failed: ") + e.message) }
                         } else if (id.startsWith("wiz-")) {
                             Wiz.scan(3000)
@@ -322,6 +334,8 @@ class WebServer(private val ctx: Context) {
                 .put("entertainment", Store.hueClientKey != null).put("area", Store.hueArea ?: "")
                 .put("areas", JSONArray().apply { Hue.areas.forEach { put(JSONObject().put("id", it.first).put("name", it.second).put("lamps", it.third)) } })
                 .put("streamLamps", JSONArray().apply { HueStream.channels.keys.forEach { put(it) } }))
+            put("ikea", JSONObject().put("paired", Store.ikeaToken != null).put("ip", Store.ikeaIp ?: "")
+                .put("pairing", Dirigera.pairing).put("status", Dirigera.status))
             put("cloud", JSONObject().put("configured", Store.cloudConfigured).put("region", Store.cloudRegion))
             phoneLink()?.let { put("link", it) }
             if (sample != null) put("top", JSONArray().apply { sample.top.forEach { put("#%02x%02x%02x".format(it[0], it[1], it[2])) } })

@@ -294,6 +294,8 @@ object Engine {
             try { Wiz.scan(2000) } catch (_: Exception) { }
         } else if (before.version == Hue.VERSION) {
             try { Hue.refresh() } catch (e: Exception) { notes += e.message ?: tr("Bridge niet bereikbaar", "Bridge not reachable") }
+        } else if (before.version == Dirigera.VERSION) {
+            try { Dirigera.refresh() } catch (e: Exception) { notes += e.message ?: tr("DIRIGERA niet bereikbaar", "DIRIGERA not reachable") }
         } else {
             if (Store.cloudConfigured) {
                 try { TuyaCloud.refresh() } catch (_: Exception) { notes += tr("cloud niet bereikbaar", "cloud not reachable") }
@@ -316,6 +318,8 @@ object Engine {
         val extra = if (notes.isEmpty()) "" else " (" + notes.joinToString(", ") + ")"
         if (!w.online) {
             // Lokaal hangt hij (komt voor bij Tuya-lampen): via de cloud aanzetten, dat lukt vaak nog wel
+            if (l.version == Dirigera.VERSION) return tr("De DIRIGERA bereikt de lamp niet. Staat hij aan (lichtschakelaar)? Kijk ook in de IKEA Home smart-app.",
+                "The DIRIGERA can't reach the lamp. Is it powered (light switch)? Check the IKEA Home smart app too.") + extra
             if (l.version == Hue.VERSION) return tr("De Bridge bereikt de lamp niet. Staat hij aan (lichtschakelaar)? Kijk ook in de Hue-app.",
                 "The Bridge can't reach the lamp. Is it powered (light switch)? Check the Hue app too.") + extra
             if (l.version != Wiz.VERSION && Store.cloudConfigured) {
