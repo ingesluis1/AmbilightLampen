@@ -218,6 +218,7 @@ object Hue : Hub {
         synchronized(this) { if (pairing) return; pairing = true }
         Thread({
             status = try { pair(ip?.trim()?.ifBlank { null }) } catch (e: Exception) { tr("Koppelen mislukt: ", "Pairing failed: ") + e.message }
+            AppLog.add("Hue koppelen: $status")
             pairing = false
         }, "hue-pair").apply { isDaemon = true; start() }
     }

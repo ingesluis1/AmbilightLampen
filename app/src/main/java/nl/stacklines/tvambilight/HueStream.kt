@@ -148,6 +148,7 @@ object HueStream {
         } catch (_: InterruptedException) {
         } catch (e: Exception) {
             status = tr("Stream mislukt: ", "Stream failed: ") + (e.message ?: e.javaClass.simpleName)
+            AppLog.add("Hue-stream: " + (e.message ?: e.javaClass.simpleName))
             fails++
             failedUntil = SystemClock.elapsedRealtime() + minOf(600_000L, 20_000L shl minOf(fails - 1, 5))
         } finally {

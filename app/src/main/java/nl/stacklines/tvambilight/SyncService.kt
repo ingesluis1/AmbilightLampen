@@ -17,6 +17,7 @@ class App : Application() {
     override fun onCreate() {
         super.onCreate()
         Store.load(this)
+        Reporter.init(this)
         Foreground.init(this)
         AutoDark.init(this)
         Dirigera.init(this)

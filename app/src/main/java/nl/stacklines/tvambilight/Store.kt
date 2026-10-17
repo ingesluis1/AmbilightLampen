@@ -75,6 +75,7 @@ class Settings {
     var darkOffset = 0       // minuten t.o.v. zonsondergang (-30 = een half uur ervoor)
     var lat = 52.1           // plek voor de zonsondergang; standaard het midden van Nederland
     var lon = 5.3
+    var reports = true       // crashes en probleemmeldingen naar de maker sturen (ntfy)
     var fixBars = true       // zwarte balken (breedbeeldfilm, 4:3) opvangen met de kleuren van de randen ernaast
     var pauseHome = true     // startscherm, schermbeveiliging of tv-instellingen in beeld = lampen terug en sync pauzeren
     var whiteLevel = 0.5     // witte leds geven meer licht dan de kleurleds: hun helderheid hiermee vermenigvuldigen
@@ -84,7 +85,7 @@ class Settings {
     fun toJson() = JSONObject().apply {
         put("smooth", smooth); put("saturation", saturation); put("brightness", brightness)
         put("minLight", minLight); put("spread", spread); put("hz", hz)
-        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("pauseHome", pauseHome); put("fixBars", fixBars); put("autoDark", autoDark); put("darkOffset", darkOffset); put("lat", lat); put("lon", lon); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds); put("whiteLevel", whiteLevel)
+        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("pauseHome", pauseHome); put("fixBars", fixBars); put("reports", reports); put("autoDark", autoDark); put("darkOffset", darkOffset); put("lat", lat); put("lon", lon); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds); put("whiteLevel", whiteLevel)
     }
 
     fun apply(o: JSONObject) {
@@ -102,6 +103,7 @@ class Settings {
         followAmbi = o.optBoolean("followAmbi", followAmbi)
         pauseHome = o.optBoolean("pauseHome", pauseHome)
         fixBars = o.optBoolean("fixBars", fixBars)
+        reports = o.optBoolean("reports", reports)
         autoDark = o.optBoolean("autoDark", autoDark)
         darkOffset = o.optInt("darkOffset", darkOffset).coerceIn(-120, 120)
         lat = o.optDouble("lat", lat).takeIf { !it.isNaN() }?.coerceIn(-66.0, 66.0) ?: lat
@@ -156,6 +158,8 @@ object Store {
     @Volatile var ikeaIp: String? = null
     @Volatile var ikeaToken: String? = null
     @Volatile var ikeaCert: String? = null
+    /** Willekeurige id van deze installatie, om meldingen van verschillende tv's uit elkaar te houden. */
+    @Volatile var installId: String = java.util.UUID.randomUUID().toString().replace("-", "")
     /** Verwijderde lampen (id naar naam): komen bij zoeken in de cloud niet vanzelf terug. */
     val hidden = LinkedHashMap<String, String>()
     /** Definitief verwijderde lampen (id naar naam): niet meer in de lijst en ook niet terug bij zoeken; alleen via devices.json. */
@@ -204,6 +208,7 @@ object Store {
             ikeaIp = o.optString("ikeaIp").ifBlank { null }
             ikeaToken = o.optString("ikeaToken").ifBlank { null }
             ikeaCert = o.optString("ikeaCert").ifBlank { null }
+            o.optString("installId").ifBlank { null }?.let { installId = it }
         }
         hidden.clear(); forgotten.clear()
         part { o.optJSONObject("hidden")?.let { h -> h.keys().forEach { k -> hidden[k] = h.optString(k) } } }
@@ -215,7 +220,7 @@ object Store {
     @Synchronized
     fun backup(withKeys: Boolean): JSONObject {
         val o = buildJson()
-        o.remove("syncWanted")
+        o.remove("syncWanted"); o.remove("installId")
         if (!withKeys) {
             o.optJSONArray("lamps")?.let { a -> for (i in 0 until a.length()) a.getJSONObject(i).remove("key") }
             for (k in listOf("tvUser", "tvPass", "cloudId", "cloudSecret", "hueKey", "hueClientKey", "hueCert", "ikeaToken", "ikeaCert")) o.remove(k)
@@ -273,6 +278,7 @@ object Store {
             put("forgotten", JSONObject(forgotten as Map<*, *>))
             put("cloudId", cloudId ?: ""); put("cloudSecret", cloudSecret ?: ""); put("cloudRegion", cloudRegion)
             put("hueIp", hueIp ?: ""); put("hueBridgeId", hueBridgeId ?: ""); put("hueKey", hueKey ?: ""); put("hueClientKey", hueClientKey ?: ""); put("hueArea", hueArea ?: ""); put("hueCert", hueCert ?: "")
+            put("installId", installId)
             put("ikeaIp", ikeaIp ?: ""); put("ikeaToken", ikeaToken ?: ""); put("ikeaCert", ikeaCert ?: "")
         }
     }

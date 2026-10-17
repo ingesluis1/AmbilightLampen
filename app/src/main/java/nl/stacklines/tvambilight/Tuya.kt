@@ -345,6 +345,7 @@ class TuyaLamp(val lamp: Lamp) {
 
     private fun noteFailure(e: Exception) {
         lastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(120); lastFail = lastError ?: ""
+        AppLog.add("${lamp.name}: $lastFail")
         reconnects++; online = false
     }
 

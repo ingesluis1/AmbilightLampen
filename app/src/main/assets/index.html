@@ -312,6 +312,10 @@ label.s span{float:right;opacity:.8}
 <section class="panel">
   <h2>App</h2>
   <div class="row"><span class="grow" id="appVersion"></span><button class="btn" id="updCheck">Zoeken naar updates</button></div>
+  <label class="s"><input type="checkbox" id="reports"> Fouten naar de maker sturen (crashes en probleemmeldingen; zonder sleutels, wachtwoorden of ip-adressen)</label>
+  <p style="margin:10px 0 6px">Gaat er iets mis? Schrijf kort wat er gebeurde en stuur het op. De stand van de app gaat mee.</p>
+  <textarea id="reportNote" rows="3" style="width:100%" placeholder="Wat ging er mis? (mag leeg)"></textarea>
+  <button class="btn" id="reportBtn" style="margin-top:6px">Probleem melden</button>
 </section>
 
 <section class="panel">
@@ -645,7 +649,7 @@ function groupUI(){
   groupList();
   const lg=$('lampGroup');if(lg){const v=(lamps.find(l=>l.id===selLamp)||{}).group||'';lg.innerHTML='<option value="">'+t('Geen (standaard)')+'</option>'+groups.map(g=>`<option value="${esc(g.id)}"></option>`).join('')+'<option value="__new"></option>';[...lg.options].forEach((o,i)=>{if(i>0&&i<=groups.length)o.textContent=groups[i-1].name});lg.options[lg.options.length-1].textContent='+ '+t('Nieuwe groep');lg.value=v;$('lampGroupSet').classList.toggle('hidden',!groups.some(g=>g.id===v))}
 }
-function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('darkColor').value=settings.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('whiteLeds').checked=!!settings.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;
+function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('darkColor').value=settings.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('whiteLeds').checked=!!settings.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;$('reports').checked=S.settings.reports!==false;
   $('autoDark').checked=!!S.settings.autoDark;$('autoDarkBox').classList.toggle('hidden',!S.settings.autoDark);
   $('darkOffset').value=S.settings.darkOffset||0;$('v_darkOffset').textContent=offsetText(S.settings.darkOffset||0);
   $('lat').value=S.settings.lat;$('lon').value=S.settings.lon;$('fixBars').checked=settings.fixBars!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
@@ -718,6 +722,9 @@ async function save(){
   if(r.ok)base=cur;
   dirty=false;$('saved').textContent=r.ok?t('opgeslagen'):t('niet opgeslagen');
 }
+$('reports').onchange=e=>{settings.reports=e.target.checked;changed(true)};
+$('reportBtn').onclick=async()=>{const b=$('reportBtn');b.disabled=true;b.textContent=t('Versturen...');
+  const r=await api('/api/report',{note:$('reportNote').value});b.disabled=false;b.textContent=t('Probleem melden');toast(r.message);if(r.ok)$('reportNote').value=''};
 $('updCheck').onclick=async()=>{const b=$('updCheck');b.disabled=true;b.textContent=t('Zoeken...');
   const r=await api('/api/update/check',{});b.disabled=false;b.textContent=t('Zoeken naar updates');toast(r.message);poll()};
 $('updBtn').onclick=async()=>{const u=S.update,n=I18N.notes(u.notes);if(!confirm(t('Wat is er nieuw in {v}',{v:u.latest})+':\n\n'+(n.length?'- '+n.join('\n- '):t('Geen beschrijving.'))+'\n\n'+t('Nu updaten?')))return;toast((await api('/api/update',{})).message+t('. Kijk op de tv.'))};

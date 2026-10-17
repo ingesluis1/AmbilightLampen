@@ -121,6 +121,7 @@ object Dirigera : Hub {
         synchronized(this) { if (pairing) return; pairing = true }
         Thread({
             status = try { pair(ip?.trim()?.ifBlank { null }) } catch (e: Exception) { tr("Koppelen mislukt: ", "Pairing failed: ") + e.message }
+            AppLog.add("IKEA koppelen: $status")
             pairing = false
         }, "ikea-pair").apply { isDaemon = true; start() }
     }

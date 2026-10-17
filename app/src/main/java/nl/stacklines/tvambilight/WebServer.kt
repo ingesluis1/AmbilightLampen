@@ -224,6 +224,11 @@ class WebServer(private val ctx: Context) {
                     path == "/api/cloud/refresh" && method == "POST" -> {
                         try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, tr("Ophalen mislukt: ", "Fetching failed: ") + e.message) }
                     }
+                    path == "/api/report" && method == "POST" -> {
+                        if (!Store.settings.reports) msg(false, tr("Fouten sturen staat uit (Instellingen)", "Sending problems is switched off (Settings)"))
+                        else if (Reporter.report(JSONObject(req).optString("note"))) msg(true, tr("Verstuurd, dank je", "Sent, thank you"))
+                        else msg(false, tr("Versturen lukte niet. Is er internet?", "Sending failed. Is there internet?"))
+                    }
                     path == "/api/update/check" && method == "POST" -> {
                         Updater.check(force = true)
                         val cur = Updater.current(ctx)
