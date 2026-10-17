@@ -233,9 +233,14 @@ class WebServer(private val ctx: Context) {
                         try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, tr("Ophalen mislukt: ", "Fetching failed: ") + e.message) }
                     }
                     path == "/api/report" && method == "POST" -> {
-                        if (!Store.settings.reports) msg(false, tr("Fouten sturen staat uit (Instellingen)", "Sending problems is switched off (Settings)"))
-                        else if (Reporter.report(JSONObject(req).optString("note"))) msg(true, tr("Verstuurd, dank je", "Sent, thank you"))
-                        else msg(false, tr("Versturen lukte niet. Is er internet?", "Sending failed. Is there internet?"))
+                        // De tekst gaat altijd mee terug: lukt versturen niet, dan kan de telefoon hem tonen om te kopiëren
+                        val text = Reporter.reportText(JSONObject(req).optString("note"))
+                        val (ok, m) = when {
+                            !Store.settings.reports -> false to tr("Fouten sturen staat uit (Instellingen). Hieronder staat de melding om zelf te sturen.", "Sending problems is switched off (Settings). The report is below to send yourself.")
+                            Reporter.report(JSONObject(req).optString("note")) -> true to tr("Verstuurd, dank je", "Sent, thank you")
+                            else -> false to tr("Versturen lukte niet (", "Sending failed (") + (Reporter.lastSendError ?: "?") + tr("). Hieronder staat de melding om zelf te sturen.", "). The report is below to send yourself.")
+                        }
+                        json(JSONObject().put("ok", ok).put("message", m).put("text", text))
                     }
                     path == "/api/update/check" && method == "POST" -> {
                         Updater.check(force = true)

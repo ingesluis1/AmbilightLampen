@@ -60,7 +60,10 @@ object Reporter {
     }
 
     /** "Probleem melden" vanaf de telefoon: wat de gebruiker schrijft plus de stand van de app. */
-    fun report(note: String): Boolean {
+    fun report(note: String): Boolean = send("Ambilight Lampen probleem (${version()})", reportText(note), "speech_balloon", 3)
+
+    /** Tekst van een probleemmelding (ook om zelf te kopiëren als versturen niet lukt). */
+    fun reportText(note: String): String {
         val lamps = Store.lampsSnapshot().joinToString("\n") { l ->
             val w = Engine.workers[l.id]
             "- ${l.name} [${l.version}${if (l.category.isNotBlank()) ", " + l.category else ""}] " +
@@ -70,9 +73,14 @@ object Reporter {
             "Tv: ${Engine.tvStatus}, sync ${if (Engine.running) "aan" else "uit"}, scène ${SceneEngine.active?.name ?: "-"}\n" +
             "Hue: ${if (Store.hueKey != null) "gekoppeld" else "-"} ${Hue.status} ${HueStream.status}\n" +
             "IKEA: ${if (Store.ikeaToken != null) "gekoppeld" else "-"} ${Dirigera.status}\n\n" +
-            "Lampen:\n$lamps\n\nLaatste meldingen:\n" + AppLog.dump()
-        return send("Ambilight Lampen probleem (${version()})", scrub(text), "speech_balloon", 3)
+            "Lampen:\n$lamps\n\nLaatste meldingen:\n" + AppLog.dump() +
+            (lastSendError?.let { "\n\nVersturen naar ntfy mislukte eerder: $it" } ?: "")
+        return scrub(text)
     }
+
+    /** Waarom het laatste versturen mislukte (HTTP-code of foutmelding), of null. */
+    @Volatile var lastSendError: String? = null
+        private set
 
     private val lastScreen = HashMap<String, Long>()
 
@@ -101,8 +109,10 @@ object Reporter {
         c.setRequestProperty("Title", title); c.setRequestProperty("Tags", tags); c.setRequestProperty("Priority", priority.toString())
         c.setRequestProperty("Content-Type", "text/plain; charset=utf-8")
         c.outputStream.use { it.write(body.toByteArray()) }
-        c.responseCode in 200..299
-    } catch (_: Exception) { false }
+        val code = c.responseCode
+        lastSendError = if (code in 200..299) null else "HTTP $code " + (c.errorStream?.use { it.readBytes().toString(Charsets.UTF_8) }?.take(150) ?: "")
+        code in 200..299
+    } catch (e: Exception) { lastSendError = e.javaClass.simpleName + ": " + (e.message ?: ""); false }
 }
 
 /** De laatste interne meldingen (fouten van lampen, hubs, stream), om mee te sturen bij een crash of probleemmelding. */

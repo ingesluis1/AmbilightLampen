@@ -316,6 +316,11 @@ label.s span{float:right;opacity:.8}
   <p style="margin:10px 0 6px">Gaat er iets mis? Schrijf kort wat er gebeurde en stuur het op. De stand van de app gaat mee.</p>
   <textarea id="reportNote" rows="3" style="width:100%" placeholder="Wat ging er mis? (mag leeg)"></textarea>
   <button class="btn" id="reportBtn" style="margin-top:6px">Probleem melden</button>
+  <div class="hidden" id="reportOut" style="margin-top:8px">
+    <p style="margin:0 0 6px">Kopieer deze tekst en stuur hem naar de maker (bijvoorbeeld via WhatsApp):</p>
+    <textarea id="reportText" rows="8" readonly style="width:100%;font-size:12px"></textarea>
+    <button class="btn gold" id="reportCopy" style="margin-top:6px">Tekst kopiëren</button>
+  </div>
 </section>
 
 <section class="panel">
@@ -724,7 +729,12 @@ async function save(){
 }
 $('reports').onchange=e=>{settings.reports=e.target.checked;changed(true)};
 $('reportBtn').onclick=async()=>{const b=$('reportBtn');b.disabled=true;b.textContent=t('Versturen...');
-  const r=await api('/api/report',{note:$('reportNote').value});b.disabled=false;b.textContent=t('Probleem melden');toast(r.message);if(r.ok)$('reportNote').value=''};
+  const r=await api('/api/report',{note:$('reportNote').value});b.disabled=false;b.textContent=t('Probleem melden');toast(r.message);
+  if(r.ok){$('reportNote').value='';$('reportOut').classList.add('hidden')}
+  else if(r.text){$('reportText').value=r.text;$('reportOut').classList.remove('hidden')}};
+// Kopiëren werkt hier zonder https alleen via selecteren + execCommand
+$('reportCopy').onclick=()=>{const a=$('reportText');a.focus();a.select();a.setSelectionRange(0,a.value.length);
+  let ok=false;try{ok=document.execCommand('copy')}catch(e){}toast(t(ok?'Gekopieerd':'Selecteer de tekst en kopieer hem zelf'))};
 $('updCheck').onclick=async()=>{const b=$('updCheck');b.disabled=true;b.textContent=t('Zoeken...');
   const r=await api('/api/update/check',{});b.disabled=false;b.textContent=t('Zoeken naar updates');toast(r.message);poll()};
 $('updBtn').onclick=async()=>{const u=S.update,n=I18N.notes(u.notes);if(!confirm(t('Wat is er nieuw in {v}',{v:u.latest})+':\n\n'+(n.length?'- '+n.join('\n- '):t('Geen beschrijving.'))+'\n\n'+t('Nu updaten?')))return;toast((await api('/api/update',{})).message+t('. Kijk op de tv.'))};
