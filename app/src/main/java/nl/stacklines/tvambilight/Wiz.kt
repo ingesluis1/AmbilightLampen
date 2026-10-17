@@ -26,7 +26,7 @@ object Wiz {
         val m = dps["21"] as? String ?: mode
         val c = dps["24"] as? String
         if (m == "colour" && c != null && c.length >= 12) {
-            val h = c.substring(0, 4).toInt(16); val s = c.substring(4, 8).toInt(16); val v = c.substring(8, 12).toInt(16)
+            val (h, s, v) = TuyaLamp.parseHsvHex(c)
             val rgb = Color.HSVToColor(floatArrayOf(h.toFloat(), (s / 1000f).coerceIn(0f, 1f), 1f))
             // WiZ dimt niet onder 10%; daaronder ook de kleur zelf zachter maken
             val dim = (v / 10.0).roundToInt().coerceIn(10, 100)

@@ -121,8 +121,6 @@ object Store {
 
     /** Instellingen die voor deze lamp gelden: die van zijn groepje, anders de algemene. */
     fun settingsFor(l: Lamp): Settings = groups.firstOrNull { it.id == l.group }?.settings ?: settings
-    // Via de kopie: lampthreads roepen dit steeds aan terwijl de lijst elders (onder het slot) verandert
-    fun settingsForId(id: String): Settings = lampsSnapshot().firstOrNull { it.id == id }?.let { settingsFor(it) } ?: settings
     @Volatile var tvHost = "127.0.0.1"
     @Volatile var tvUser: String? = null
     @Volatile var tvPass: String? = null
@@ -146,6 +144,7 @@ object Store {
     @Volatile var version = 0
 
     val tvPaired get() = tvUser != null && tvPass != null
+    val cloudConfigured get() = cloudId != null && cloudSecret != null
 
     @Synchronized
     fun load(ctx: Context) {
@@ -185,10 +184,24 @@ object Store {
         version++
     }
 
-    @Synchronized
+    private val fileLock = Object()
+    private var saveSeq = 0L
+    private var writtenSeq = 0L
+
     fun save() {
-        version++
-        val o = JSONObject().apply {
+        val (n, text) = synchronized(this) { version++; ++saveSeq to buildJson().toString() }
+        // Buiten het Store-slot schrijven: lampthreads en de sync-lus lezen ondertussen gewoon door
+        synchronized(fileLock) {
+            if (n < writtenSeq) return   // een nieuwere stand is al weggeschreven
+            writtenSeq = n
+            val tmp = File(file.parentFile, "config.json.tmp")
+            tmp.writeText(text)
+            tmp.renameTo(file)
+        }
+    }
+
+    private fun buildJson(): JSONObject {
+        return JSONObject().apply {
             put("layout", layout)
             put("lamps", JSONArray().apply { lamps.forEach { put(it.toJson(true)) } })
             put("settings", settings.toJson())
@@ -202,9 +215,6 @@ object Store {
             put("cloudId", cloudId ?: ""); put("cloudSecret", cloudSecret ?: ""); put("cloudRegion", cloudRegion)
             put("hueIp", hueIp ?: ""); put("hueBridgeId", hueBridgeId ?: ""); put("hueKey", hueKey ?: ""); put("hueClientKey", hueClientKey ?: ""); put("hueArea", hueArea ?: ""); put("hueCert", hueCert ?: "")
         }
-        val tmp = File(file.parentFile, "config.json.tmp")
-        tmp.writeText(o.toString())
-        tmp.renameTo(file)
     }
 
     @Synchronized

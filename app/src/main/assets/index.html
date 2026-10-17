@@ -640,11 +640,11 @@ function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!n
    (of van de app zelf, zoals een nieuw ip-adres) niet worden overschreven door wat deze pagina eerder laadde. */
 let base=null;
 function lampFields(l){return {group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,heightY:l.heightY??null,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,satBoost:l.satBoost>0?l.satBoost:-1,lowHue:l.lowHue??190,lowStrength:l.lowStrength||0,enabled:l.enabled,ip:l.ip}}
-function snap(){return JSON.parse(JSON.stringify({layout:L,settings,groups,lamps:lamps.map(lampFields)}))}
+function stateSnapshot(){return JSON.parse(JSON.stringify({layout:L,settings,groups,lamps:lamps.map(lampFields)}))}
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function diffKeys(cur,old){const d={};for(const k in cur)if(!old||!same(cur[k],old[k]))d[k]=cur[k];return d}
 async function save(){
-  const cur=snap(),b=base||{},body={};
+  const cur=stateSnapshot(),b=base||{},body={};
   if(!same(cur.layout,b.layout))body.layout=cur.layout;
   const sd=diffKeys(cur.settings,b.settings);if(Object.keys(sd).length)body.settings=sd;
   // Groepen: altijd de hele lijst (nieuw, hernoemd, verwijderd), maar van bestaande groepen alleen gewijzigde instellingen
@@ -730,7 +730,7 @@ function liveFrom(s){
 }
 async function load(){
   S=await api('/api/state');
-  if(!dirty){L=Room.migrate(S.layout);lamps=S.lamps.map(l=>({...l}));settings=S.settings;groups=(S.groups||[]).map(g=>JSON.parse(JSON.stringify(g)));base=snap();if(!groups.find(g=>g.id===setTarget))setTarget='';groupUI();showSettings()}
+  if(!dirty){L=Room.migrate(S.layout);lamps=S.lamps.map(l=>({...l}));settings=S.settings;groups=(S.groups||[]).map(g=>JSON.parse(JSON.stringify(g)));base=stateSnapshot();if(!groups.find(g=>g.id===setTarget))setTarget='';groupUI();showSettings()}
   else for(const nl of S.lamps)if(!lamps.find(l=>l.id===nl.id)){lamps.push({...nl});if(base)base.lamps.push(lampFields(nl))}
   lamps=lamps.filter(l=>S.lamps.find(n=>n.id===l.id));
   liveFrom(S);

@@ -52,12 +52,17 @@ object Hue {
      */
     fun bridge(method: String, host: String, path: String, body: String? = null, key: String? = Store.hueKey,
                timeout: Int = 3000, pin: String? = Store.hueCert, seen: ((String) -> Unit)? = null): Pair<Int, String> {
-        val c = URL("https://$host$path").openConnection() as HttpsURLConnection
-        c.sslSocketFactory = Tls.pinned(pin, seen)
-        // Het certificaat staat op naam van de Bridge, niet op het ip-adres; de vingerafdruk is de controle
-        c.hostnameVerifier = HostnameVerifier { _, _ -> true }
-        return exchange(c, method, body, if (pin != null) key else null, timeout)
+        return exchange(open(host, path, pin, seen), method, body, if (pin != null) key else null, timeout)
     }
+
+    // Het certificaat staat op naam van de Bridge, niet op het ip-adres; de vingerafdruk is de controle
+    private val anyHost = HostnameVerifier { _, _ -> true }
+
+    private fun open(host: String, path: String, pin: String?, seen: ((String) -> Unit)?): HttpsURLConnection =
+        (URL("https://$host$path").openConnection() as HttpsURLConnection).apply {
+            sslSocketFactory = Tls.pinned(pin, seen)
+            hostnameVerifier = anyHost
+        }
 
     private fun exchange(c: HttpURLConnection, method: String, body: String?, key: String?, timeout: Int): Pair<Int, String> {
         c.requestMethod = method; c.connectTimeout = timeout; c.readTimeout = timeout
@@ -117,10 +122,9 @@ object Hue {
     fun applicationId(): String? {
         val host = Store.hueIp ?: return null
         val key = Store.hueKey ?: return null
+        val pin = Store.hueCert ?: return key
         return try {
-            val c = URL("https://$host/auth/v1").openConnection() as HttpsURLConnection
-            c.sslSocketFactory = Tls.pinned(Store.hueCert ?: return key, null)
-            c.hostnameVerifier = HostnameVerifier { _, _ -> true }
+            val c = open(host, "/auth/v1", pin, null)
             c.connectTimeout = 3000; c.readTimeout = 3000
             c.setRequestProperty("hue-application-key", key)
             if (c.responseCode == 200) c.getHeaderField("hue-application-id")?.ifBlank { null } ?: key else key
@@ -151,8 +155,9 @@ object Hue {
      */
     fun reachable(lightId: String): Boolean? {
         val now = SystemClock.elapsedRealtime()
-        if (now - connectivityAt > 10_000) {
-            connectivityAt = now
+        // Eén lampthread haalt de status op, de rest gebruikt die
+        val fetch = synchronized(this) { (now - connectivityAt > 10_000).also { if (it) connectivityAt = now } }
+        if (fetch) {
             try {
                 val z = resource("zigbee_connectivity")
                 val m = HashMap<String, Boolean>()
@@ -167,23 +172,23 @@ object Hue {
 
     // ---------- Zoeken en koppelen ----------
 
-    /** Zoekt Bridges: eerst via de zoekdienst van Philips, anders zelf het netwerk afgaan. */
-    fun findBridges(): List<String> {
+    /** Zoekt Bridges (adres naar id): eerst via de zoekdienst van Philips, anders zelf het netwerk afgaan. */
+    fun findBridges(): Map<String, String> {
         val out = LinkedHashSet<String>()
         try {
             val (code, text) = request("GET", "https://discovery.meethue.com/", timeout = 4000)
             if (code == 200) JSONArray(text).let { a -> for (i in 0 until a.length()) a.getJSONObject(i).optString("internalipaddress").ifBlank { null }?.let { out += it } }
         } catch (_: Exception) { }
         // Alleen adressen in het eigen netwerk, en alleen wat echt antwoordt (de zoekdienst kan een oud adres geven)
-        val alive = out.filter { isLocal(it) && bridgeId(it) != null }.toMutableList()
-        if (alive.isEmpty()) alive += scan()
-        return alive
+        val alive = LinkedHashMap<String, String>()
+        for (h in out) if (isLocal(h)) bridgeId(h)?.let { alive[h] = it }
+        return alive.ifEmpty { scan() }
     }
 
     /** Privé-adres (10.x, 172.16-31.x, 192.168.x): de Bridge staat altijd in het eigen netwerk. */
     fun isLocal(host: String): Boolean = try {
         val h = host.substringBefore(':')
-        h.matches(Regex("""\d{1,3}(\.\d{1,3}){3}""")) && InetAddress.getByName(h).isSiteLocalAddress
+        h.matches(WebServer.IPV4) && InetAddress.getByName(h).isSiteLocalAddress
     } catch (_: Exception) { false }
 
     /** Id van de Bridge op dit adres (vraagt de openbare config op), of null als daar geen Bridge zit. */
@@ -193,13 +198,13 @@ object Hue {
     } catch (_: Exception) { null }
 
     /** Alle adressen in het eigen netwerk (x.x.x.1 tot .254) proberen. */
-    private fun scan(): List<String> {
-        val prefix = WebServer.localIp()?.substringBeforeLast('.') ?: return emptyList()
-        val found = java.util.Collections.synchronizedList(mutableListOf<String>())
+    private fun scan(): Map<String, String> {
+        val prefix = WebServer.localIp()?.substringBeforeLast('.') ?: return emptyMap()
+        val found = java.util.concurrent.ConcurrentHashMap<String, String>()
         val pool = Executors.newFixedThreadPool(32)
-        for (i in 1..254) pool.execute { val host = "$prefix.$i"; if (bridgeId(host, 900) != null) found += host }
+        for (i in 1..254) pool.execute { val host = "$prefix.$i"; bridgeId(host, 900)?.let { found[host] = it } }
         pool.shutdown(); pool.awaitTermination(20, TimeUnit.SECONDS)
-        return found.sorted()
+        return found.toSortedMap()
     }
 
     /** Koppelen op de achtergrond: Bridge zoeken (als er geen adres is), wachten op de knop, lampen ophalen. */
@@ -215,7 +220,7 @@ object Hue {
         if (ip != null && !isLocal(ip)) return tr("Vul het ip-adres van de Bridge in, bijvoorbeeld 192.168.1.20.", "Enter the Bridge's IP address, for example 192.168.1.20.")
         val host = ip ?: run {
             status = tr("Bridge zoeken...", "Looking for the Bridge...")
-            findBridges().firstOrNull()
+            findBridges().keys.firstOrNull()
         } ?: return tr("Geen Bridge gevonden. Zit hij in hetzelfde netwerk als de tv? Je kunt ook het ip-adres invullen (staat in de Hue-app bij Instellingen, Bridges).",
             "No Bridge found. Is it on the same network as the TV? You can also enter its IP address (in the Hue app under Settings, Bridges).")
         val id = bridgeId(host) ?: return tr("Op $host antwoordt geen Hue Bridge.", "No Hue Bridge answers at $host.")
@@ -232,9 +237,7 @@ object Hue {
                 HueStream.stopNow()
                 Store.hueIp = host; Store.hueBridgeId = id; Store.hueCert = cert
                 Store.hueKey = ok.getString("username"); Store.hueClientKey = ok.optString("clientkey").ifBlank { null }
-                Store.save()
-                synchronized(Store) { Store.lamps.filter { it.version == VERSION }.forEach { it.ip = host } }
-                Engine.syncWorkers()
+                moveLampsTo(host)
                 return tr("Bridge gekoppeld. ", "Bridge paired. ") + refresh()
             }
             val err = o?.optJSONObject("error")
@@ -365,11 +368,16 @@ object Hue {
         val now = SystemClock.elapsedRealtime()
         if (lastRelocate != 0L && now - lastRelocate < 600_000) return false
         lastRelocate = now
-        val host = findBridges().firstOrNull { it != Store.hueIp && bridgeId(it) == id } ?: return false
+        val host = findBridges().entries.firstOrNull { it.key != Store.hueIp && it.value == id }?.key ?: return false
         Store.hueIp = host
+        moveLampsTo(host)
+        return true
+    }
+
+    /** Hue-lampen hebben het adres van de Bridge als ip; na een ander adres nieuwe verbindingen. */
+    private fun moveLampsTo(host: String) {
         synchronized(Store) { Store.lamps.filter { it.version == VERSION }.forEach { it.ip = host } }
         Store.save(); Engine.syncWorkers()
-        return true
     }
 
     /** Bij het starten van de app de lampen en ruimtes ophalen, daarna af en toe (nieuwe lampen, ander adres). */
@@ -422,7 +430,7 @@ object Hue {
         val m = dps["21"] as? String ?: mode
         val c = dps["24"] as? String
         if (m == "colour" && c != null && c.length >= 12) {
-            val h = c.substring(0, 4).toInt(16); val s = c.substring(4, 8).toInt(16); val v = c.substring(8, 12).toInt(16)
+            val (h, s, v) = TuyaLamp.parseHsvHex(c)
             o.put("dimming", JSONObject().put("brightness", (v / 10.0).coerceIn(1.0, 100.0)))
             when (category) {
                 "hue-color" -> {
@@ -466,7 +474,7 @@ object Hue {
         val m = dps["21"] as? String ?: mode
         val c = dps["24"] as? String
         val rgb = if (m == "colour" && c != null && c.length >= 12) {
-            val h = c.substring(0, 4).toInt(16); val s = c.substring(4, 8).toInt(16); val v = c.substring(8, 12).toInt(16)
+            val (h, s, v) = TuyaLamp.parseHsvHex(c)
             Color.HSVToColor(floatArrayOf(h.toFloat(), (s / 1000f).coerceIn(0f, 1f), (v / 1000f).coerceIn(0f, 1f)))
         } else if (m == "white" && dps.containsKey("22")) {
             Engine.whiteRgb((dps["23"] as? Number)?.toInt() ?: 500, (dps["22"] as Number).toInt(), floor = 0f)

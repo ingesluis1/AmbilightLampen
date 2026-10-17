@@ -251,11 +251,13 @@ function demoFrame(){
   const k=demoKey(),box=$('demo'),cap=$('demoCap');
   if(k!==demoShown){demoShown=k;demoT0=performance.now();box.classList.toggle('hidden',!k);$('settings').classList.toggle('demo',!!k&&setOpen)}
   // Uitleg: in het instellingenpaneel als dat open is, anders los onderin beeld
-  cap.classList.toggle('hidden',!k||setOpen);if(!k)$('setCap').textContent='';
-  if(k){const cv=$('demoCv'),W=cv.width=innerWidth/4|0,H=cv.height=innerHeight/4|0,t=(performance.now()-demoT0)/1000;
+  const capHidden=!k||setOpen;if(cap.classList.contains('hidden')!==capHidden)cap.classList.toggle('hidden',capHidden);
+  if(!k&&$('setCap').textContent)$('setCap').textContent='';
+  if(k){const cv=$('demoCv'),W=innerWidth/4|0,H=innerHeight/4|0,t=(performance.now()-demoT0)/1000;
+    if(cv.width!==W)cv.width=W;if(cv.height!==H)cv.height=H;
     DEMOS[k].draw(cv.getContext('2d'),W,H,t);
     const txt=k==='whiteLeds'?t2('Nu: {c}. Aan: wit, grijs, geel en donker met de witte leds; rood en blauw blijven kleurlicht.',{c:t2(DEMOS.whiteLeds.now)}):t2(DEMOS[k].cap);
-    if(setOpen){if($('setCap').textContent!==txt)$('setCap').textContent=txt}else cap.textContent=txt}
+    if(setOpen){if($('setCap').textContent!==txt)$('setCap').textContent=txt}else if(cap.textContent!==txt)cap.textContent=txt}
   requestAnimationFrame(demoFrame);
 }
 const t2=(s,a)=>t(s,a);

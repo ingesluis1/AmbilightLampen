@@ -281,9 +281,6 @@ object Engine {
 
     fun endAllPreviews() { for (id in preview.keys.toList()) endPreview(id) }
 
-    /** Gebruikt de nieuwste plek/hoogte van een lamp (de verbinding blijft dezelfde). */
-    private fun current(id: String) = Store.lampsSnapshot().firstOrNull { it.id == id }
-
     fun blink(id: String) { syncWorkers(); workers[id]?.blink() }
 
     /**
@@ -298,7 +295,7 @@ object Engine {
         } else if (before.version == Hue.VERSION) {
             try { Hue.refresh() } catch (e: Exception) { notes += e.message ?: tr("Bridge niet bereikbaar", "Bridge not reachable") }
         } else {
-            if (Store.cloudId != null && Store.cloudSecret != null) {
+            if (Store.cloudConfigured) {
                 try { TuyaCloud.refresh() } catch (_: Exception) { notes += tr("cloud niet bereikbaar", "cloud not reachable") }
             }
             Discovery.ask()
@@ -317,7 +314,7 @@ object Engine {
             // Lokaal hangt hij (komt voor bij Tuya-lampen): via de cloud aanzetten, dat lukt vaak nog wel
             if (l.version == Hue.VERSION) return tr("De Bridge bereikt de lamp niet. Staat hij aan (lichtschakelaar)? Kijk ook in de Hue-app.",
                 "The Bridge can't reach the lamp. Is it powered (light switch)? Check the Hue app too.") + extra
-            if (l.version != Wiz.VERSION && Store.cloudId != null && Store.cloudSecret != null) {
+            if (l.version != Wiz.VERSION && Store.cloudConfigured) {
                 val viaCloud = try { TuyaCloud.powerOn(id) } catch (_: Exception) { null }
                 if (viaCloud == true) return tr("Lokaal reageert hij niet, maar via de cloud is hij aangezet. Meekleuren lukt pas weer na stroom eraf en erop.",
                     "Not responding locally, but switched on via the cloud. Following the picture only works again after a power cycle.") + extra
@@ -487,17 +484,11 @@ object Engine {
     private fun restoreAll(touched: Set<String>, saved: Map<String, JSONObject?>) {
         for (id in touched) {
                 val w = workers[id] ?: continue
-                val restore: Map<String, Any> = when (Store.settings.after) {
-                    "off" -> mapOf("20" to false)
-                    "white" -> mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500)
-                    else -> saved[id]?.let { st ->
-                        val m = LinkedHashMap<String, Any>()
-                        for (k in listOf("20", "21", "22", "23", "24")) if (st.has(k)) m[k] = st.get(k)
-                        m
-                    }?.takeIf { it.isNotEmpty() } ?: mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500)
+                when (Store.settings.after) {
+                    "off" -> { w.send(mapOf("20" to false)); w.shownColor = 0xFF555555.toInt() }
+                    "white" -> { w.send(TuyaLamp.WARM_WHITE); w.shownColor = 0xFF555555.toInt() }
+                    else -> w.restore(saved[id])
                 }
-                w.send(restore)
-                w.shownColor = 0xFF555555.toInt()
             }
     }
 
@@ -595,19 +586,20 @@ object Engine {
                 }
                 tvStatus = "Verbonden"
                 lastSample = sample
+                val frameLamps = Store.lampsSnapshot()
                 val zc = Triple(sample.left.size, sample.top.size, sample.right.size)
                 if (Store.version != weightsVersion || zc != zoneCount) {
                     weightsVersion = Store.version; zoneCount = zc
                     weights = HashMap()
                     // Lampen op "Bovenrand" krijgen op volgorde van links naar rechts een gelijk verdeelde plek op de bovenrand
-                    val topLamps = Store.lampsSnapshot().filter { it.follow == "top" && it.placed }
+                    val topLamps = frameLamps.filter { it.follow == "top" && it.placed }
                         .sortedBy { Mixer.project(Store.layout, it)?.get(0) ?: 0.0 }
                     val topX = topLamps.withIndex().associate { (k, l) -> l.id to (-1 + (2.0 * k + 1) / topLamps.size) }
-                    for (l in Store.lampsSnapshot()) weights[l.id] = Mixer.weights(Store.layout, l, Store.settingsFor(l).spread, zc.first, zc.second, zc.third, topX[l.id])
+                    for (l in frameLamps) weights[l.id] = Mixer.weights(Store.layout, l, Store.settingsFor(l).spread, zc.first, zc.second, zc.third, topX[l.id])
                 }
                 // Voorronde voor donker beeld: welke lampen hebben nog kleur (tint + verzadiging), en wat is het gemiddelde van het hele beeld
                 lit.clear()
-                for (l in Store.lampsSnapshot()) {
+                for (l in frameLamps) {
                     if (!l.enabled || !l.placed || l.layers > 0) continue
                     val ls = Store.settingsFor(l)
                     val tgt = Mixer.mix(weights[l.id] ?: continue, sample)
@@ -623,7 +615,7 @@ object Engine {
                 leftHS = avgHS(sample.left + sample.top.take(nt / 2), s, 0.015f)
                 rightHS = avgHS(sample.right + sample.top.drop(nt - nt / 2), s, 0.015f)
                 // Elke ronde opnieuw: lampen die tijdens de sync zijn toegevoegd doen meteen mee
-                for (l in Store.lampsSnapshot()) {
+                for (l in frameLamps) {
                     val id = l.id
                     val worker = workers[id] ?: continue
                     if (!l.enabled) continue

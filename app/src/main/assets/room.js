@@ -336,9 +336,15 @@ const Room = (() => {
   }
 
   /** Per frame: basis + (bij sync) donkere kamer met gekleurd licht. */
+  let frameCv = null;
   function frame(baseCanvas, L, lamps, live, sync, top) {
-    const c = document.createElement('canvas'); c.width = baseCanvas.width; c.height = baseCanvas.height;
+    // Eén canvas hergebruiken: elke poll een nieuw canvas maken kost op de tv onnodig geheugen en tijd
+    const c = frameCv || (frameCv = document.createElement('canvas'));
+    if (c.width !== baseCanvas.width) c.width = baseCanvas.width;
+    if (c.height !== baseCanvas.height) c.height = baseCanvas.height;
     const g = c.getContext('2d');
+    g.globalCompositeOperation = 'source-over';
+    g.clearRect(0, 0, c.width, c.height);
     g.imageSmoothingEnabled = false;
     g.drawImage(baseCanvas, 0, 0);
     if (sync) { g.fillStyle = 'rgba(16,6,28,.55)'; g.fillRect(0, 0, c.width, c.height); }
@@ -389,8 +395,12 @@ const Room = (() => {
     if (integer && s >= 2) s = Math.floor(s);
     const W = Math.round(img.width * s), H = Math.round(img.height * s);
     const dpr = window.devicePixelRatio || 1;
-    view.width = W * dpr; view.height = H * dpr; view.style.width = W + 'px'; view.style.height = H + 'px';
+    // Maat alleen zetten als hij verandert: zelfs dezelfde maat zetten maakt het canvas opnieuw aan
+    if (view.width !== W * dpr) view.width = W * dpr;
+    if (view.height !== H * dpr) view.height = H * dpr;
+    if (view.style.width !== W + 'px') { view.style.width = W + 'px'; view.style.height = H + 'px'; }
     const g = view.getContext('2d'); g.setTransform(dpr, 0, 0, dpr, 0, 0); g.imageSmoothingEnabled = false;
+    g.clearRect(0, 0, W, H);
     g.drawImage(img, 0, 0, W, H);
     return { scale: s * PPM, ox: s * PPM, oy: s * PPM, g, W, H };
   }

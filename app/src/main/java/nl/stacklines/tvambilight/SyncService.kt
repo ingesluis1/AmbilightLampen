@@ -70,7 +70,7 @@ class SyncService : Service() {
             while (true) { Updater.check(); try { Thread.sleep(6 * 3_600_000L) } catch (_: InterruptedException) { break } }
         }.apply { isDaemon = true }.start()
         // Nieuwe lampen of gewijzigde sleutels ophalen als de cloud is ingesteld
-        if (Store.cloudId != null && Store.cloudSecret != null) Thread { try { TuyaCloud.refresh() } catch (_: Exception) { } }.start()
+        if (Store.cloudConfigured) Thread { try { TuyaCloud.refresh() } catch (_: Exception) { } }.start()
         registerReceiver(screen, IntentFilter().apply { addAction(Intent.ACTION_SCREEN_OFF); addAction(Intent.ACTION_SCREEN_ON) })
     }
 

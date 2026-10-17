@@ -74,16 +74,6 @@ object PhilipsTv {
         } catch (_: Exception) { null }
     }
 
-    /** Staat Ambilight aan? null als het niet op te vragen is. */
-    fun ambilightOn(): Boolean? {
-        val u = Store.tvUser ?: return null
-        val p = Store.tvPass ?: return null
-        return try {
-            val r = call("GET", "/ambilight/power", user = u, pass = p)
-            if (r.code != 200) null else !JSONObject(r.body).optString("power").equals("Off", true)
-        } catch (_: Exception) { null }
-    }
-
     /** Stap 1: de tv toont een pincode van 4 cijfers. */
     fun pairRequest(): String {
         val id = (1..16).map { "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".random() }.joinToString("")
@@ -126,12 +116,21 @@ object PhilipsTv {
         return m
     }
 
-    private fun md5(s: String) = MessageDigest.getInstance("MD5").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
+    private val HEX = "0123456789abcdef".toCharArray()
+    private fun md5(s: String): String {
+        val d = MessageDigest.getInstance("MD5").digest(s.toByteArray())
+        val o = CharArray(d.size * 2)
+        for (i in d.indices) { val v = d[i].toInt() and 0xff; o[i * 2] = HEX[v ushr 4]; o[i * 2 + 1] = HEX[v and 15] }
+        return String(o)
+    }
+    /** HA1 en HA2 veranderen alleen met de challenge of het adres; de meting draait tot 25 keer per seconde. */
+    private val fixedHashes = java.util.concurrent.ConcurrentHashMap<String, String>()
+    private fun md5Fixed(s: String) = fixedHashes.getOrPut(s) { md5(s) }
 
     private fun digest(method: String, uri: String, user: String, pass: String): String {
         val ch = challenge!!
         val realm = ch["realm"] ?: ""; val nonce = ch["nonce"] ?: ""
-        val ha1 = md5("$user:$realm:$pass"); val ha2 = md5("$method:$uri")
+        val ha1 = md5Fixed("$user:$realm:$pass"); val ha2 = md5Fixed("$method:$uri")
         val qop = ch["qop"]?.split(',')?.map { it.trim() }?.firstOrNull { it == "auth" }
         val sb = StringBuilder("Digest username=\"$user\", realm=\"$realm\", nonce=\"$nonce\", uri=\"$uri\"")
         if (qop != null) {

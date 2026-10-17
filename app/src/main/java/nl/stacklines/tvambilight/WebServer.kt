@@ -18,6 +18,7 @@ import java.net.Socket
  */
 class WebServer(private val ctx: Context) {
     @Volatile private var running = false
+    private val clients = java.util.concurrent.Executors.newCachedThreadPool { r -> Thread(r, "web-client").apply { isDaemon = true } }
     private var serverSocket: ServerSocket? = null
     var port = 0
         private set
@@ -33,7 +34,7 @@ class WebServer(private val ctx: Context) {
             while (running) {
                 try {
                     val c = ss.accept()
-                    Thread({ handle(c) }, "web-client").apply { isDaemon = true; start() }
+                    clients.execute { handle(c) }
                 } catch (_: java.net.SocketTimeoutException) {
                 } catch (_: Exception) { }
             }
@@ -243,7 +244,7 @@ class WebServer(private val ctx: Context) {
                             Wiz.scan(3000)
                             if (Store.lampsSnapshot().any { it.id == id }) msg(true, tr("Lamp teruggezet", "Lamp restored"))
                             else msg(true, tr("Lamp komt terug zodra de tv hem weer op het netwerk ziet", "The lamp comes back as soon as the TV sees it on the network again"))
-                        } else if (Store.cloudId != null && Store.cloudSecret != null) {
+                        } else if (Store.cloudConfigured) {
                             try { TuyaCloud.refresh(); msg(true, tr("Lamp teruggezet", "Lamp restored")) } catch (e: Exception) { msg(false, tr("Terugzetten mislukt: ", "Restoring failed: ") + e.message) }
                         } else msg(true, tr("Zoek de lamp opnieuw of upload devices.json", "Search for the lamp again or upload devices.json"))
                     }
@@ -292,7 +293,7 @@ class WebServer(private val ctx: Context) {
                 .put("entertainment", Store.hueClientKey != null).put("area", Store.hueArea ?: "")
                 .put("areas", JSONArray().apply { Hue.areas.forEach { put(JSONObject().put("id", it.first).put("name", it.second).put("lamps", it.third)) } })
                 .put("streamLamps", JSONArray().apply { HueStream.channels.keys.forEach { put(it) } }))
-            put("cloud", JSONObject().put("configured", Store.cloudId != null && Store.cloudSecret != null).put("region", Store.cloudRegion))
+            put("cloud", JSONObject().put("configured", Store.cloudConfigured).put("region", Store.cloudRegion))
             phoneLink()?.let { put("link", it) }
             if (sample != null) put("top", JSONArray().apply { sample.top.forEach { put("#%02x%02x%02x".format(it[0], it[1], it[2])) } })
         }

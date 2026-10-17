@@ -30,9 +30,10 @@ object Updater {
         private set
     private var lastCheck = 0L
 
-    fun current(ctx: Context): String = try {
+    @Volatile private var currentVersion: String? = null
+    fun current(ctx: Context): String = currentVersion ?: (try {
         ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "0"
-    } catch (_: Exception) { "0" }
+    } catch (_: Exception) { "0" }).also { currentVersion = it }
 
     fun available(ctx: Context): Boolean = latest?.let { newer(it, current(ctx)) } == true && apkUrl != null
 

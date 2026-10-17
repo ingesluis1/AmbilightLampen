@@ -190,7 +190,7 @@ class TuyaLamp(val lamp: Lamp) {
         private set
 
     fun noteState(d: Map<String, Any?>) {
-        synchronized(known) { for (k in listOf("20", "21", "22", "23", "24")) d[k]?.let { known[k] = it } }
+        synchronized(known) { for (k in STATE_KEYS) d[k]?.let { known[k] = it } }
         powered = known["20"] as? Boolean
     }
     private fun noteState(d: JSONObject) = noteState(d.keys().asSequence().associateWith { d.opt(it) })
@@ -202,7 +202,7 @@ class TuyaLamp(val lamp: Lamp) {
         return when (st["21"]) {
             "colour" -> (st["24"] as? String)?.let { c ->
                 val (h, s, v) = when (c.length) {
-                    12 -> Triple(c.substring(0, 4).toInt(16), c.substring(4, 8).toInt(16) / 1000f, c.substring(8, 12).toInt(16) / 1000f)
+                    12 -> parseHsvHex(c).let { Triple(it[0], it[1] / 1000f, it[2] / 1000f) }
                     14 -> Triple(c.substring(6, 10).toInt(16), c.substring(10, 12).toInt(16) / 255f, c.substring(12, 14).toInt(16) / 255f)
                     else -> return null
                 }
@@ -262,16 +262,11 @@ class TuyaLamp(val lamp: Lamp) {
         synchronized(lock) { layerPending.clear(); layerPending[0] = intArrayOf(h, s, v, 0); lock.notifyAll() }
     }
 
-    /** Scènewissel bij een lamp met lagen: eerst één kleur voor de hele lamp (één bericht), oude laag-opdrachten vervallen. */
-    fun sendWhole(h: Int, s: Int, v: Int) {
-        synchronized(lock) { layerPending.clear(); pending["24"] = hsvHex(h, s, v); lock.notifyAll() }
-    }
-
     /** Zet een kleur in het formaat dat deze lamp verwacht (v2: hhhhssssvvvv met 0..1000, v1: rrggbbhhhhssvv). */
     private fun adapt(dps: Map<String, Any>): Map<String, Any> {
         val c = dps["24"] as? String ?: return dps
         if (!colourV1 || c.length != 12) return dps
-        val h = c.substring(0, 4).toInt(16); val s = c.substring(4, 8).toInt(16); val v = c.substring(8, 12).toInt(16)
+        val (h, s, v) = parseHsvHex(c)
         val rgb = android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), s / 1000f, v / 1000f))
         val v1 = "%02x%02x%02x%04x%02x%02x".format((rgb shr 16) and 0xff, (rgb shr 8) and 0xff, rgb and 0xff,
             h, (s * 255 / 1000).coerceIn(0, 255), (v * 255 / 1000).coerceIn(0, 255))
@@ -310,7 +305,7 @@ class TuyaLamp(val lamp: Lamp) {
                 shownColor = android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), 1f, 1f))
                 Thread.sleep(900)
             }
-            send(mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500))
+            send(WARM_WHITE)
             shownColor = 0xFFFFE2A8.toInt()
             Thread.sleep(900)
             restore(before)
@@ -326,11 +321,30 @@ class TuyaLamp(val lamp: Lamp) {
         shownColor = rgb or 0xFF000000.toInt()
     }
 
+    /** Terug naar een opgeslagen stand (functies 20..24); zonder stand warm wit. */
     fun restore(st: JSONObject?) {
         val m = LinkedHashMap<String, Any>()
-        if (st != null) for (k in listOf("20", "21", "22", "23", "24")) if (st.has(k)) m[k] = st.get(k)
-        send(if (m.isNotEmpty()) m else mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500))
+        if (st != null) for (k in STATE_KEYS) if (st.has(k)) m[k] = st.get(k)
+        send(if (m.isNotEmpty()) m else WARM_WHITE)
         shownColor = 0xFF555555.toInt()
+    }
+
+    /** Lampen zonder lagen (WiZ, Hue): de belangrijkste laag wordt de kleur van de hele lamp; geeft de opdrachten die klaarstaan. */
+    private fun takeFlatBatch(): Map<String, Any>? = synchronized(lock) {
+        layerPending.entries.maxByOrNull { it.value.getOrElse(3) { 0 } }?.let { e ->
+            if (!pending.containsKey("24")) pending["24"] = hsvHex(e.value[0], e.value[1], e.value[2]); layerPending.clear()
+        }
+        if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() } else null
+    }
+
+    /** Wachten tot er iets te doen is (send, queryStatus en stop maken wakker), hooguit maxMs. */
+    private fun idleWait(maxMs: Long) = synchronized(lock) {
+        if (running && pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(maxMs.coerceAtLeast(1))
+    }
+
+    private fun noteFailure(e: Exception) {
+        lastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(120); lastFail = lastError ?: ""
+        reconnects++; online = false
     }
 
     fun stop() {
@@ -371,15 +385,9 @@ class TuyaLamp(val lamp: Lamp) {
                     }
                     continue
                 }
-                val batch: Map<String, Any>? = synchronized(lock) {
-                    // Lagen kent WiZ niet: neem de belangrijkste laag als kleur voor de hele lamp
-                    layerPending.entries.maxByOrNull { it.value.getOrElse(3) { 0 } }?.let { e ->
-                        if (!pending.containsKey("24")) pending["24"] = hsvHex(e.value[0], e.value[1], e.value[2]); layerPending.clear()
-                    }
-                    if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() } else null
-                }
+                val batch = takeFlatBatch()
                 if (batch != null) {
-                    val gap = if (Store.settingsForId(lamp.id).fade) FADE_GAP_MS else MIN_GAP_MS
+                    val gap = if (Store.settingsFor(lamp).fade) FADE_GAP_MS else MIN_GAP_MS
                     val wait = gap - (now - lastSend); if (wait > 0) Thread.sleep(wait)
                     val p = Wiz.pilot(batch, mode)
                     (batch["21"] as? String)?.let { mode = it }
@@ -392,12 +400,11 @@ class TuyaLamp(val lamp: Lamp) {
                     r?.optJSONObject("result")?.let { noteState(Wiz.dps(it)) }
                     if (r == null && now - lastRx > 12_000) online = false
                 } else {
-                    synchronized(lock) { if (pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(40) }
+                    idleWait(5000 - (now - lastBeat))   // tot de volgende hartslag; nieuwe opdrachten maken eerder wakker
                 }
             } catch (_: InterruptedException) {
             } catch (e: Exception) {
-                lastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(120); lastFail = lastError ?: ""
-                reconnects++; online = false
+                noteFailure(e)
                 try { udp?.close() } catch (_: Exception) { }; udp = null
                 sleepQuiet(500)
             }
@@ -413,6 +420,8 @@ class TuyaLamp(val lamp: Lamp) {
         val hueId = lamp.id.removePrefix("hue-")
         var mode = "white"
         var lastSend = 0L; var lastBeat = 0L
+        // De Bridge antwoordde; of de lamp zelf bereikbaar is, weet alleen de Zigbee-status
+        fun alive(t: Long) { lastRx = t; online = Hue.reachable(hueId) != false; lastError = null }
         while (running) {
             try {
                 if (ip.isBlank()) { online = false; sleepQuiet(2000); continue }
@@ -420,22 +429,16 @@ class TuyaLamp(val lamp: Lamp) {
                 if (queryWanted || lastBeat == 0L) {
                     queryWanted = false; lastBeat = now
                     val d = Hue.light(hueId)
-                    if (d != null) { mode = d.optString("21", mode); statusResult = d; noteState(d); lastRx = now; online = Hue.reachable(hueId) != false; lastError = null }
+                    if (d != null) { mode = d.optString("21", mode); statusResult = d; noteState(d); alive(now) }
                     else if (now - lastRx > 12_000) online = false
                     continue
                 }
-                val batch: Map<String, Any>? = synchronized(lock) {
-                    // Lagen kent Hue hier niet: neem de belangrijkste laag als kleur voor de hele lamp
-                    layerPending.entries.maxByOrNull { it.value.getOrElse(3) { 0 } }?.let { e ->
-                        if (!pending.containsKey("24")) pending["24"] = hsvHex(e.value[0], e.value[1], e.value[2]); layerPending.clear()
-                    }
-                    if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() } else null
-                }
+                val batch = takeFlatBatch()
                 if (batch != null) {
                     val m = mode
                     (batch["21"] as? String)?.let { mode = it }
                     if (HueStream.offer(lamp.id, batch, m)) {
-                        if (HueStream.live) { online = Hue.reachable(hueId) != false; lastRx = now }
+                        if (HueStream.live) alive(now)
                         lastSend = now; lastBeat = now
                         continue
                     }
@@ -444,25 +447,24 @@ class TuyaLamp(val lamp: Lamp) {
                     Hue.waitTurn()
                     val t = SystemClock.elapsedRealtime()
                     // Overgang zo lang als de tijd sinds de vorige opdracht: dan loopt de kleur vloeiend door
-                    val ms = if (Store.settingsForId(lamp.id).fade) (t - lastSend).coerceIn(100L, 800L) else 0L
+                    val ms = if (Store.settingsFor(lamp).fade) (t - lastSend).coerceIn(100L, 800L) else 0L
                     if (!Hue.setLight(hueId, Hue.body(batch, m, lamp.category, ms))) {
                         // Bridge heeft het druk: opnieuw proberen, tenzij er intussen iets nieuwers klaarstaat
                         synchronized(lock) { for ((k, v) in batch) pending.putIfAbsent(k, v) }
                         sleepQuiet(500); continue
                     }
-                    lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend; lastRx = lastSend
-                    online = Hue.reachable(hueId) != false; lastError = null
+                    lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
+                    alive(lastSend)
                 } else if (now - lastBeat > 5000 && !HueStream.live) {
                     lastBeat = now
                     val d = Hue.light(hueId)
-                    if (d != null) { noteState(d); lastRx = now; online = Hue.reachable(hueId) != false } else if (now - lastRx > 12_000) online = false
+                    if (d != null) { noteState(d); alive(now) } else if (now - lastRx > 12_000) online = false
                 } else {
-                    synchronized(lock) { if (pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(40) }
+                    idleWait(5000 - (now - lastBeat))
                 }
             } catch (_: InterruptedException) {
             } catch (e: Exception) {
-                lastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(120); lastFail = lastError ?: ""
-                reconnects++; online = false
+                noteFailure(e)
                 sleepQuiet(1000)
             }
         }
@@ -513,7 +515,7 @@ class TuyaLamp(val lamp: Lamp) {
                     // Laag-berichten zijn klein: die mogen sneller achter elkaar (getest op de Wall Washer)
                     val gap = when {
                         isLayer && lamp.category == "dd" -> STRIP_GAP_MS          // ledstrips: rustig tempo, anders resetten ze
-                        !Store.settingsForId(lamp.id).fade -> MIN_GAP_MS
+                        !Store.settingsFor(lamp).fade -> MIN_GAP_MS
                         isLayer -> LAYER_GAP_MS
                         else -> FADE_GAP_MS
                     }
@@ -525,13 +527,10 @@ class TuyaLamp(val lamp: Lamp) {
                     write(TuyaCodec.HEART_BEAT, "{}", header = false)
                     lastBeat = now
                 } else {
-                    synchronized(lock) { if (pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(40) }
+                    idleWait(40)   // Tuya: ook binnenkomende standen van de lamp bijhouden (drain)
                 }
             } catch (e: Exception) {
-                lastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(120)
-                lastFail = lastError ?: ""
-                reconnects++
-                online = false
+                noteFailure(e)
                 close()
                 // Sommige lampen (Wall Washer) resetten onder belasting om de paar seconden: dan meteen opnieuw verbinden
                 if (e !is java.net.SocketException || e.message?.contains("reset", true) != true) sleepQuiet(300)
@@ -655,5 +654,11 @@ class TuyaLamp(val lamp: Lamp) {
         }
 
         fun hsvHex(h: Int, s: Int, v: Int) = "%04x%04x%04x".format(h, s, v)
+        /** Omgekeerde van hsvHex: "hhhhssssvvvv" naar h, s, v (de aanroeper controleert de lengte). */
+        fun parseHsvHex(c: String) = intArrayOf(c.substring(0, 4).toInt(16), c.substring(4, 8).toInt(16), c.substring(8, 12).toInt(16))
+        /** De functies die samen de stand van een lamp vormen: aan/uit, modus, helderheid, temperatuur, kleur. */
+        val STATE_KEYS = listOf("20", "21", "22", "23", "24")
+        /** Neutraal warm wit: terugval als er geen opgeslagen stand is. */
+        val WARM_WHITE: Map<String, Any> = mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500)
     }
 }
