@@ -96,12 +96,14 @@ object TuyaCloud {
                     if (ex.key != key) { ex.key = key; updated++ }
                     ex.category = d.optString("category", ex.category)
                 } else if (d.optBoolean("online", true)) {   // offline registraties (oude lampen) overslaan
-                    Store.lamps += Lamp(id, key, d.optString("name", id)).apply { category = d.optString("category") }
-                    added += d.optString("name", id)
+                    val name = d.optString("name", id).replace(Regex("\\s+"), " ").trim().take(60).ifBlank { id }
+                    Store.lamps += Lamp(id, key, name).apply { category = d.optString("category") }
+                    added += name
                 }
             }
         }
         Store.save(); Engine.syncWorkers()
+        if (added.isNotEmpty()) Discovery.lookupNew()
         return buildString {
             append(if (added.isEmpty()) tr("Geen nieuwe lampen gevonden.", "No new lamps found.") else tr("Nieuw: ", "New: ") + added.joinToString(", ") + tr(". Hang ze op via Lampen.", ". Place them under Lamps."))
             if (updated > 0) append(tr(" $updated sleutel(s) bijgewerkt.", " $updated key(s) updated."))

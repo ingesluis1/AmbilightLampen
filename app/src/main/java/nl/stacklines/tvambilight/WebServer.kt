@@ -375,6 +375,7 @@ class WebServer(private val ctx: Context) {
             }
         }
         Store.save(); Engine.syncWorkers()
+        if (added > 0) Discovery.lookupNew()
         return tr("$added lamp(en) toegevoegd, $updated bijgewerkt.", "$added lamp(s) added, $updated updated.") + tvNote
     }
 

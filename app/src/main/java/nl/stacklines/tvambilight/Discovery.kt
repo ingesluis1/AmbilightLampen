@@ -16,10 +16,28 @@ object Discovery {
     private val udpKey = MessageDigest.getInstance("MD5").digest("yGAdlopoPVldABfn".toByteArray())
     @Volatile private var started = false
     @Volatile private var sock7000: DatagramSocket? = null
+    /** Alle lampen die zich gemeld hebben (id naar ip en versie), ook die nog niet in de lijst staan. */
+    private val seen = java.util.concurrent.ConcurrentHashMap<String, Pair<String, String>>()
+    private var found: ((String, String, String) -> Unit)? = null
+
+    /**
+     * Lampen die net zijn toegevoegd (cloud, devices.json) meteen hun adres geven als ze zich al gemeld hadden,
+     * en een paar keer kort na elkaar vragen wie er is (anders duurt het tot de volgende melding, soms minuten).
+     */
+    fun lookupNew() {
+        val cb = found ?: return
+        for ((id, v) in seen) cb(id, v.first, v.second)
+        Thread({
+            for (wait in longArrayOf(0, 2000, 5000)) {
+                try { Thread.sleep(wait); ask() } catch (_: Exception) { }
+            }
+        }, "discovery-burst").apply { isDaemon = true; start() }
+    }
 
     fun start(ctx: Context, onFound: (id: String, ip: String, version: String) -> Unit) {
         if (started) return
         started = true
+        found = onFound
         try {
             val wifi = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager?
             wifi?.createMulticastLock("tuya")?.apply { setReferenceCounted(false); acquire() }
@@ -54,6 +72,11 @@ object Discovery {
         DatagramSocket().use { it.broadcast = true; sendAll(it) }
     }
 
+    private fun report(id: String, ip: String, version: String, onFound: (String, String, String) -> Unit) {
+        seen[id] = ip to version
+        onFound(id, ip, version)
+    }
+
     private fun listen(port: Int, onFound: (String, String, String) -> Unit) {
         val sock = try {
             DatagramSocket(null).apply { reuseAddress = true; broadcast = true; bind(InetSocketAddress(port)) }
@@ -70,7 +93,7 @@ object Discovery {
                     val f = TuyaCodec.readFrame(java.io.DataInputStream(data.inputStream()), "3.5", udpKey)
                     val j = TuyaCodec.jsonOf(f.plain) ?: continue
                     val id = j.optString("gwId").ifBlank { j.optString("devId") }
-                    if (id.isNotBlank() && j.optString("ip").isNotBlank()) onFound(id, j.optString("ip"), j.optString("version", "3.5"))
+                    if (id.isNotBlank() && j.optString("ip").isNotBlank()) report(id, j.optString("ip"), j.optString("version", "3.5"), onFound)
                     continue
                 }
                 val len = ((data[12].toInt() and 0xff) shl 24) or ((data[13].toInt() and 0xff) shl 16) or
@@ -84,7 +107,7 @@ object Discovery {
                 val j = JSONObject(text.trim { it <= ' ' || it == '\u0000' })
                 val id = j.optString("gwId").ifBlank { j.optString("devId") }
                 val ip = j.optString("ip")
-                if (id.isNotBlank() && ip.isNotBlank()) onFound(id, ip, j.optString("version", "3.3"))
+                if (id.isNotBlank() && ip.isNotBlank()) report(id, ip, j.optString("version", "3.3"), onFound)
             } catch (_: Exception) { }
         }
     }

@@ -298,8 +298,12 @@ object Engine {
             if (Store.cloudConfigured) {
                 try { TuyaCloud.refresh() } catch (_: Exception) { notes += tr("cloud niet bereikbaar", "cloud not reachable") }
             }
-            Discovery.ask()
-            Thread.sleep(1500)
+            Discovery.lookupNew()
+            val until = SystemClock.elapsedRealtime() + if (before.ip.isBlank()) 6000 else 1500
+            while (SystemClock.elapsedRealtime() < until) {
+                Thread.sleep(250)
+                if (before.ip.isBlank() && Store.lampsSnapshot().firstOrNull { it.id == id }?.ip?.isNotBlank() == true) break
+            }
         }
         val l = Store.lampsSnapshot().firstOrNull { it.id == id } ?: return tr("Lamp niet gevonden", "Lamp not found")
         if (l.key != before.key) notes += tr("nieuwe sleutel", "new key")
