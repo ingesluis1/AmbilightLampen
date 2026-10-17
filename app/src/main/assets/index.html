@@ -217,6 +217,20 @@ label.s span{float:right;opacity:.8}
   <div style="margin-top:12px"><b>WiZ-lampen</b>
     <p style="margin:4px 0 8px">Koppel ze eerst in de WiZ-app en zet daar bij Instellingen, Beveiliging "Lokale communicatie" aan. De tv vindt ze dan vanzelf.</p>
     <button class="btn" id="wizScan">WiZ-lampen zoeken</button></div>
+  <div style="margin-top:12px"><b>Philips Hue</b>
+    <div id="hueSetup">
+      <p style="margin:4px 0 8px">Werkt met een Hue Bridge. Lampen van andere merken die aan de Bridge gekoppeld zijn (zoals IKEA) doen ook mee. Laat het ip-adres leeg, dan zoekt de tv de Bridge zelf.</p>
+      <div class="row"><input type="text" id="hueIp" class="grow" placeholder="Ip-adres van de Bridge (mag leeg)" autocomplete="off" autocapitalize="off"><button class="btn gold" id="huePair">Koppelen</button></div>
+    </div>
+    <div id="hueOn" class="hidden">
+      <p id="hueInfo" style="margin:4px 0 8px"></p>
+      <p style="margin:0 0 8px">Voor de snelste reactie: maak in de Hue-app een Entertainment-ruimte (Instellingen, Entertainment-ruimtes) met je Hue-lampen. Andere lampen krijgen gewone opdrachten, samen ongeveer 10 per seconde.</p>
+      <div class="row hidden" id="hueAreaRow" style="margin-bottom:6px"><select id="hueArea" class="grow"></select></div>
+      <button class="btn" id="hueRefresh">Nieuwe lampen zoeken</button>
+      <button class="btn" id="hueUnpair" style="margin-left:6px">Ontkoppelen</button>
+    </div>
+    <p id="hueStatus" style="margin:6px 0 0"></p>
+  </div>
   <details style="margin-top:12px"><summary>Of: devices.json van tinytuya uploaden</summary>
     <input type="file" id="importFile" accept=".json,application/json" style="margin-top:8px">
   </details>
@@ -666,8 +680,27 @@ function hiddenList(s){
       const res=await api('/api/lamp/forget',{id:x.id});toast(res.message);load()};
     $('hiddenList').append(r)}
 }
+function hueUI(s){
+  const h=s.hue;if(!h)return;
+  $('hueSetup').classList.toggle('hidden',h.paired);$('hueOn').classList.toggle('hidden',!h.paired);
+  $('huePair').disabled=h.pairing;$('huePair').textContent=t(h.pairing?'Bezig...':'Koppelen');
+  const n=s.lamps.filter(l=>l.version==='hue').length;
+  $('hueInfo').textContent=t('Bridge {ip}: {n} lamp(en), waarvan {s} via Entertainment.',{ip:h.ip,n:n,s:h.streamLamps.length});
+  const sel=$('hueArea'),key=h.areas.map(a=>a.id+a.name+a.lamps).join()+'|'+h.area;
+  if(sel.dataset.k!==key){sel.dataset.k=key;sel.innerHTML='';
+    for(const a of h.areas){const o=document.createElement('option');o.value=a.id;o.textContent=a.name+' ('+t('{n} lamp(en)',{n:a.lamps})+')';sel.append(o)}
+    sel.value=h.area}
+  $('hueAreaRow').classList.toggle('hidden',h.areas.length<2);
+  $('hueStatus').textContent=[h.status,h.stream].filter(Boolean).join(' ');
+}
+$('huePair').onclick=async()=>{const r=await api('/api/hue/pair',{ip:$('hueIp').value});toast(r.message);poll()};
+$('hueRefresh').onclick=async()=>{const b=$('hueRefresh');b.disabled=true;b.textContent=t('Zoeken...');
+  const r=await api('/api/hue/refresh',{});b.disabled=false;b.textContent=t('Nieuwe lampen zoeken');toast(r.message);load()};
+$('hueArea').onchange=async()=>{const r=await api('/api/hue/area',{id:$('hueArea').value});toast(r.message);$('hueArea').dataset.k='';poll()};
+$('hueUnpair').onclick=async()=>{if(!confirm(t('Bridge ontkoppelen? De Hue-lampen gaan naar Verwijderde lampen.')))return;
+  const r=await api('/api/hue/unpair',{});toast(r.message);load()};
 function liveFrom(s){
-  hiddenList(s);sceneList(s);
+  hiddenList(s);sceneList(s);hueUI(s);
   live={};for(const l of s.lamps)live[l.id]=l;
   $('syncBtn').textContent=t(s.sync?'Sync stoppen':'Sync starten');
   $('offBtn').textContent=t(s.lampsOff?'Lampen aan':'Lampen uit');

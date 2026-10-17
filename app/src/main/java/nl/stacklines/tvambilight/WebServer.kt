@@ -165,6 +165,18 @@ class WebServer(private val ctx: Context) {
                             else -> tr("Geen WiZ-lampen gevonden. Staat Lokale communicatie aan in de WiZ-app?", "No WiZ lamps found. Is Local communication on in the WiZ app?")
                         })
                     }
+                    path == "/api/hue/pair" && method == "POST" -> {
+                        Hue.startPair(JSONObject(req).optString("ip"))
+                        msg(true, tr("Bezig met koppelen", "Pairing"))
+                    }
+                    path == "/api/hue/refresh" && method == "POST" -> {
+                        try { msg(true, Hue.refresh()) } catch (e: Exception) { msg(false, e.message ?: "") }
+                    }
+                    path == "/api/hue/area" && method == "POST" -> {
+                        if (Engine.running || SceneEngine.active != null) msg(false, tr("Stop eerst de sync", "Stop the sync first"))
+                        else { Store.hueArea = JSONObject(req).optString("id").ifBlank { null }; Store.save(); msg(true, Hue.loadAreas()) }
+                    }
+                    path == "/api/hue/unpair" && method == "POST" -> msg(true, Hue.unpair())
                     path == "/api/cloud/refresh" && method == "POST" -> {
                         try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, tr("Ophalen mislukt: ", "Fetching failed: ") + e.message) }
                     }
@@ -206,7 +218,9 @@ class WebServer(private val ctx: Context) {
                         val id = JSONObject(req).getString("id")
                         synchronized(Store) { Store.hidden.remove(id) }
                         Store.save()
-                        if (id.startsWith("wiz-")) {
+                        if (id.startsWith("hue-")) {
+                            try { Hue.refresh(); msg(true, tr("Lamp teruggezet", "Lamp restored")) } catch (e: Exception) { msg(false, tr("Terugzetten mislukt: ", "Restoring failed: ") + e.message) }
+                        } else if (id.startsWith("wiz-")) {
                             Wiz.scan(3000)
                             if (Store.lampsSnapshot().any { it.id == id }) msg(true, tr("Lamp teruggezet", "Lamp restored"))
                             else msg(true, tr("Lamp komt terug zodra de tv hem weer op het netwerk ziet", "The lamp comes back as soon as the TV sees it on the network again"))
@@ -254,6 +268,11 @@ class WebServer(private val ctx: Context) {
             put("update", JSONObject().put("current", Updater.current(ctx)).put("latest", Updater.latest ?: "")
                 .put("available", Updater.available(ctx)).put("status", Updater.status).put("notes", Updater.notes))
             put("hidden", JSONArray().apply { Store.hidden.forEach { (k, n) -> put(JSONObject().put("id", k).put("name", n)) } })
+            put("hue", JSONObject().put("paired", Store.hueKey != null).put("ip", Store.hueIp ?: "")
+                .put("pairing", Hue.pairing).put("status", Hue.status).put("stream", HueStream.status).put("live", HueStream.live)
+                .put("entertainment", Store.hueClientKey != null).put("area", Store.hueArea ?: "")
+                .put("areas", JSONArray().apply { Hue.areas.forEach { put(JSONObject().put("id", it.first).put("name", it.second).put("lamps", it.third)) } })
+                .put("streamLamps", JSONArray().apply { HueStream.channels.keys.forEach { put(it) } }))
             put("cloud", JSONObject().put("configured", Store.cloudId != null && Store.cloudSecret != null).put("region", Store.cloudRegion))
             phoneLink()?.let { put("link", it) }
             if (sample != null) put("top", JSONArray().apply { sample.top.forEach { put("#%02x%02x%02x".format(it[0], it[1], it[2])) } })

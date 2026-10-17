@@ -2,7 +2,7 @@
 
 Nederlands | [English](README.en.md)
 
-Android TV-app die gewone Tuya-wifilampen (Trust, LSC/Action en andere merken die in Smart Life werken) laat meekleuren met het beeld van een Philips Ambilight-tv, een beetje zoals Philips Hue Sync. De app draait op de tv zelf, dus er hoeft geen pc of extra kastje aan te staan.
+Android TV-app die gewone Tuya-wifilampen (Trust, LSC/Action en andere merken die in Smart Life werken), WiZ-lampen en Philips Hue-lampen laat meekleuren met het beeld van een Philips Ambilight-tv, een beetje zoals Philips Hue Sync. De app draait op de tv zelf, dus er hoeft geen pc of extra kastje aan te staan.
 
 <p>
   <img src="docs/tv-scherm.png" width="49%" alt="Tv-scherm overdag">
@@ -41,6 +41,8 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 2. **Tv koppelen:** druk op "Koppel tv". Er verschijnt een pincode op de tv; vul die in op je telefoon.
 3. **Lampen toevoegen:** maak op [iot.tuya.com](https://iot.tuya.com) een cloudproject (Smart Home, datacenter dat bij je account hoort, voor Nederland Central Europe) en koppel je Smart Life-account eraan via de QR-code onder Devices, Link App Account. Vul daarna in de editor de Access ID en het Access Secret van het project in en druk op "Opslaan en zoeken". Komt er later een lamp bij: koppel hem in Smart Life en druk op "Nieuwe lampen zoeken".
    Alternatief zonder cloud-sleutels in de app: upload het `devices.json` van de [tinytuya](https://github.com/jasonacox/tinytuya)-wizard.
+   **WiZ:** zet in de WiZ-app bij Instellingen, Beveiliging "Lokale communicatie" aan en druk op "WiZ-lampen zoeken".
+   **Philips Hue:** druk bij Philips Hue op "Koppelen" en daarna op de grote knop op de Bridge. Lampen van andere merken die aan de Bridge gekoppeld zijn (zoals IKEA) komen ook mee. Maak voor de snelste reactie in de Hue-app een Entertainment-ruimte met je Hue-lampen: die krijgen dan de Entertainment-stream, net als bij Hue Sync.
 4. Teken je kamer, hang de lampen op en druk op "Sync starten".
 
 De ip-adressen van de lampen vindt de app zelf: Tuya-lampen roepen elke paar seconden hun adres om op het netwerk.
@@ -54,6 +56,7 @@ De local keys van de lampen, de tv-koppeling en de Tuya-sleutels staan alleen in
 - Lokaal Tuya-protocol 3.1, 3.3, 3.4 en 3.5 (Trust, LSC/Action en de meeste andere Smart Life-lampen).
 - Alleen Philips-tv's met Ambilight en de JointSpace-API (versie 6, Android TV). Getest op een 65OLED810.
 - Het gratis IoT Core-abonnement van Tuya loopt na een maand af (verlengen kan). Daarna werkt alleen "Nieuwe lampen zoeken" niet meer; lampen die al in de app staan blijven werken.
+- Hue werkt alleen via een Hue Bridge. Zonder Entertainment-ruimte, en voor lampen van andere merken aan de Bridge, verwerkt de Bridge samen ongeveer 10 opdrachten per seconde: hoe meer van die lampen, hoe trager elk afzonderlijk.
 - Wifilampen zijn trager dan Hue Entertainment: reken op 0,1 tot 0,3 seconde vertraging. Voor sfeer werkt dat goed, heel korte flitsen komen deels later.
 
 ## Hoe het in elkaar zit

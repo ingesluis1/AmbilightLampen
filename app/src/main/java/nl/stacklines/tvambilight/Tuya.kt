@@ -219,6 +219,7 @@ class TuyaLamp(val lamp: Lamp) {
     private val ver = lamp.version
     private val modern = ver == "3.4" || ver == "3.5"
     private val wiz = ver == Wiz.VERSION
+    private val hue = ver == Hue.VERSION
     private var key = localKey
     private val ip = lamp.ip
     private val pending = LinkedHashMap<String, Any>()
@@ -401,8 +402,68 @@ class TuyaLamp(val lamp: Lamp) {
         try { udp?.close() } catch (_: Exception) { }
     }
 
+    /**
+     * Hue: lampen in de Entertainment-ruimte gaan tijdens sync en scènes via de stream (HueStream);
+     * de rest via gewone opdrachten aan de Bridge, met een gedeelde rem van ±10 per seconde voor alle Hue-lampen.
+     */
+    private fun hueLoop() {
+        val hueId = lamp.id.removePrefix("hue-")
+        var mode = "white"
+        var lastSend = 0L; var lastBeat = 0L
+        while (running) {
+            try {
+                if (ip.isBlank()) { online = false; sleepQuiet(2000); continue }
+                val now = SystemClock.elapsedRealtime()
+                if (queryWanted || lastBeat == 0L) {
+                    queryWanted = false; lastBeat = now
+                    val d = Hue.light(hueId)
+                    if (d != null) { mode = d.optString("21", mode); statusResult = d; noteState(d); lastRx = now; online = true; lastError = null }
+                    else if (now - lastRx > 12_000) online = false
+                    continue
+                }
+                val batch: Map<String, Any>? = synchronized(lock) {
+                    // Lagen kent Hue hier niet: neem de belangrijkste laag als kleur voor de hele lamp
+                    layerPending.entries.maxByOrNull { it.value.getOrElse(3) { 0 } }?.let { e ->
+                        if (!pending.containsKey("24")) pending["24"] = hsvHex(e.value[0], e.value[1], e.value[2]); layerPending.clear()
+                    }
+                    if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() } else null
+                }
+                if (batch != null) {
+                    val m = mode
+                    (batch["21"] as? String)?.let { mode = it }
+                    if (HueStream.offer(lamp.id, batch, m)) {
+                        if (HueStream.live) { online = true; lastRx = now }
+                        lastSend = now; lastBeat = now
+                        continue
+                    }
+                    // Lamp die net nog gestreamd werd: eerst de stream laten stoppen, anders negeert de Bridge de opdracht
+                    if (HueStream.holds(lamp.id)) HueStream.awaitStop()
+                    Hue.waitTurn()
+                    val t = SystemClock.elapsedRealtime()
+                    // Overgang zo lang als de tijd sinds de vorige opdracht: dan loopt de kleur vloeiend door
+                    val ms = if (Store.settingsForId(lamp.id).fade) (t - lastSend).coerceIn(100L, 800L) else 0L
+                    Hue.setLight(hueId, Hue.body(batch, m, lamp.category, ms))
+                    lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend; lastRx = lastSend
+                    online = true; lastError = null
+                } else if (now - lastBeat > 5000 && !HueStream.live) {
+                    lastBeat = now
+                    val d = Hue.light(hueId)
+                    if (d != null) { noteState(d); lastRx = now; online = true } else if (now - lastRx > 12_000) online = false
+                } else {
+                    synchronized(lock) { if (pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(40) }
+                }
+            } catch (_: InterruptedException) {
+            } catch (e: Exception) {
+                lastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(120); lastFail = lastError ?: ""
+                reconnects++; online = false
+                sleepQuiet(1000)
+            }
+        }
+    }
+
     private fun loop() {
         if (wiz) { wizLoop(); return }
+        if (hue) { hueLoop(); return }
         var lastSend = 0L
         var lastBeat = 0L
         while (running) {

@@ -266,6 +266,8 @@ object Engine {
         val notes = mutableListOf<String>()
         if (before.version == Wiz.VERSION) {
             try { Wiz.scan(2000) } catch (_: Exception) { }
+        } else if (before.version == Hue.VERSION) {
+            try { Hue.refresh() } catch (e: Exception) { notes += e.message ?: tr("Bridge niet bereikbaar", "Bridge not reachable") }
         } else {
             if (Store.cloudId != null && Store.cloudSecret != null) {
                 try { TuyaCloud.refresh() } catch (_: Exception) { notes += tr("cloud niet bereikbaar", "cloud not reachable") }
@@ -284,6 +286,8 @@ object Engine {
         val extra = if (notes.isEmpty()) "" else " (" + notes.joinToString(", ") + ")"
         if (!w.online) {
             // Lokaal hangt hij (komt voor bij Tuya-lampen): via de cloud aanzetten, dat lukt vaak nog wel
+            if (l.version == Hue.VERSION) return tr("De Bridge bereikt de lamp niet. Staat hij aan (lichtschakelaar)? Kijk ook in de Hue-app.",
+                "The Bridge can't reach the lamp. Is it powered (light switch)? Check the Hue app too.") + extra
             if (l.version != Wiz.VERSION && Store.cloudId != null && Store.cloudSecret != null) {
                 val viaCloud = try { TuyaCloud.powerOn(id) } catch (_: Exception) { null }
                 if (viaCloud == true) return tr("Lokaal reageert hij niet, maar via de cloud is hij aangezet. Meekleuren lukt pas weer na stroom eraf en erop.",

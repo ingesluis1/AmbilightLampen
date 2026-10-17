@@ -34,6 +34,8 @@ kotlin {
 
 dependencies {
     implementation("com.google.zxing:core:3.5.3")
+    // DTLS voor de Hue Entertainment-stream (Android heeft zelf geen DTLS met PSK)
+    implementation("org.bouncycastle:bctls-jdk18on:1.78.1")
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.json:json:20240303")
 }

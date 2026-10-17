@@ -29,7 +29,7 @@ class Lamp(
     /** Ledstrips tonen kleuren witter dan lampen; die standaard iets voller. */
     val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
     val placed get() = x >= 0 && y >= 0
-    val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5", Wiz.VERSION)
+    val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5", Wiz.VERSION, Hue.VERSION)
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
         put("id", id); put("name", name); put("ip", ip); put("version", version)
@@ -129,6 +129,12 @@ object Store {
     @Volatile var cloudId: String? = null
     @Volatile var cloudSecret: String? = null
     @Volatile var cloudRegion = "eu"
+    /** Hue Bridge: adres, id, sleutel (username) en clientkey voor de Entertainment-stream; gekozen Entertainment-ruimte. */
+    @Volatile var hueIp: String? = null
+    @Volatile var hueBridgeId: String? = null
+    @Volatile var hueKey: String? = null
+    @Volatile var hueClientKey: String? = null
+    @Volatile var hueArea: String? = null
     /** Verwijderde lampen (id naar naam): komen bij zoeken in de cloud niet vanzelf terug. */
     val hidden = LinkedHashMap<String, String>()
     /** Definitief verwijderde lampen (id naar naam): niet meer in de lijst en ook niet terug bij zoeken; alleen via devices.json. */
@@ -157,6 +163,11 @@ object Store {
             cloudId = o.optString("cloudId").ifBlank { null }
             cloudSecret = o.optString("cloudSecret").ifBlank { null }
             cloudRegion = o.optString("cloudRegion", "eu")
+            hueIp = o.optString("hueIp").ifBlank { null }
+            hueBridgeId = o.optString("hueBridgeId").ifBlank { null }
+            hueKey = o.optString("hueKey").ifBlank { null }
+            hueClientKey = o.optString("hueClientKey").ifBlank { null }
+            hueArea = o.optString("hueArea").ifBlank { null }
             hidden.clear()
             o.optJSONObject("hidden")?.let { h -> h.keys().forEach { k -> hidden[k] = h.getString(k) } }
             forgotten.clear()
@@ -180,6 +191,7 @@ object Store {
             put("hidden", JSONObject(hidden as Map<*, *>))
             put("forgotten", JSONObject(forgotten as Map<*, *>))
             put("cloudId", cloudId ?: ""); put("cloudSecret", cloudSecret ?: ""); put("cloudRegion", cloudRegion)
+            put("hueIp", hueIp ?: ""); put("hueBridgeId", hueBridgeId ?: ""); put("hueKey", hueKey ?: ""); put("hueClientKey", hueClientKey ?: ""); put("hueArea", hueArea ?: "")
         }
         val tmp = File(file.parentFile, "config.json.tmp")
         tmp.writeText(o.toString())

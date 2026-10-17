@@ -25,6 +25,7 @@ class App : Application() {
             }
         }
         Wiz.startBackground()
+        Hue.startBackground()
         Engine.syncWorkers()
     }
 

@@ -2,7 +2,7 @@
 
 [Nederlands](README.md) | English
 
-Android TV app that makes ordinary Tuya Wi-Fi lamps (Trust, LSC/Action and other brands that work with Smart Life) follow the picture of a Philips Ambilight TV, a bit like Philips Hue Sync. The app runs on the TV itself, so no PC or extra box needs to be on.
+Android TV app that makes ordinary Tuya Wi-Fi lamps (Trust, LSC/Action and other brands that work with Smart Life), WiZ lamps and Philips Hue lamps follow the picture of a Philips Ambilight TV, a bit like Philips Hue Sync. The app runs on the TV itself, so no PC or extra box needs to be on.
 
 <p>
   <img src="docs/tv-scherm.png" width="49%" alt="TV screen">
@@ -41,6 +41,8 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 2. **Pair the TV:** press "Pair TV". A PIN code appears on the TV; enter it on your phone.
 3. **Add lamps:** create a cloud project on [iot.tuya.com](https://iot.tuya.com) (Smart Home, the data center that matches your account) and link your Smart Life account via the QR code under Devices, Link App Account. Enter the project's Access ID and Access Secret in the editor and press "Save and search". New lamp later? Pair it in Smart Life and press "Find new lamps".
    Without cloud keys in the app: upload the `devices.json` from the [tinytuya](https://github.com/jasonacox/tinytuya) wizard instead.
+   **WiZ:** turn on "Local communication" in the WiZ app under Settings, Security and press "Find WiZ lamps".
+   **Philips Hue:** press "Pair" under Philips Hue, then the big button on the Bridge. Lamps of other brands paired to the Bridge (such as IKEA) come along too. For the fastest response, create an entertainment area with your Hue lamps in the Hue app: those then get the entertainment stream, just like Hue Sync.
 4. Draw your room, place the lamps and press "Start sync".
 
 ## Privacy
@@ -52,4 +54,5 @@ Lamp keys, TV pairing and Tuya keys are only stored in the app storage on the TV
 - Tuya local protocol 3.1, 3.3, 3.4 and 3.5.
 - Only Philips TVs with Ambilight and the JointSpace API (version 6, Android TV). Tested on a 65OLED810.
 - Tuya's free IoT Core plan expires after a month (it can be extended). After that only "Find new lamps" stops working.
+- Hue only works through a Hue Bridge. Without an entertainment area, and for other brands' lamps on the Bridge, the Bridge handles about 10 commands per second in total: the more of those lamps, the slower each one.
 - Wi-Fi lamps are slower than Hue Entertainment: expect 0.1 to 0.3 seconds of delay.
