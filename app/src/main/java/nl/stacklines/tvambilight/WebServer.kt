@@ -55,7 +55,15 @@ class WebServer(private val ctx: Context) {
         }
     }
 
+    /**
+     * Eén verzoek afhandelen. Een verbinding die wegvalt (de pagina breekt een verzoek af, telefoon gaat op slot)
+     * mag nooit de app laten crashen: alle fouten hier worden opgevangen.
+     */
     private fun handle(client: Socket) {
+        try { handleUnsafe(client) } catch (_: Throwable) { try { client.close() } catch (_: Exception) { } }
+    }
+
+    private fun handleUnsafe(client: Socket) {
         client.use { c ->
             c.soTimeout = 8000
             val inp = BufferedInputStream(c.getInputStream())
@@ -294,8 +302,11 @@ class WebServer(private val ctx: Context) {
                     }
                     else -> send("404 Not Found", "text/plain", "Niet gevonden".toByteArray())
                 }
+            } catch (e: java.net.SocketException) {
+                // Verbinding al dicht: niets meer terug te sturen
             } catch (e: Exception) {
-                msg(false, tr("Fout: ", "Error: ") + e.message)
+                AppLog.add("Web $method $path: " + (e.message ?: e.javaClass.simpleName))
+                try { msg(false, tr("Fout: ", "Error: ") + e.message) } catch (_: Exception) { }
             }
         }
     }

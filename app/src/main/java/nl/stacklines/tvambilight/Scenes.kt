@@ -141,6 +141,8 @@ object SceneEngine {
                 Thread.sleep(if (scene.kind == "static" || scene.kind == "custom") 5_000 else 250)
             }
         } catch (_: InterruptedException) {
+        } catch (e: Exception) {
+            AppLog.add("Scène: " + (e.message ?: e.javaClass.simpleName))
         } finally {
             for (l in lamps) Engine.workers[l.id]?.restore(saved[l.id])
         }

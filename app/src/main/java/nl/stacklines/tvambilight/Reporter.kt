@@ -27,7 +27,10 @@ object Reporter {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { t, e ->
             try { save(t, e) } catch (_: Throwable) { }
-            previous?.uncaughtException(t, e)
+            // Fout in een achtergrondtaak (webserver, lamp, sync): melden, maar de app laten doordraaien.
+            // Anders kan één fout bij het opstarten de app steeds opnieuw laten crashen. Alleen het hoofdscherm valt terug op Android.
+            if (t === android.os.Looper.getMainLooper().thread) previous?.uncaughtException(t, e)
+            else Thread({ try { sendPending() } catch (_: Throwable) { } }, "crash-send-now").apply { isDaemon = true; start() }
         }
         // Crashes van de vorige keer versturen (op de achtergrond, internet kan nog even op zich laten wachten)
         Thread({ try { Thread.sleep(15_000); sendPending() } catch (_: Throwable) { } }, "crash-send").apply { isDaemon = true; start() }

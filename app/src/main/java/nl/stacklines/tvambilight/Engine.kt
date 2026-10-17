@@ -195,7 +195,7 @@ object Engine {
     /** Vraagt de stand van een stel lampen tegelijk op (wacht hooguit één keer, niet per lamp). */
     fun queryAll(ids: Collection<String>): Map<String, JSONObject> {
         val out = ConcurrentHashMap<String, JSONObject>()
-        val threads = ids.mapNotNull { id -> workers[id]?.let { w -> Thread { w.queryStatus()?.let { out[id] = it } }.apply { isDaemon = true; start() } } }
+        val threads = ids.mapNotNull { id -> workers[id]?.let { w -> Thread { try { w.queryStatus()?.let { out[id] = it } } catch (_: Exception) { } }.apply { isDaemon = true; start() } } }
         try { threads.forEach { it.join(3000) } } catch (e: InterruptedException) { threads.forEach { it.interrupt() }; throw e }
         return out
     }
@@ -702,6 +702,10 @@ object Engine {
                 if (wait > 0) Thread.sleep(wait)
             }
         } catch (_: InterruptedException) {
+        } catch (e: Exception) {
+            // Onverwachte fout in de sync: melden en netjes stoppen (lampen terug), niet de app laten crashen
+            AppLog.add("Sync: " + (e.message ?: e.javaClass.simpleName))
+            running = false
         } finally {
             paused = false
             restoreAll(touched, saved)
