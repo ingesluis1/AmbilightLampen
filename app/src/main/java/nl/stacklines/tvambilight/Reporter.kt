@@ -74,6 +74,24 @@ object Reporter {
         return send("Ambilight Lampen probleem (${version()})", scrub(text), "speech_balloon", 3)
     }
 
+    private val lastScreen = HashMap<String, Long>()
+
+    /**
+     * Probleem met het tv-scherm (pagina laadt niet, JavaScript-fout, ingebouwde browser gestopt). Gaat in het logboek
+     * en naar de maker; dezelfde melding hooguit eens per half uur, zodat een herhalende fout niet blijft versturen.
+     */
+    fun screenProblem(msg: String) {
+        AppLog.add(msg)
+        if (!Store.settings.reports) return
+        val now = System.currentTimeMillis()
+        synchronized(lastScreen) {
+            if (now - (lastScreen[msg] ?: 0L) < 30 * 60_000L) return
+            lastScreen[msg] = now
+        }
+        Thread({ try { send("Ambilight Lampen tv-scherm (${version()})", scrub(header("Tv-scherm") + "\n" + msg + "\n\nLaatste meldingen:\n" + AppLog.dump()), "tv", 4) } catch (_: Throwable) { } },
+            "screen-report").apply { isDaemon = true; start() }
+    }
+
     private fun scrub(s: String) = IPV4.replace(s, "<ip>")
 
     /** Bericht naar ntfy; ntfy maakt van lange berichten zelf een bijlage. */
