@@ -12,13 +12,13 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Crashes en "Probleem melden" naar de maker, als pushbericht via ntfy.sh (gratis, geen account).
+ * Crashes en "Probleem melden" naar de maker, als pushbericht via de eigen ntfy-server (ntfy.stacklines.nl).
+ * Iedereen mag naar het kanaal sturen, alleen de maker kan het lezen (met account).
  * Een crash wordt eerst als bestand bewaard (het proces gaat daarna dood) en bij de volgende start verstuurd.
  * In een melding staan geen sleutels, wachtwoorden of ip-adressen. Uit te zetten met de instelling "Fouten naar de maker sturen".
- * Let op: de repo is openbaar, dus de kanaalnaam ook. Meldingen bevatten daarom alleen technische informatie.
  */
 object Reporter {
-    private const val TOPIC = "ambilight-lampen-u4uipunn83ug10xm"
+    private const val URL_NTFY = "https://ntfy.stacklines.nl/ambilight"
     private var ctx: Context? = null
     private val IPV4 = Regex("""\b\d{1,3}(\.\d{1,3}){3}\b""")
 
@@ -104,7 +104,7 @@ object Reporter {
 
     /** Bericht naar ntfy; ntfy maakt van lange berichten zelf een bijlage. */
     private fun send(title: String, body: String, tags: String, priority: Int): Boolean = try {
-        val c = URL("https://ntfy.sh/$TOPIC").openConnection() as HttpURLConnection
+        val c = URL(URL_NTFY).openConnection() as HttpURLConnection
         c.requestMethod = "POST"; c.doOutput = true; c.connectTimeout = 8000; c.readTimeout = 8000
         c.setRequestProperty("Title", title); c.setRequestProperty("Tags", tags); c.setRequestProperty("Priority", priority.toString())
         c.setRequestProperty("Content-Type", "text/plain; charset=utf-8")
