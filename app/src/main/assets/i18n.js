@@ -29,7 +29,8 @@ const I18N = (() => {
     'Eén rondje per {n} seconden': 'One turn every {n} seconds',
     // instellingen
     'Reactiesnelheid': 'Response speed', 'Kleurintensiteit': 'Colour intensity', 'Helderheid': 'Brightness',
-    'Licht bij zwart beeld': 'Light on a black screen', 'Hoe breed lampen meekijken': 'How wide lamps look', 'Na stoppen': 'After stopping',
+    'Licht bij zwart beeld': 'Light on a black screen', 'Blikveld van de lampen': 'Lamp field of view',
+    'Smal: elke lamp volgt zijn eigen stukje rand van het beeld. Breed: lampen nemen meer van het hele beeld mee, rustiger en meer één kleur.': 'Narrow: each lamp follows its own part of the picture edge. Wide: lamps take in more of the whole picture, calmer and more one colour.', 'Na stoppen': 'After stopping',
     'Terug naar hoe ze stonden': 'Back to how they were', 'Warm wit': 'Warm white',
     'Automatisch starten als de tv aangaat': 'Start automatically when the TV turns on',
     // editor
@@ -119,7 +120,7 @@ const I18N = (() => {
     'Zachte, flauwe kleuren. Hoger: de lampen maken ze voller.': 'Soft, faded colours. Higher: the lamps make them richer.',
     'Het beeld wordt stap voor stap feller. Hoger: de lampen branden feller bij hetzelfde beeld.': 'The picture gets brighter step by step. Higher: the lamps are brighter for the same picture.',
     'Zwart beeld met af en toe een donkere scène. Dit bepaalt hoe fel de lampen blijven bij zwart.': 'Black picture with an occasional dark scene. This sets how bright the lamps stay on black.',
-    'Links rood, boven groen, rechts blauw. Hoger: elke lamp neemt meer van de andere kanten mee.': 'Red on the left, green on top, blue on the right. Higher: each lamp takes in more of the other sides.',
+    'Links rood, boven groen, rechts blauw. Smal: elke lamp volgt zijn eigen stukje rand. Breed: lampen nemen meer van het hele beeld mee.': 'Red on the left, green on top, blue on the right. Narrow: each lamp follows its own part of the edge. Wide: lamps take in more of the whole picture.',
     'Donker beeld: links donkerblauw, rechts donkerrood. Schermhelft: elke lamp volgt zijn eigen kant.': 'Dark picture: dark blue on the left, dark red on the right. Screen half: each lamp follows its own side.',
     'Kleine kleurstapjes. Aan: de lampen vloeien mee. Uit: ze springen.': 'Small colour steps. On: the lamps fade along. Off: they jump.',
     'Harde scènewissels. Aan: de lampen springen direct mee. Uit: ze vloeien ook hier.': 'Hard scene changes. On: the lamps jump right away. Off: they fade here too.',

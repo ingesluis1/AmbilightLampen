@@ -204,7 +204,7 @@ const ROWS=[
   {k:'saturation',label:'Kleurintensiteit',min:0.8,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'brightness',label:'Helderheid',min:0.5,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'minLight',label:'Licht bij zwart beeld',min:0,max:0.3,step:0.01,fmt:v=>v<0.005?t('uit'):Math.round(v*100)+'%'},
-  {k:'spread',label:'Hoe breed lampen meekijken',min:0.4,max:2.5,step:0.1,fmt:v=>v.toFixed(1)+'x'},
+  {k:'spread',label:'Blikveld van de lampen',min:0.4,max:2.5,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'darkColor',label:'Kleur bij donker beeld',options:[['half','Schermhelft'],['lamp','Dichtstbijzijnde lamp']]},
   {k:'after',label:'Na stoppen',options:[['restore','Terug naar hoe ze stonden'],['white','Warm wit'],['off','Uit']]},
   {k:'fade',label:'Vloeiende overgangen',bool:true},
@@ -232,7 +232,7 @@ const DEMOS={
     draw(g,W,H,t){const l=[8,20,35,55][Math.floor(t/2.5)%4];g.fillStyle=hsl(35,60,l);g.fillRect(0,0,W,H)}},
   minLight:{cap:'Zwart beeld met af en toe een donkere scène. Dit bepaalt hoe fel de lampen blijven bij zwart.',
     draw(g,W,H,t){g.fillStyle=(t%6)<4?'#000':hsl(220,60,10);g.fillRect(0,0,W,H)}},
-  spread:{cap:'Links rood, boven groen, rechts blauw. Hoger: elke lamp neemt meer van de andere kanten mee.',
+  spread:{cap:'Links rood, boven groen, rechts blauw. Smal: elke lamp volgt zijn eigen stukje rand. Breed: lampen nemen meer van het hele beeld mee.',
     draw(g,W,H){const gr=g.createLinearGradient(0,0,W,0);gr.addColorStop(0,'#e00');gr.addColorStop(.33,'#e00');gr.addColorStop(.67,'#00e');gr.addColorStop(1,'#00e');
       g.fillStyle=gr;g.fillRect(0,0,W,H);g.fillStyle='#0c0';g.fillRect(W*.3,0,W*.4,H*.35)}},
   darkColor:{cap:'Donker beeld: links donkerblauw, rechts donkerrood. Schermhelft: elke lamp volgt zijn eigen kant.',
