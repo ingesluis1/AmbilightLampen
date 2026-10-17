@@ -164,6 +164,10 @@ label.s span{float:right;opacity:.8}
       <div class="seg" id="satSeg" style="margin-top:3px">
         <button class="btn" data-k="0.8">Zwakker</button><button class="btn" data-k="1">Normaal</button><button class="btn" data-k="1.4">Sterker</button><button class="btn" data-k="1.8">Veel sterker</button>
       </div>
+      <div style="margin-top:8px;font-size:14px">Maximale helderheid</div>
+      <div class="seg" id="briSeg" style="margin-top:3px">
+        <button class="btn" data-k="0.25">25%</button><button class="btn" data-k="0.5">50%</button><button class="btn" data-k="0.75">75%</button><button class="btn" data-k="1">100%</button>
+      </div>
       <div style="margin-top:8px;font-size:14px">Kalibreren</div>
       <div class="row" style="margin-top:3px"><button class="btn" id="calibBtn">Hoogte</button><button class="btn" id="lowBtn">Kleur bij weinig licht</button></div>
       <div id="calibState" style="font-size:14px;margin-top:4px"></div>
@@ -271,6 +275,15 @@ label.s span{float:right;opacity:.8}
   <label class="s">Taal</label>
   <select id="lang"><option value="nl">Nederlands</option><option value="en">English</option></select>
   </div>
+</section>
+
+<section class="panel">
+  <h2>Bewaren en terugzetten</h2>
+  <p style="margin:0 0 8px">Bewaar je kamer, lampen, groepen, kalibraties, scènes en instellingen in een bestand, bijvoorbeeld voor het opnieuw installeren van de app.</p>
+  <label class="s"><input type="checkbox" id="bkKeys"> Met sleutels (lampen, Tuya, Hue, tv-koppeling). Bewaar het bestand dan goed: wie het heeft, kan je lampen bedienen.</label>
+  <div class="row" style="margin-top:6px"><a class="btn" id="bkDown" href="/api/backup" download>Bestand downloaden</a></div>
+  <p style="margin:10px 0 6px">Terugzetten uit een bestand. Sleutels die niet in het bestand staan, blijven zoals ze nu zijn.</p>
+  <input type="file" id="bkFile" accept=".json,application/json">
 </section>
 
 <section class="panel">
@@ -509,6 +522,7 @@ function showLamp(){
   document.querySelectorAll('#followSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.f===(l.follow||'auto')));
   document.querySelectorAll('#layerSeg .btn').forEach(b=>b.classList.toggle('on',+b.dataset.n===(l.layers||0)));
   const sf=l.satBoost>0?l.satBoost:(l.satFactor||1);document.querySelectorAll('#satSeg .btn').forEach(b=>b.classList.toggle('on',Math.abs(+b.dataset.k-sf)<0.05));
+  const mb=l.maxBright||1;document.querySelectorAll('#briSeg .btn').forEach(b=>b.classList.toggle('on',Math.abs(+b.dataset.k-mb)<0.05));
   $('followSeg').classList.toggle('hidden',(l.layers||0)>0);
   $('follows').textContent=follows(l);$('lampEnabled').checked=l.enabled;
   if(document.activeElement!==$('lampIpEdit'))$('lampIpEdit').value=l.ip||'';
@@ -517,6 +531,7 @@ function showLamp(){
 $('lampName').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.name=e.target.value;changed();chips()}};
 document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.shape=b.dataset.s;if(l.shape==='rod')l.height='floor';changed();showLamp()}});
 document.querySelectorAll('#satSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.satBoost=+b.dataset.k;changed();showLamp()}});
+document.querySelectorAll('#briSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.maxBright=+b.dataset.k;changed();showLamp()}});
 document.querySelectorAll('#layerSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.layers=+b.dataset.n;changed();showLamp()}});
 document.querySelectorAll('#followSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.follow=b.dataset.f;changed();showLamp()}});
 document.querySelectorAll('#heightSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.height=b.dataset.h;l.heightY=null;changed();showLamp()}});
@@ -639,7 +654,7 @@ function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!n
 /* Laatst bekende stand van de tv; opslaan stuurt alleen wat hiervan afwijkt, zodat wijzigingen op de tv
    (of van de app zelf, zoals een nieuw ip-adres) niet worden overschreven door wat deze pagina eerder laadde. */
 let base=null;
-function lampFields(l){return {group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,heightY:l.heightY??null,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,satBoost:l.satBoost>0?l.satBoost:-1,lowHue:l.lowHue??190,lowStrength:l.lowStrength||0,enabled:l.enabled,ip:l.ip}}
+function lampFields(l){return {group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,heightY:l.heightY??null,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,satBoost:l.satBoost>0?l.satBoost:-1,lowHue:l.lowHue??190,lowStrength:l.lowStrength||0,maxBright:l.maxBright||1,enabled:l.enabled,ip:l.ip}}
 function stateSnapshot(){return JSON.parse(JSON.stringify({layout:L,settings,groups,lamps:lamps.map(lampFields)}))}
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function diffKeys(cur,old){const d={};for(const k in cur)if(!old||!same(cur[k],old[k]))d[k]=cur[k];return d}
@@ -669,6 +684,10 @@ $('wizScan').onclick=async()=>{const b=$('wizScan');b.disabled=true;b.textConten
 $('cloudRefresh').onclick=async()=>{const b=$('cloudRefresh');b.disabled=true;b.textContent=t('Zoeken...');
   const r=await api('/api/cloud/refresh',{});b.disabled=false;b.textContent=t('Nieuwe lampen zoeken');toast(r.message);load()};
 $('cloudChange').onclick=()=>{$('cloudSetup').classList.remove('hidden');$('cloudOn').classList.add('hidden')};
+$('bkKeys').onchange=()=>{$('bkDown').href='/api/backup'+($('bkKeys').checked?'?keys=1':'')};
+$('bkFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
+  if(!confirm(t('Alles terugzetten uit "{n}"? Je huidige kamer, lampen en instellingen worden vervangen.',{n:f.name}))){e.target.value='';return}
+  const r=await api('/api/restore',JSON.parse(await f.text()));toast(r.message);e.target.value='';if(r.ok){dirty=false;load()}};
 $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();
   const r=await fetch('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:t}).then(x=>x.json());toast(r.message);e.target.value='';load()};
 

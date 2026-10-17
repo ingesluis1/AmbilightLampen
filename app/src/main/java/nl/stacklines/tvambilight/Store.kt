@@ -24,7 +24,8 @@ class Lamp(
     var group: String = "",           // id van het groepje; leeg = algemene instellingen
     var heightY: Double? = null,      // gekalibreerde hoogte op het tv-vlak (-1 = onderrand, 1 = bovenrand); null = vaste hoogte
     var lowHue: Double = 190.0,       // kleurcorrectie bij weinig licht: richting (tint 0..360) waarheen bijgestuurd wordt
-    var lowStrength: Double = 0.0     // en hoe sterk (0 = geen correctie, 0.6 = veel)
+    var lowStrength: Double = 0.0,    // en hoe sterk (0 = geen correctie, 0.6 = veel)
+    var maxBright: Double = 1.0       // maximale helderheid van deze lamp bij sync en scènes (0.1..1), bv. een felle lamp dichtbij
 ) {
     /** Ledstrips tonen kleuren witter dan lampen; die standaard iets voller. */
     val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
@@ -35,7 +36,7 @@ class Lamp(
         put("id", id); put("name", name); put("ip", ip); put("version", version)
         put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers); put("category", category); put("satBoost", satBoost); put("satFactor", satFactor); put("group", group)
         heightY?.let { put("heightY", it) }
-        put("lowHue", lowHue); put("lowStrength", lowStrength)
+        put("lowHue", lowHue); put("lowStrength", lowStrength); put("maxBright", maxBright)
         if (withKey) put("key", key)
     }
 
@@ -48,7 +49,8 @@ class Lamp(
             o.optString("follow", "auto"), o.optInt("layers", 0), o.optString("category"),
             o.optDouble("satBoost", -1.0), o.optString("group"),
             if (o.has("heightY")) o.optDouble("heightY") else null,
-            o.optDouble("lowHue", 190.0), o.optDouble("lowStrength", 0.0)
+            o.optDouble("lowHue", 190.0), o.optDouble("lowStrength", 0.0),
+            o.optDouble("maxBright", 1.0).coerceIn(0.1, 1.0)
         )
     }
 }
@@ -155,7 +157,11 @@ object Store {
             try { file.copyTo(File(file.parentFile, "config.json.bad"), overwrite = true) } catch (_: Exception) { }
             return
         }
-        // Per onderdeel inlezen: één kapot veld mag de rest (sleutels, koppelingen) niet meenemen
+        parse(o)
+    }
+
+    /** Leest een opgeslagen stand in (config.json of een backup). Per onderdeel: één kapot veld mag de rest niet meenemen. */
+    private fun parse(o: JSONObject) {
         fun part(block: () -> Unit) = try { block() } catch (_: Exception) { }
         part { o.optJSONObject("layout")?.let { layout = it } }
         lamps.clear()
@@ -182,6 +188,37 @@ object Store {
         part { o.optJSONObject("hidden")?.let { h -> h.keys().forEach { k -> hidden[k] = h.optString(k) } } }
         part { o.optJSONObject("forgotten")?.let { h -> h.keys().forEach { k -> forgotten[k] = h.optString(k) } } }
         version++
+    }
+
+    /** Backup voor de telefoon: alles, en de sleutels (lampen, cloud, Hue, tv-koppeling) alleen als daarom gevraagd is. */
+    @Synchronized
+    fun backup(withKeys: Boolean): JSONObject {
+        val o = buildJson()
+        o.remove("syncWanted")
+        if (!withKeys) {
+            o.optJSONArray("lamps")?.let { a -> for (i in 0 until a.length()) a.getJSONObject(i).remove("key") }
+            for (k in listOf("tvUser", "tvPass", "cloudId", "cloudSecret", "hueKey", "hueClientKey", "hueCert")) o.remove(k)
+        }
+        return JSONObject().put("app", "AmbilightLampen").put("created", System.currentTimeMillis()).put("withKeys", withKeys).put("config", o)
+    }
+
+    /** Zet een backup terug. Sleutels die niet in de backup staan, blijven zoals ze op de tv waren. */
+    fun restore(b: JSONObject): Int {
+        val o = b.optJSONObject("config") ?: throw IllegalArgumentException(tr("Dit is geen backup van Ambilight Lampen", "This is not an Ambilight Lampen backup"))
+        synchronized(this) {
+            val oldKeys = lamps.associate { it.id to it.key }
+            val old = listOf(tvUser, tvPass, cloudId, cloudSecret, hueKey, hueClientKey, hueCert)
+            val wanted = syncWanted
+            parse(o)
+            syncWanted = wanted
+            lamps.forEach { if (it.key.isBlank()) it.key = oldKeys[it.id].orEmpty() }
+            tvUser = tvUser ?: old[0]; tvPass = tvPass ?: old[1]
+            cloudId = cloudId ?: old[2]; cloudSecret = cloudSecret ?: old[3]
+            // Hue-sleutels horen bij elkaar (en bij het certificaat): alleen samen overnemen
+            if (hueKey == null) { hueKey = old[4]; hueClientKey = old[5]; hueCert = old[6] }
+        }
+        save()
+        return lamps.size
     }
 
     private val fileLock = Object()

@@ -63,6 +63,7 @@ class WebServer(private val ctx: Context) {
             val parts = requestLine.split(' ')
             val method = parts.getOrNull(0) ?: "GET"
             val path = (parts.getOrNull(1) ?: "/").substringBefore('?')
+            val query = (parts.getOrNull(1) ?: "").substringAfter('?', "")
             var len = 0
             var host = ""; var origin: String? = null; var contentType = ""
             while (true) {
@@ -109,6 +110,22 @@ class WebServer(private val ctx: Context) {
                         send("200 OK", "image/png", bos.toByteArray())
                     }
                     path == "/api/state" -> json(state())
+                    method == "GET" && path == "/api/backup" -> {
+                        val keys = query.split('&').contains("keys=1")
+                        val name = "ambilight-lampen-backup-" + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(java.util.Date()) + ".json"
+                        val content = Store.backup(keys).toString(2).toByteArray()
+                        out.write(("HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: ${content.size}\r\n" +
+                            "Content-Disposition: attachment; filename=\"$name\"\r\nCache-Control: no-store\r\nConnection: close\r\n\r\n").toByteArray())
+                        out.write(content); out.flush()
+                    }
+                    path == "/api/restore" && method == "POST" -> {
+                        if (Engine.running || SceneEngine.active != null) msg(false, tr("Stop eerst de sync of scène", "Stop the sync or scene first"))
+                        else {
+                            val n = Store.restore(JSONObject(req))
+                            Engine.syncWorkers()
+                            msg(true, tr("Teruggezet: $n lamp(en) met kamer, groepen en instellingen.", "Restored: $n lamp(s) with room, groups and settings."))
+                        }
+                    }
                     path == "/api/save" && method == "POST" -> { save(JSONObject(req)); msg(true, tr("Opgeslagen", "Saved")) }
                     path == "/api/import" && method == "POST" -> msg(true, import(req))
                     path == "/api/identify" && method == "POST" -> {
@@ -329,6 +346,7 @@ class WebServer(private val ctx: Context) {
                     l.follow = j.optString("follow", l.follow)
                     l.layers = j.optInt("layers", l.layers).coerceIn(0, 5)
                     if (j.has("satBoost")) l.satBoost = j.optDouble("satBoost", l.satBoost)
+                    if (j.has("maxBright")) l.maxBright = j.optDouble("maxBright", l.maxBright).coerceIn(0.1, 1.0)
                     if (j.has("lowHue")) l.lowHue = ((j.optDouble("lowHue", l.lowHue) % 360) + 360) % 360
                     if (j.has("lowStrength")) l.lowStrength = j.optDouble("lowStrength", l.lowStrength).coerceIn(0.0, 0.8)
                     if (j.has("group")) l.group = j.optString("group")

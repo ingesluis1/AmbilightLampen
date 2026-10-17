@@ -100,7 +100,8 @@ object SceneEngine {
             val w = Engine.workers[l.id] ?: continue
             val col = (if (live) w.shownColor else w.idleColor()) ?: continue
             val hsv = FloatArray(3); Color.colorToHSV(col, hsv)
-            m[l.id] = intArrayOf(hsv[0].roundToInt() % 360, (hsv[1] * 1000).roundToInt(), max(30, (hsv[2] * 1000).roundToInt()))
+            // De maximale helderheid van de lamp zit al in de getoonde kleur; bij afspelen komt hij er weer overheen
+            m[l.id] = intArrayOf(hsv[0].roundToInt() % 360, (hsv[1] * 1000).roundToInt(), max(30, (hsv[2] * 1000 / l.maxBright).roundToInt().coerceAtMost(1000)))
         }
         val s = Scene("c" + System.currentTimeMillis().toString(36), name.ifBlank { "Eigen scène" }, "custom", perLamp = m, builtin = false)
         Store.customScenes = Store.customScenes + s; Store.save()
@@ -118,7 +119,7 @@ object SceneEngine {
             if (scene.kind == "white") {
                 val w = scene.white ?: intArrayOf(700, 500)
                 for (l in lamps) {
-                    Engine.workers[l.id]?.let { it.send(mapOf("20" to true, "21" to "white", "22" to w[0], "23" to w[1])); it.shownColor = Color.rgb(255, 225, 180) }
+                    Engine.workers[l.id]?.let { it.send(mapOf("20" to true, "21" to "white", "22" to (w[0] * l.maxBright).roundToInt().coerceAtLeast(10), "23" to w[1])); it.shownColor = Color.rgb(255, 225, 180) }
                 }
                 while (true) Thread.sleep(60_000)
             }
@@ -131,7 +132,7 @@ object SceneEngine {
                     if (p != null && hueDist(p[0], c[0]) < 2 && abs(p[1] - c[1]) < 10 && abs(p[2] - c[2]) < 10) continue
                     val dps = LinkedHashMap<String, Any>()
                     if (p == null) { dps["20"] = true; dps["21"] = "colour" }
-                    dps["24"] = TuyaLamp.hsvHex(c[0], c[1].coerceIn(0, 1000), c[2].coerceIn(10, 1000))
+                    dps["24"] = TuyaLamp.hsvHex(c[0], c[1].coerceIn(0, 1000), (c[2] * l.maxBright).roundToInt().coerceIn(10, 1000))
                     w.send(dps)
                     w.shownColor = Scene.hsv(c)
                     last[l.id] = c

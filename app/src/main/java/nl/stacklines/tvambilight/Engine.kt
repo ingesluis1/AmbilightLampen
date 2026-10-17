@@ -410,7 +410,7 @@ object Engine {
             val dk = darkMix(s, raw)
             val h0 = if (dk > 0.5) donor[0].roundToInt() % 360 else hsv[0].roundToInt() % 360
             // Laag zwart: helderheid 0 (de lamp blijft aan, alleen die laag gaat uit)
-            val vv = if (s.minLight <= 0.001 && raw * s.brightness < 0.02) 0 else max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
+            val vv = if (s.minLight <= 0.001 && raw * s.brightness < 0.02) 0 else max(10, (v * l.maxBright * 1000).roundToInt().coerceIn(0, 1000))
             val sv0 = (min(1.0, (sat * (1 - dk) + donor[1] * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000)
             val corr = lowCorrect(l, h0, sv0, vv); val h = corr[0]; val sv = corr[1]
             if (i == cols.size / 2) shown = Color.HSVToColor(floatArrayOf(h.toFloat(), sv / 1000f, max(0.15f, vv / 1000f)))
@@ -647,7 +647,7 @@ object Engine {
                     }
                     val dk = darkMix(ls, rawV)
                     val dn = donorFor(l, la)
-                    val vv = max(10, (v * 1000).roundToInt().coerceIn(0, 1000))
+                    val vv = max(10, (v * l.maxBright * 1000).roundToInt().coerceIn(0, 1000))
                     val corr = lowCorrect(l, if (dk > 0.5) dn[0].roundToInt() % 360 else hsv[0].roundToInt() % 360,
                         (min(1.0, (sat * (1 - dk) + dn[1] * dk) * l.satFactor) * 1000).roundToInt().coerceIn(0, 1000), vv)
                     val h = corr[0]; val sv = corr[1]
