@@ -133,7 +133,10 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
 <script>
 const $=id=>document.getElementById(id);
 let S=null,L=null,baseImg=null,baseKey='',busy=false,langDone=false,rbBase=null,rbBaseKey='';
-function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2200)}
+// Langere meldingen blijven langer staan (ongeveer 70 ms per teken, 2,5 tot 10 seconden); tikken sluit hem
+function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);
+  e._t=setTimeout(()=>e.classList.remove('show'),Math.min(10000,Math.max(2500,String(t).length*70)));
+  e.onclick=()=>{clearTimeout(e._t);e.classList.remove('show')}}
 async function api(p,b){const r=await fetch(p,b===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});return r.json()}
 
 function render(){
