@@ -38,6 +38,8 @@ main{max-width:640px;margin:0 auto;padding:0 12px}
 .chip.sel{background:var(--gold);}
 .dot{width:12px;height:12px;background:#555;border:2px solid var(--ink)}
 .seg{display:flex;gap:4px}
+.looks{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:3px}
+.looks .btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;font-size:11px}
 .seg .btn{flex:1;padding:7px 4px}
 label.s{display:block;margin:12px 0 2px;font-size:15px}
 label.s span{float:right;opacity:.8}
@@ -128,6 +130,7 @@ label.s span{float:right;opacity:.8}
   <div id="panelLamp" class="hidden" style="margin-top:12px">
     <div class="chips" id="chips"></div>
     <div class="row hidden" id="roomLampRow" style="margin-bottom:6px"><b class="grow" id="roomLampName"></b><button class="btn" id="roomLampSettings">Instellingen van deze lamp</button></div>
+    <div class="hidden" id="roomLookBox" style="margin-bottom:8px"><div style="font-size:14px">Soort lamp</div><div class="looks" id="lookGrid"></div></div>
     <div class="hint">Kies een lamp en tik op de kaart om hem op te hangen. Sleep om te verschuiven.</div>
   </div>
 </section>
@@ -145,9 +148,6 @@ label.s span{float:right;opacity:.8}
     <div id="lampDetail">
       <div class="row"><input type="text" id="lampName" class="grow" placeholder="Naam"><button class="btn" id="blinkBtn">Knipper</button></div>
       <div class="row" id="reviveRow" style="margin-top:6px"><span class="grow" style="font-size:14px">Reageert deze lamp niet?</span><button class="btn gold" id="reviveBtn">Opnieuw verbinden</button></div>
-      <div class="seg" id="shapeSeg" style="margin-top:8px">
-        <button class="btn" data-s="bulb">Lamp of spot</button><button class="btn" data-s="rod">Staaflamp</button>
-      </div>
       <div class="seg" id="heightSeg" style="margin-top:6px">
         <button class="btn" data-h="ceiling">Plafond</button><button class="btn" data-h="sill">Vensterbank</button><button class="btn" data-h="table">Tafel</button><button class="btn" data-h="floor">Vloer</button>
       </div>
@@ -518,7 +518,7 @@ function follows(l){
   return t('Volgt {e}, {s}',{e:t(l.height==='ceiling'?'de bovenrand':(l.height==='table'||l.height==='sill')?'de zijkanten':'de onderkant'),s:t(side)});
 }
 function showLamp(){
-  const l=lamps.find(l=>l.id===selLamp);$('lampDetailPanel').classList.toggle('hidden',!l);$('roomLampRow').classList.toggle('hidden',!l);
+  const l=lamps.find(l=>l.id===selLamp);$('lampDetailPanel').classList.toggle('hidden',!l);$('roomLampRow').classList.toggle('hidden',!l);$('roomLookBox').classList.toggle('hidden',!l);
   const row=l&&[...$('lampList').children].find(r=>r.dataset.id===l.id);if(row&&row.nextSibling!==$('lampDetailPanel'))row.after($('lampDetailPanel'));
   for(const r of $('lampList').children)r.classList.toggle('sel',r.dataset.id===selLamp);if(!l)return;
   $('lampDetailTitle').textContent=l.name;$('roomLampName').textContent=l.name;
@@ -527,7 +527,7 @@ function showLamp(){
   document.querySelectorAll('#heightSeg .btn').forEach(b=>b.classList.toggle('on',!cal&&b.dataset.h===l.height));
   const rod=(l.shape||'bulb')==='rod';
   calibUI(l);lowUI(l);if(rod){$('calibBtn').classList.add('hidden');$('calibState').textContent=''}
-  document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.s===(l.shape||'bulb')));
+  const curLook=l.look||(rod?'rod':'');document.querySelectorAll('#lookGrid .btn').forEach(b=>b.classList.toggle('on',b.dataset.k===curLook));
   $('heightSeg').classList.toggle('hidden',rod);
   groupUI();
   document.querySelectorAll('#followSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.f===(l.follow||'auto')));
@@ -540,7 +540,14 @@ function showLamp(){
   const lv=live[l.id];$('lampIp').innerHTML=esc(l.ip||t('geen ip'))+' '+(lv&&lv.online?'<span class="ok">'+t('bereikbaar')+'</span>':'<span class="bad">'+t('niet bereikbaar')+'</span>');
 }
 $('lampName').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.name=e.target.value;changed();chips()}};
-document.querySelectorAll('#shapeSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.shape=b.dataset.s;if(l.shape==='rod')l.height='floor';changed();showLamp()}});
+// Soort lamp: plaatje + naam; kiezen zet ook de gebruikelijke hoogte (aan te passen) en staaflamp of niet
+for(const k of Room.LOOKS){const b=document.createElement('button');b.className='btn';b.dataset.k=k.id;
+  // Elke tekening midden in zijn knop: kleine lampen hoger, booglamp iets naar links
+  const dx=k.id==='arc'?-4:0,ty={spot:15,pendant:20,table:20,globe:19}[k.id]||25;
+  b.append(preview(g=>Room.lampFixture(g,{x:(14+dx)/Room.PPM-1,y:ty/Room.PPM-1,look:k.id,shape:k.id==='rod'?'rod':'bulb',height:k.height},'#ffe2a8'),28));
+  const s=document.createElement('span');s.textContent=t(k.label);b.append(s);
+  b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.look=k.id;l.shape=k.id==='rod'?'rod':'bulb';l.height=k.height;changed();showLamp()}};
+  $('lookGrid').append(b)}
 document.querySelectorAll('#satSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.satBoost=+b.dataset.k;changed();showLamp()}});
 document.querySelectorAll('#briSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.maxBright=+b.dataset.k;changed();showLamp()}});
 document.querySelectorAll('#layerSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.layers=+b.dataset.n;changed();showLamp()}});
@@ -674,7 +681,7 @@ function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!n
 /* Laatst bekende stand van de tv; opslaan stuurt alleen wat hiervan afwijkt, zodat wijzigingen op de tv
    (of van de app zelf, zoals een nieuw ip-adres) niet worden overschreven door wat deze pagina eerder laadde. */
 let base=null;
-function lampFields(l){return {group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,heightY:l.heightY??null,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,satBoost:l.satBoost>0?l.satBoost:-1,lowHue:l.lowHue??190,lowStrength:l.lowStrength||0,maxBright:l.maxBright||1,enabled:l.enabled,ip:l.ip}}
+function lampFields(l){return {group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,heightY:l.heightY??null,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,satBoost:l.satBoost>0?l.satBoost:-1,lowHue:l.lowHue??190,lowStrength:l.lowStrength||0,maxBright:l.maxBright||1,look:l.look||'',enabled:l.enabled,ip:l.ip}}
 function stateSnapshot(){return JSON.parse(JSON.stringify({layout:L,settings,groups,lamps:lamps.map(lampFields)}))}
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function diffKeys(cur,old){const d={};for(const k in cur)if(!old||!same(cur[k],old[k]))d[k]=cur[k];return d}

@@ -306,8 +306,78 @@ const Room = (() => {
     });
   }
 
+  /** Soorten lampen: uiterlijk op de kaart, standaardhoogte en waar het licht vandaan komt (dx, dy in pixels, grootte gloed). */
+  const LOOKS = [
+    { id: 'spot', label: 'Spot', height: 'ceiling', light: [0, 0, 1] },
+    { id: 'pendant', label: 'Hanglamp', height: 'ceiling', light: [0, -2, 1] },
+    { id: 'floor', label: 'Staande lamp', height: 'sill', light: [0, -16, 1] },
+    { id: 'arc', label: 'Booglamp', height: 'sill', light: [8, -12, 1] },
+    { id: 'table', label: 'Tafellamp', height: 'table', light: [0, -5, 0.75] },
+    { id: 'globe', label: 'Bollamp', height: 'table', light: [0, -3, 0.75] },
+    { id: 'rod', label: 'Staaflamp', height: 'floor', light: [0, -9, 1] },
+  ];
+  const lookOf = l => LOOKS.find(k => k.id === (l.look || (l.shape === 'rod' ? 'rod' : '')));
+
+  /** Pixelrijen tekenen: rows = [[dy, van dx, tot dx], ...] rond (x, y). */
+  function rows(g, x, y, list) { for (const [dy, a, b] of list) g.fillRect(x + a, y + dy, b - a + 1, 1); }
+
   function lampFixture(g, l, color) {
     const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
+    const O = '#2a1a2e', SHADE = '#efe0c0', SH = 'rgba(30,10,30,.3)';
+    const look = l.look || '';
+    if (look === 'pendant') {
+      // hanglamp: snoer van boven, koepel, licht uit de onderkant
+      g.fillStyle = SH; g.fillRect(x - 3, y + 2, 7, 2);
+      g.fillStyle = O; g.fillRect(x, y - 12, 1, 7);
+      rows(g, x, y, [[-5, -2, 2], [-4, -4, 4], [-3, -4, 4], [-2, -4, 4]]);
+      g.fillStyle = SHADE; rows(g, x, y, [[-4, -3, 3], [-3, -3, 3]]);
+      g.fillStyle = color; rows(g, x, y, [[-2, -3, 3]]);
+      return;
+    }
+    if (look === 'floor') {
+      // staande lamp: voet, paal, kap met licht onderuit
+      g.fillStyle = SH; g.fillRect(x - 3, y, 8, 2);
+      g.fillStyle = O; g.fillRect(x - 3, y - 1, 7, 2); g.fillRect(x, y - 15, 1, 15);
+      rows(g, x, y, [[-22, -2, 2], [-21, -3, 3], [-20, -3, 3], [-19, -4, 4], [-18, -4, 4], [-17, -4, 4], [-16, -4, 4]]);
+      g.fillStyle = SHADE; rows(g, x, y, [[-21, -2, 2], [-20, -2, 2], [-19, -3, 3], [-18, -3, 3], [-17, -3, 3]]);
+      g.fillStyle = color; rows(g, x, y, [[-16, -3, 3]]);
+      return;
+    }
+    if (look === 'arc') {
+      // booglamp: voet, paal omhoog, boog naar rechts, kap boven de bank
+      g.fillStyle = SH; g.fillRect(x - 3, y, 8, 2); g.fillRect(x + 5, y - 1, 7, 2);
+      g.fillStyle = O; g.fillRect(x - 3, y - 1, 7, 2); g.fillRect(x, y - 14, 1, 14);
+      for (const [dx, dy] of [[1, -15], [2, -16], [3, -17], [4, -18], [5, -18], [6, -18], [7, -18], [8, -17]]) g.fillRect(x + dx, y + dy, 1, 1);
+      rows(g, x + 8, y, [[-16, -2, 2], [-15, -3, 3], [-14, -3, 3], [-13, -3, 3]]);
+      g.fillStyle = SHADE; rows(g, x + 8, y, [[-15, -2, 2], [-14, -2, 2]]);
+      g.fillStyle = color; rows(g, x + 8, y, [[-13, -2, 2]]);
+      return;
+    }
+    if (look === 'table') {
+      // tafellamp: houten voetje, steeltje, kap
+      g.fillStyle = SH; g.fillRect(x - 3, y + 1, 7, 2);
+      g.fillStyle = '#6b4430'; g.fillRect(x - 2, y, 5, 2);
+      g.fillStyle = O; g.fillRect(x, y - 3, 1, 3);
+      rows(g, x, y, [[-9, -2, 2], [-8, -3, 3], [-7, -3, 3], [-6, -4, 4], [-5, -4, 4], [-4, -4, 4]]);
+      g.fillStyle = SHADE; rows(g, x, y, [[-8, -2, 2], [-7, -2, 2], [-6, -3, 3], [-5, -3, 3]]);
+      g.fillStyle = color; rows(g, x, y, [[-4, -3, 3]]);
+      return;
+    }
+    if (look === 'globe') {
+      // bollamp: glazen bol op een klein voetje
+      g.fillStyle = SH; g.fillRect(x - 3, y + 1, 7, 2);
+      g.fillStyle = O; g.fillRect(x - 2, y, 5, 2);
+      rows(g, x, y, [[-8, -1, 1], [-7, -3, 3], [-6, -4, 4], [-5, -4, 4], [-4, -4, 4], [-3, -4, 4], [-2, -3, 3], [-1, -1, 1]]);
+      g.fillStyle = color; rows(g, x, y, [[-7, -1, 1], [-6, -3, 3], [-5, -3, 3], [-4, -3, 3], [-3, -3, 3], [-2, -1, 1]]);
+      g.fillStyle = 'rgba(255,255,255,.55)'; g.fillRect(x - 2, y - 6, 1, 2);
+      return;
+    }
+    if (look === 'spot') {
+      g.fillStyle = O; g.fillRect(x - 2, y - 3, 5, 7); g.fillRect(x - 3, y - 2, 7, 5);
+      g.fillStyle = '#d8d2c4'; g.fillRect(x - 2, y - 2, 5, 5);
+      g.fillStyle = color; g.fillRect(x - 1, y - 1, 3, 3);
+      return;
+    }
     if (l.shape === 'rod') {
       // staande staaf: voetje op de vloer, lichtgevende buis omhoog (3/4-aanzicht)
       g.fillStyle = 'rgba(30,10,30,.35)'; g.fillRect(x - 3, y, 8, 3);
@@ -371,9 +441,14 @@ const Room = (() => {
       if ((sync && lv.color === '#555555') || lv.on === false) continue;
       const col = lv.color && lv.color !== '#555555' ? lv.color : '#ffd696';
       const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
-      const big = l.height === 'ceiling' || l.shape === 'rod' ? 1 : 0.75;
+      const lk = l.look ? lookOf(l) : null;
+      const big = lk ? lk.light[2] : (l.height === 'ceiling' || l.shape === 'rod' ? 1 : 0.75);
       const rings = sync ? [[30, 0.06], [22, 0.07], [14, 0.09], [7, 0.12]] : [[14, 0.05], [7, 0.06]];
-      if (l.shape === 'rod') {
+      if (lk && lk.id !== 'rod') {
+        // gloed vanuit de kap (bij een staande lamp hoger, bij een booglamp boven de bank)
+        const gx = x + lk.light[0], gy = y + lk.light[1];
+        for (const [r, a] of rings) { g.globalAlpha = a; g.fillStyle = col; g.beginPath(); g.arc(gx, gy, r * big, 0, 7); g.fill(); }
+      } else if (l.shape === 'rod') {
         // langgerekte gloed langs de staaf
         for (const [r, a] of rings) { g.globalAlpha = a; g.fillStyle = col; g.beginPath(); g.ellipse(x, y - 9, r * 0.8, r * 1.15, 0, 0, 7); g.fill(); }
       } else {
@@ -425,5 +500,5 @@ const Room = (() => {
   /** Vaste hoogte die het dichtst bij een gekalibreerde hoogte ligt (voor de tekening en de uitleg). */
   const presetFor = y => y >= 0.7 ? 'ceiling' : y >= 0.25 ? 'sill' : y >= -0.3 ? 'table' : 'floor';
 
-  return { PPM, ITEMS, SPRITES, FLOORS, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandOf, presetFor };
+  return { PPM, ITEMS, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandOf, presetFor };
 })();

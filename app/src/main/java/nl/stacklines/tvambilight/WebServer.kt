@@ -349,6 +349,7 @@ class WebServer(private val ctx: Context) {
                     l.follow = j.optString("follow", l.follow)
                     l.layers = j.optInt("layers", l.layers).coerceIn(0, 5)
                     if (j.has("satBoost")) l.satBoost = j.optDouble("satBoost", l.satBoost)
+                    if (j.has("look")) j.optString("look").takeIf { it in LOOKS }?.let { l.look = it }
                     if (j.has("maxBright")) l.maxBright = j.optDouble("maxBright", l.maxBright).coerceIn(0.1, 1.0)
                     if (j.has("lowHue")) l.lowHue = ((j.optDouble("lowHue", l.lowHue) % 360) + 360) % 360
                     if (j.has("lowStrength")) l.lowStrength = j.optDouble("lowStrength", l.lowStrength).coerceIn(0.0, 0.8)
@@ -422,6 +423,7 @@ class WebServer(private val ctx: Context) {
         val IPV4 = Regex("""\d{1,3}(\.\d{1,3}){3}""")
         /** Groeps-id's komen in de pagina terecht: alleen letters, cijfers, - en _. */
         private val SAFE_ID = Regex("[A-Za-z0-9_-]{1,40}")
+        private val LOOKS = setOf("", "spot", "pendant", "floor", "arc", "table", "globe", "rod")
         private val STATIC = mapOf(
             "/" to "text/html; charset=utf-8", "/index.html" to "text/html; charset=utf-8",
             "/tv.html" to "text/html; charset=utf-8", "/room.js" to "application/javascript; charset=utf-8",

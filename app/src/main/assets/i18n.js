@@ -49,7 +49,7 @@ const I18N = (() => {
     'Elke laag volgt zijn hoogte aan de rechterkant van het beeld': 'Each layer follows its height on the right side of the picture',
     'Kleuren van': 'Colours from', 'Het beeld': 'The picture', 'De Ambilight-leds': 'The Ambilight LEDs',
     'Het beeld (randen van het scherm)': 'The picture (edges of the screen)', 'De Ambilight-leds achter de tv': 'The Ambilight LEDs behind the TV',
-    'Kleur': 'Colour', 'Alleen automatisch na zonsondergang': 'Only automatically after sunset',
+    'Kleur': 'Colour', 'Soort lamp': 'Lamp type', 'Spot': 'Spot', 'Hanglamp': 'Pendant', 'Staande lamp': 'Floor lamp', 'Booglamp': 'Arc lamp', 'Tafellamp': 'Table lamp', 'Bollamp': 'Globe lamp', 'Alleen automatisch na zonsondergang': 'Only automatically after sunset',
     'Alleen automatisch syncen na zonsondergang (overdag zet je hem zelf aan)': 'Only sync automatically after sunset (during the day you start it yourself)',
     'Starten': 'Start', 'Plek': 'Place', 'Starten t.o.v. zonsondergang': 'Start relative to sunset', 'bij zonsondergang': 'at sunset',
     '{n} min voor zonsondergang': '{n} min before sunset', '{n} min na zonsondergang': '{n} min after sunset', '{n} min ervoor': '{n} min before', '{n} min erna': '{n} min after',
