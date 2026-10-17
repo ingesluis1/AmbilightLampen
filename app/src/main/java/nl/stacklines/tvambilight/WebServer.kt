@@ -216,6 +216,15 @@ class WebServer(private val ctx: Context) {
                     path == "/api/cloud/refresh" && method == "POST" -> {
                         try { msg(true, TuyaCloud.refresh()) } catch (e: Exception) { msg(false, tr("Ophalen mislukt: ", "Fetching failed: ") + e.message) }
                     }
+                    path == "/api/update/check" && method == "POST" -> {
+                        Updater.check(force = true)
+                        val cur = Updater.current(ctx)
+                        when {
+                            Updater.available(ctx) -> msg(true, tr("Nieuwe versie ${Updater.latest} beschikbaar. Druk op Update.", "New version ${Updater.latest} available. Press Update."))
+                            Updater.latest == null -> msg(false, tr("Kon GitHub niet bereiken. Probeer het later opnieuw.", "Could not reach GitHub. Try again later."))
+                            else -> msg(true, tr("Je hebt de nieuwste versie ($cur)", "You have the latest version ($cur)"))
+                        }
+                    }
                     path == "/api/update" && method == "POST" -> {
                         Updater.check(force = true)
                         if (Updater.available(ctx)) msg(true, Updater.install(ctx))

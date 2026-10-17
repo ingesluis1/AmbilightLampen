@@ -227,10 +227,11 @@ const ROWS=[
   {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
   {k:'autoDark',label:'Alleen automatisch na zonsondergang',bool:true},
   {k:'darkOffset',label:'Starten t.o.v. zonsondergang',min:-120,max:60,step:15,fmt:v=>v==0?t('bij zonsondergang'):(v<0?t('{n} min ervoor',{n:-v}):t('{n} min erna',{n:v}))},
+  {k:'_update',label:'Zoeken naar updates',action:true},
   {k:'lang',label:'Taal',options:[['nl','Nederlands'],['en','English']],reload:true,raw:true},
 ];
 let setOpen=false,setIdx=0,setVals=null,setTimer=null,setTgt='';
-const GLOBAL_ONLY=['after','autostart','autoDark','darkOffset','followAmbi','pauseHome','fixBars','lang'];
+const GLOBAL_ONLY=['_update','after','autostart','autoDark','darkOffset','followAmbi','pauseHome','fixBars','lang'];
 function rows(){return ROWS.filter(r=>!(setTgt&&GLOBAL_ONLY.includes(r.k)))}
 
 /* ---------- demo per instelling: testbeeld waarop je ziet wat de instelling met de lampen doet ---------- */
@@ -347,14 +348,21 @@ function renderSettings(){
   $('srows').innerHTML=rows().map((r,i)=>{
     const v=setVals[r.k];let val,bar='';
     if(r.target){const g=tgtGroup();val=g?esc(g.name):t('Alle lampen (standaard)')}
+    else if(r.action)val=updMsg||t('OK: nu zoeken');
     else if(r.bool)val=t(v?'aan':'uit');
     else if(r.options){const o=(r.options.find(o=>o[0]===v)||r.options[0])[1];val=r.raw?o:t(o)}
     else{val=r.fmt(+v);const n=20,f=Math.round((v-r.min)/(r.max-r.min)*n);bar='<div class="bar">'+Array.from({length:n},(_,j)=>`<i class="${j<f?'on':''}"></i>`).join('')+'</div>'}
-    return `<div class="srow${i===setIdx?' focus':''}"><div class="top"><span>${t(r.label)}</span><span><span class="arrows">${r.bool?'OK ':'&lt; '}</span>${val}<span class="arrows">${r.bool?'':' &gt;'}</span></span></div>${bar}</div>`}).join('');
+    return `<div class="srow${i===setIdx?' focus':''}"><div class="top"><span>${t(r.label)}</span><span><span class="arrows">${r.bool?'OK ':r.action?'':'&lt; '}</span>${val}<span class="arrows">${r.bool||r.action?'':' &gt;'}</span></span></div>${bar}</div>`}).join('');
   const f=$('srows').querySelector('.srow.focus');if(f)f.scrollIntoView({block:'nearest'});
 }
+let updMsg='';
+/** Nu op GitHub kijken; is er een nieuwe versie, dan meteen het update-venster openen. */
+async function checkUpdates(){updMsg=t('Zoeken...');renderSettings();
+  const r=await api('/api/update/check',{});updMsg=r.message;renderSettings();
+  S=await api('/api/state');status();if(S.update&&S.update.available){closeSettings();openUpd()}}
 function changeSetting(dir){
   const r=rows()[setIdx];
+  if(r.action)return;
   if(r.target){const ids=['',...(S.groups||[]).map(g=>g.id)];setTgt=ids[(ids.indexOf(setTgt)+dir+ids.length)%ids.length];
     const g=tgtGroup();setVals={...(g?g.settings:S.settings)};renderSettings();return}
   if(r.bool)setVals[r.k]=!setVals[r.k];
@@ -413,7 +421,7 @@ document.addEventListener('keydown',e=>{
   else if(e.key==='ArrowUp'){setIdx=(setIdx-1+rows().length)%rows().length;renderSettings()}
   else if(e.key==='ArrowRight')changeSetting(1);
   else if(e.key==='ArrowLeft')changeSetting(-1);
-  else if(e.key==='Enter'){const r=rows()[setIdx];if(r.bool||r.options||r.target)changeSetting(1)}
+  else if(e.key==='Enter'){const r=rows()[setIdx];if(r.action)checkUpdates();else if(r.bool||r.options||r.target)changeSetting(1)}
   else if(e.key==='Escape'||e.key==='Backspace')closeSettings();
   else return;
   e.preventDefault();e.stopImmediatePropagation();

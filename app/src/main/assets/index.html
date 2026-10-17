@@ -298,6 +298,11 @@ label.s span{float:right;opacity:.8}
 </section>
 
 <section class="panel">
+  <h2>App</h2>
+  <div class="row"><span class="grow" id="appVersion"></span><button class="btn" id="updCheck">Zoeken naar updates</button></div>
+</section>
+
+<section class="panel">
   <h2>Status</h2>
   <div id="tvStatus" style="margin-top:10px;font-size:14px"></div>
 </section>
@@ -701,6 +706,8 @@ async function save(){
   if(r.ok)base=cur;
   dirty=false;$('saved').textContent=r.ok?t('opgeslagen'):t('niet opgeslagen');
 }
+$('updCheck').onclick=async()=>{const b=$('updCheck');b.disabled=true;b.textContent=t('Zoeken...');
+  const r=await api('/api/update/check',{});b.disabled=false;b.textContent=t('Zoeken naar updates');toast(r.message);poll()};
 $('updBtn').onclick=async()=>{const u=S.update,n=I18N.notes(u.notes);if(!confirm(t('Wat is er nieuw in {v}',{v:u.latest})+':\n\n'+(n.length?'- '+n.join('\n- '):t('Geen beschrijving.'))+'\n\n'+t('Nu updaten?')))return;toast((await api('/api/update',{})).message+t('. Kijk op de tv.'))};
 $('syncBtn').onclick=async()=>{const on=!(S&&S.sync);$('syncBtn').disabled=true;const r=await api('/api/sync',{on});toast(r.message);setTimeout(()=>{$('syncBtn').disabled=false;poll()},on?2500:3500)};
 $('offBtn').onclick=async()=>{const on=!!(S&&S.lampsOff);$('offBtn').disabled=true;toast((await api('/api/lamps/power',{on})).message);setTimeout(()=>{$('offBtn').disabled=false;poll()},on?500:3500)};
@@ -769,7 +776,7 @@ function liveFrom(s){
   live={};for(const l of s.lamps)live[l.id]=l;
   $('syncBtn').textContent=t(s.sync?'Sync stoppen':'Sync starten');
   $('offBtn').textContent=t(s.lampsOff?'Lampen aan':'Lampen uit');
-  if(s.update){$('updBtn').classList.toggle('hidden',!s.update.available);$('updBtn').textContent=t('Update {v}',{v:s.update.latest})}
+  if(s.update){$('appVersion').textContent=t('Versie {v}',{v:s.update.current});$('updBtn').classList.toggle('hidden',!s.update.available);$('updBtn').textContent=t('Update {v}',{v:s.update.latest})}
   $('pairCard').classList.toggle('hidden',s.tv.paired);
   $('pauseHomeHint').classList.toggle('hidden',!!s.tv.appAccess);
   if(s.sun&&s.sun.sunset)$('sunInfo').textContent=t('Vandaag: zonsondergang {s}, de sync start om {b}. Zonsopkomst {r}.',{s:s.sun.sunset,b:s.sun.start,r:s.sun.sunrise});
