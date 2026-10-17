@@ -14,6 +14,12 @@ body.night{background:#0e0814}
 #map{image-rendering:pixelated;border:4px solid #120a16;box-shadow:0 0 0 3px #3b2240,0 10px 30px rgba(0,0,0,.5)}
 .side{width:31vw;max-height:92vh;display:flex;flex-direction:column;gap:0}
 .side .panel{margin-top:0;margin-bottom:1.4vh;padding:14px 16px}
+/* Veel lampen: het bovenste paneel krimpt en de lampenlijst scrolt, zodat het QR-blok altijd in beeld blijft */
+.side .panel:first-child{display:flex;flex-direction:column;min-height:0;flex:0 1 auto}
+.side .panel:last-child{flex-shrink:0}
+.legend{min-height:0;overflow-y:auto;padding-right:.3vw}
+.legend.many{grid-template-columns:1fr 1fr 1fr!important}
+.legend.many .btn{font-size:1.5vh;padding:.4vh .4vw}
 h1{margin:0;font-size:2.8vh;font-weight:700}
 .stat{display:flex;align-items:center;gap:.8vw;font-size:1.9vh;margin-top:.4vh}
 .stat i{width:1.2vh;height:1.2vh;background:#8a7a6a;border:2px solid var(--ink);display:inline-block}
@@ -163,6 +169,7 @@ function status(){
   const ids=s.lamps.map(l=>l.id+l.name+(l.x<0)).join();
   if($('legend').dataset.ids!==ids){
     $('legend').dataset.ids=ids;
+    $('legend').classList.toggle('many',s.lamps.length>8);
     $('legend').innerHTML='<div class="hint">'+t('OK op een lamp laat hem knipperen')+'</div>'+s.lamps.map(l=>`<button class="btn lamp" data-id="${esc(l.id)}"><span class="sq"></span>${esc(l.name)}${l.x<0?t(' (nog ophangen)'):''}</button>`).join('');
     $('legend').querySelectorAll('.lamp').forEach(b=>{
       b.onclick=async()=>toast((await api('/api/identify',{id:b.dataset.id})).message);
