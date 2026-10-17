@@ -101,6 +101,7 @@ object TuyaCodec {
         if (len < 8 || len > 8192) throw IOException("ongeldige lengte $len")
         val rest = ByteArray(len); inp.readFully(rest)
         if (version == "3.4") {
+            if (len < 36) return Frame(cmd, ByteArray(0))   // te kort voor inhoud + HMAC: overslaan
             val body = rest.copyOfRange(0, len - 36)
             for (off in intArrayOf(4, 0)) {
                 if (body.size - off <= 0 || (body.size - off) % 16 != 0) continue
@@ -207,14 +208,15 @@ class TuyaLamp(val lamp: Lamp) {
                 }
                 android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), s.coerceIn(0f, 1f), 0.45f + 0.55f * v.coerceIn(0f, 1f)))
             }
-            "white" -> {
-                val t = ((st["23"] as? Number)?.toInt() ?: 500) / 1000f
-                android.graphics.Color.rgb((255 - 35 * t).toInt(), (190 + 50 * t).toInt(), (110 + 145 * t).toInt())
-            }
+            "white" -> Engine.whiteRgb((st["23"] as? Number)?.toInt() ?: 500, 1000)
             else -> null
         }
     }
 
+    /** Waarmee deze verbinding gestart is; wijkt de lamp daarvan af, dan maakt de Engine een nieuwe verbinding. */
+    val connIp = lamp.ip
+    val connKey = lamp.key
+    val connVersion = lamp.version
     private val localKey = lamp.key.toByteArray(Charsets.UTF_8)
     private val ver = lamp.version
     private val modern = ver == "3.4" || ver == "3.5"
@@ -381,7 +383,8 @@ class TuyaLamp(val lamp: Lamp) {
                     val wait = gap - (now - lastSend); if (wait > 0) Thread.sleep(wait)
                     val p = Wiz.pilot(batch, mode)
                     (batch["21"] as? String)?.let { mode = it }
-                    if (p.length() > 0) exchange("setPilot", p, 250)
+                    // Geen antwoord meer (stroom eraf): na 5 seconden als niet bereikbaar tonen, ook tijdens de sync
+                    if (p.length() > 0 && exchange("setPilot", p, 250) == null && SystemClock.elapsedRealtime() - lastRx > 5000) online = false
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
                 } else if (now - lastBeat > 5000) {
                     lastBeat = now
@@ -417,7 +420,7 @@ class TuyaLamp(val lamp: Lamp) {
                 if (queryWanted || lastBeat == 0L) {
                     queryWanted = false; lastBeat = now
                     val d = Hue.light(hueId)
-                    if (d != null) { mode = d.optString("21", mode); statusResult = d; noteState(d); lastRx = now; online = true; lastError = null }
+                    if (d != null) { mode = d.optString("21", mode); statusResult = d; noteState(d); lastRx = now; online = Hue.reachable(hueId) != false; lastError = null }
                     else if (now - lastRx > 12_000) online = false
                     continue
                 }
@@ -432,7 +435,7 @@ class TuyaLamp(val lamp: Lamp) {
                     val m = mode
                     (batch["21"] as? String)?.let { mode = it }
                     if (HueStream.offer(lamp.id, batch, m)) {
-                        if (HueStream.live) { online = true; lastRx = now }
+                        if (HueStream.live) { online = Hue.reachable(hueId) != false; lastRx = now }
                         lastSend = now; lastBeat = now
                         continue
                     }
@@ -442,13 +445,17 @@ class TuyaLamp(val lamp: Lamp) {
                     val t = SystemClock.elapsedRealtime()
                     // Overgang zo lang als de tijd sinds de vorige opdracht: dan loopt de kleur vloeiend door
                     val ms = if (Store.settingsForId(lamp.id).fade) (t - lastSend).coerceIn(100L, 800L) else 0L
-                    Hue.setLight(hueId, Hue.body(batch, m, lamp.category, ms))
+                    if (!Hue.setLight(hueId, Hue.body(batch, m, lamp.category, ms))) {
+                        // Bridge heeft het druk: opnieuw proberen, tenzij er intussen iets nieuwers klaarstaat
+                        synchronized(lock) { for ((k, v) in batch) pending.putIfAbsent(k, v) }
+                        sleepQuiet(500); continue
+                    }
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend; lastRx = lastSend
-                    online = true; lastError = null
+                    online = Hue.reachable(hueId) != false; lastError = null
                 } else if (now - lastBeat > 5000 && !HueStream.live) {
                     lastBeat = now
                     val d = Hue.light(hueId)
-                    if (d != null) { noteState(d); lastRx = now; online = true } else if (now - lastRx > 12_000) online = false
+                    if (d != null) { noteState(d); lastRx = now; online = Hue.reachable(hueId) != false } else if (now - lastRx > 12_000) online = false
                 } else {
                     synchronized(lock) { if (pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(40) }
                 }
@@ -491,7 +498,7 @@ class TuyaLamp(val lamp: Lamp) {
                         val keys = layerPending.filter { (_, c) -> similar(c, e.value) }.keys.toList()
                         keys.forEach { layerPending.remove(it) }; isLayer = true
                         // Sleutel 0 = alle segmenten (niet-bestaande segmenten negeert de lamp)
-                        val segs = if (0 in keys) (1..3).toList() else keys
+                        val segs = if (0 in keys) (1..5).toList() else keys
                         mapOf<String, Any>("61" to layerValue(segs, e.value))
                     }
                 }

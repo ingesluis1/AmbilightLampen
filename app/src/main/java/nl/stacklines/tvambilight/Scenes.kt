@@ -94,9 +94,12 @@ object SceneEngine {
     /** Huidige kleuren van alle lampen opslaan als eigen scène. */
     fun saveCurrent(name: String): Scene {
         val m = HashMap<String, IntArray>()
+        // Tijdens sync of scène: wat de app nu stuurt; anders de stand die de lamp zelf meldt (uit of onbekend = niet opnemen)
+        val live = Engine.running || active != null
         for (l in Store.lampsSnapshot()) {
             val w = Engine.workers[l.id] ?: continue
-            val hsv = FloatArray(3); Color.colorToHSV(w.shownColor, hsv)
+            val col = (if (live) w.shownColor else w.idleColor()) ?: continue
+            val hsv = FloatArray(3); Color.colorToHSV(col, hsv)
             m[l.id] = intArrayOf(hsv[0].roundToInt() % 360, (hsv[1] * 1000).roundToInt(), max(30, (hsv[2] * 1000).roundToInt()))
         }
         val s = Scene("c" + System.currentTimeMillis().toString(36), name.ifBlank { "Eigen scène" }, "custom", perLamp = m, builtin = false)
@@ -107,8 +110,7 @@ object SceneEngine {
     private fun loop(scene: Scene) {
         val lamps = Store.lampsSnapshot().filter { it.enabled && Engine.workers.containsKey(it.id) }
             .sortedBy { Mixer.project(Store.layout, it)?.get(0) ?: it.x }
-        val saved = HashMap<String, JSONObject?>()
-        for (l in lamps) saved[l.id] = Engine.workers[l.id]?.queryStatus()
+        val saved = try { Engine.queryAll(lamps.map { it.id }) } catch (_: InterruptedException) { return }
         val last = HashMap<String, IntArray>()
         val t0 = SystemClock.elapsedRealtime()
         try {
@@ -139,14 +141,7 @@ object SceneEngine {
             }
         } catch (_: InterruptedException) {
         } finally {
-            for (l in lamps) {
-                val w = Engine.workers[l.id] ?: continue
-                val st = saved[l.id]
-                val m = LinkedHashMap<String, Any>()
-                if (st != null) for (k in listOf("20", "21", "22", "23", "24")) if (st.has(k)) m[k] = st.get(k)
-                w.send(if (m.isNotEmpty()) m else mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 500))
-                w.shownColor = 0xFF555555.toInt()
-            }
+            for (l in lamps) Engine.workers[l.id]?.restore(saved[l.id])
         }
     }
 

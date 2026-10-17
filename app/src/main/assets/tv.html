@@ -132,7 +132,7 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
 <script src="/room.js"></script>
 <script>
 const $=id=>document.getElementById(id);
-let S=null,L=null,baseImg=null,baseKey='',busy=false,langDone=false;
+let S=null,L=null,baseImg=null,baseKey='',busy=false,langDone=false,rbBase=null,rbBaseKey='';
 function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');clearTimeout(e._t);e._t=setTimeout(()=>e.classList.remove('show'),2200)}
 async function api(p,b){const r=await fetch(p,b===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});return r.json()}
 
@@ -160,7 +160,7 @@ function status(){
   const ids=s.lamps.map(l=>l.id+l.name+(l.x<0)).join();
   if($('legend').dataset.ids!==ids){
     $('legend').dataset.ids=ids;
-    $('legend').innerHTML='<div class="hint">'+t('OK op een lamp laat hem knipperen')+'</div>'+s.lamps.map(l=>`<button class="btn lamp" data-id="${l.id}"><span class="sq"></span>${l.name}${l.x<0?t(' (nog ophangen)'):''}</button>`).join('');
+    $('legend').innerHTML='<div class="hint">'+t('OK op een lamp laat hem knipperen')+'</div>'+s.lamps.map(l=>`<button class="btn lamp" data-id="${esc(l.id)}"><span class="sq"></span>${esc(l.name)}${l.x<0?t(' (nog ophangen)'):''}</button>`).join('');
     $('legend').querySelectorAll('.lamp').forEach(b=>{
       b.onclick=async()=>toast((await api('/api/identify',{id:b.dataset.id})).message);
       b.addEventListener('focus',()=>b.classList.add('focus'));b.addEventListener('blur',()=>b.classList.remove('focus'));
@@ -266,7 +266,7 @@ requestAnimationFrame(demoFrame);
 function tgtGroup(){return (S.groups||[]).find(g=>g.id===setTgt)}
 function openSettings(){if(!S)return;setTgt='';setVals={...S.settings};setOpen=true;setIdx=0;$('settings').classList.remove('hidden');renderSettings()}
 function closeSettings(){setOpen=false;$('settings').classList.add('hidden');$('settings').classList.remove('demo');$('setBtn').focus();demoAsked='';api('/api/demo',{k:''})}
-let rbOpen=false,rbStartedSync=false,rbSpeed=8,rbSel=-1,rbSave=null,rbLamps=null;
+let rbOpen=false,rbSpeed=8,rbSel=-1,rbSave=null,rbLamps=null;
 function rbHint(){
   const l=rbLamps&&rbLamps[rbSel];
   $('rbHint').textContent=l?t('"{n}" gekozen: pijltjes schuiven hem 25 cm, OK kiest de volgende lamp.',{n:l.name})
@@ -275,7 +275,10 @@ function rbHint(){
 function rbRender(){
   if(!rbOpen||!S)return;
   const lamps=S.lamps.map(l=>{const m=rbLamps&&rbLamps.find(x=>x.id===l.id);return m?{...l,x:m.x,y:m.y}:l});
-  const Lr=Room.migrate(S.layout),base=Room.base(Lr,lamps),live={};for(const l of S.lamps)live[l.id]=l;
+  // Vloer en meubels alleen opnieuw tekenen als de kamer of de lampen veranderen (niet bij elke meting)
+  const Lr=Room.migrate(S.layout),key=JSON.stringify(Lr)+JSON.stringify(lamps.map(l=>[l.id,l.x,l.y,l.height]));
+  if(key!==rbBaseKey){rbBase=Room.base(Lr,lamps);rbBaseKey=key}
+  const base=rbBase,live={};for(const l of S.lamps)live[l.id]=l;
   const img=Room.frame(base,Lr,lamps,live,S.sync,S.top),st=$('rbStage');
   const v=Room.present($('rbMap'),img,st.clientWidth,st.clientHeight,true);
   const l=rbLamps&&rbLamps[rbSel];
@@ -288,15 +291,18 @@ function rbMove(dx,dy){
   rbRender();clearTimeout(rbSave);
   rbSave=setTimeout(()=>api('/api/save',{lamps:rbLamps.map(x=>({id:x.id,x:x.x,y:x.y}))}),300);
 }
+// Tijdelijk starten: de sync stopt weer als het testbeeld dicht gaat (tenzij je hem zelf had aangezet), en blijft niet aan na herstarten
 async function openRainbow(){
   rbOpen=true;rbSel=-1;rbLamps=S?S.lamps.map(l=>({id:l.id,name:l.name,x:l.x,y:l.y})):[];
   $('rainbow').classList.remove('hidden');speedRb(0);rbHint();setTimeout(rbRender,50);
-  if(S&&!S.sync){rbStartedSync=true;await api('/api/sync',{on:true})}else rbStartedSync=false;
+  await api('/api/sync',{on:true,temp:'rainbow'});
 }
 async function closeRainbow(){
   rbOpen=false;$('rainbow').classList.add('hidden');$('rainbowBtn').focus();
-  if(rbStartedSync){rbStartedSync=false;await api('/api/sync',{on:false})}
+  await api('/api/sync',{on:false,temp:'rainbow'});
 }
+// App naar de achtergrond (Home-knop): testbeeld sluiten, anders blijft de sync draaien
+window.onHide=()=>{if(rbOpen)closeRainbow()};
 function speedRb(d){rbSpeed=Math.min(30,Math.max(2,rbSpeed+d));$('rainbow').style.setProperty('--speed',rbSpeed+'s');$('rbSpeed').textContent=t('Eén rondje per {n} seconden',{n:rbSpeed})}
 $('rainbowBtn').onclick=openRainbow;
 document.addEventListener('keydown',e=>{
@@ -320,7 +326,7 @@ function renderSettings(){
   demoAsk();
   $('srows').innerHTML=rows().map((r,i)=>{
     const v=setVals[r.k];let val,bar='';
-    if(r.target){const g=tgtGroup();val=g?g.name:t('Alle lampen (standaard)')}
+    if(r.target){const g=tgtGroup();val=g?esc(g.name):t('Alle lampen (standaard)')}
     else if(r.bool)val=t(v?'aan':'uit');
     else if(r.options){const o=(r.options.find(o=>o[0]===v)||r.options[0])[1];val=r.raw?o:t(o)}
     else{val=r.fmt(+v);const n=20,f=Math.round((v-r.min)/(r.max-r.min)*n);bar='<div class="bar">'+Array.from({length:n},(_,j)=>`<i class="${j<f?'on':''}"></i>`).join('')+'</div>'}
@@ -348,7 +354,7 @@ $('setBtn').onclick=openSettings;
 let scOpen=false,scIdx=0;
 function scList(){const l=(S&&S.scenes)||[];return S&&S.activeScene?[{id:'',name:t('Scène stoppen'),preview:[]},...l]:l}
 function renderScenes(){
-  $('sgrid').innerHTML=scList().map((sc,i)=>`<div class="scard${i===scIdx?' focus':''}${S.activeScene===sc.id?' on':''}"><span></span><div class="sw">${(sc.preview||[]).map(c=>`<i style="background:${c}"></i>`).join('')}</div></div>`).join('');
+  $('sgrid').innerHTML=scList().map((sc,i)=>`<div class="scard${i===scIdx?' focus':''}${S.activeScene===sc.id?' on':''}"><span></span><div class="sw">${(sc.preview||[]).map(c=>`<i style="background:${esc(c)}"></i>`).join('')}</div></div>`).join('');
   [...$('sgrid').children].forEach((d,i)=>d.querySelector('span').textContent=t(scList()[i].name));
 }
 function openScenes(){if(!S)return;scOpen=true;scIdx=0;$('scenes').classList.remove('hidden');renderScenes()}

@@ -63,10 +63,17 @@ class WebServer(private val ctx: Context) {
             val method = parts.getOrNull(0) ?: "GET"
             val path = (parts.getOrNull(1) ?: "/").substringBefore('?')
             var len = 0
+            var host = ""; var origin: String? = null; var contentType = ""
             while (true) {
                 val h = readLine(inp) ?: break
                 if (h.isEmpty()) break
-                if (h.startsWith("Content-Length:", true)) len = h.substringAfter(':').trim().toIntOrNull() ?: 0
+                val v = h.substringAfter(':', "").trim()
+                when {
+                    h.startsWith("Content-Length:", true) -> len = v.toIntOrNull() ?: 0
+                    h.startsWith("Host:", true) -> host = v
+                    h.startsWith("Origin:", true) -> origin = v
+                    h.startsWith("Content-Type:", true) -> contentType = v
+                }
             }
             val body = if (len > 0) {
                 val buf = ByteArray(len.coerceAtMost(2_000_000)); var read = 0
@@ -81,6 +88,10 @@ class WebServer(private val ctx: Context) {
             }
             fun json(o: Any) = send("200 OK", "application/json; charset=utf-8", o.toString().toByteArray())
             fun msg(ok: Boolean, text: String) = json(JSONObject().put("ok", ok).put("message", text))
+
+            if (!allowed(method, host, origin, contentType)) {
+                send("403 Forbidden", "text/plain", "Niet toegestaan".toByteArray()); return
+            }
 
             try {
                 val trimmed = body.trim()
@@ -114,6 +125,12 @@ class WebServer(private val ctx: Context) {
                         val j = JSONObject(req)
                         if (Engine.running) msg(false, tr("Stop eerst de sync", "Stop the sync first"))
                         else { Engine.setColor(j.getString("id"), android.graphics.Color.parseColor(j.getString("color"))); msg(true, tr("Kleur gezet", "Colour set")) }
+                    }
+                    path == "/api/sync" && method == "POST" && JSONObject(req).optString("temp").isNotBlank() -> {
+                        // Tijdelijk (testbeeld): niet onthouden als "sync aan"
+                        val j = JSONObject(req)
+                        if (j.optBoolean("on")) Engine.tempStart(j.getString("temp")) else Engine.tempEnd(j.getString("temp"))
+                        msg(true, "")
                     }
                     path == "/api/sync" && method == "POST" -> {
                         val on = JSONObject(req).optBoolean("on")
@@ -214,6 +231,8 @@ class WebServer(private val ctx: Context) {
                         synchronized(Store) { Store.hidden.remove(id)?.let { Store.forgotten[id] = it } }
                         Store.save(); msg(true, tr("Lamp definitief verwijderd", "Lamp removed for good"))
                     }
+                    path == "/api/lamp/restore" && method == "POST" && JSONObject(req).getString("id").startsWith("hue-") && Store.hueKey == null ->
+                        msg(false, tr("Koppel eerst de Hue Bridge, dan komt de lamp vanzelf terug", "Pair the Hue Bridge first, then the lamp comes back by itself"))
                     path == "/api/lamp/restore" && method == "POST" -> {
                         val id = JSONObject(req).getString("id")
                         synchronized(Store) { Store.hidden.remove(id) }
@@ -285,10 +304,11 @@ class WebServer(private val ctx: Context) {
         // Groepjes: volledige lijst (nieuw, hernoemd, verwijderd); bestaande houden hun instellingen tenzij meegestuurd
         o.optJSONArray("groups")?.let { a ->
             val old = Store.groups.associateBy { it.id }
-            Store.groups = (0 until a.length()).map { i ->
+            Store.groups = (0 until a.length()).mapNotNull { i ->
                 val g = a.getJSONObject(i); val id = g.getString("id")
+                if (!id.matches(SAFE_ID)) return@mapNotNull null
                 val grp = old[id] ?: Group(id, g.optString("name", "Groepje"), Settings().apply { apply(Store.settings.toJson()) })
-                grp.name = g.optString("name", grp.name).ifBlank { grp.name }
+                grp.name = g.optString("name", grp.name).trim().take(40).ifBlank { grp.name }
                 g.optJSONObject("settings")?.let { grp.settings.apply(it) }
                 grp
             }
@@ -300,7 +320,7 @@ class WebServer(private val ctx: Context) {
                 for (i in 0 until a.length()) {
                     val j = a.getJSONObject(i)
                     val l = Store.lamps.firstOrNull { it.id == j.optString("id") } ?: continue
-                    l.name = j.optString("name", l.name).ifBlank { l.name }
+                    l.name = j.optString("name", l.name).trim().take(60).ifBlank { l.name }
                     l.x = j.optDouble("x", l.x); l.y = j.optDouble("y", l.y)
                     l.height = j.optString("height", l.height)
                     if (j.has("heightY")) l.heightY = if (j.isNull("heightY")) null else j.getDouble("heightY").coerceIn(-1.5, 1.5)
@@ -312,7 +332,7 @@ class WebServer(private val ctx: Context) {
                     if (j.has("lowStrength")) l.lowStrength = j.optDouble("lowStrength", l.lowStrength).coerceIn(0.0, 0.8)
                     if (j.has("group")) l.group = j.optString("group")
                     l.enabled = j.optBoolean("enabled", l.enabled)
-                    j.optString("ip").takeIf { it.isNotBlank() }?.let { l.ip = it }
+                    j.optString("ip").trim().takeIf { it.matches(IPV4) }?.let { l.ip = it }
                 }
             }
         }
@@ -343,11 +363,11 @@ class WebServer(private val ctx: Context) {
                 val ex = Store.lamps.firstOrNull { it.id == id }
                 if (ex != null) {
                     ex.key = key
-                    d.optString("ip").ifBlank { null }?.let { ex.ip = it }
+                    d.optString("ip").takeIf { it.matches(IPV4) }?.let { ex.ip = it }
                     d.optString("version").ifBlank { null }?.let { ex.version = it }
                     updated++
                 } else {
-                    Store.lamps += Lamp(id, key, d.optString("name", id), d.optString("ip"), d.optString("version", "3.3").ifBlank { "3.3" })
+                    Store.lamps += Lamp(id, key, d.optString("name", id).take(60), d.optString("ip").takeIf { it.matches(IPV4) }.orEmpty(), d.optString("version", "3.3").ifBlank { "3.3" })
                     Store.hidden.remove(id); Store.forgotten.remove(id)
                     added++
                 }
@@ -357,10 +377,28 @@ class WebServer(private val ctx: Context) {
         return tr("$added lamp(en) toegevoegd, $updated bijgewerkt.", "$added lamp(s) added, $updated updated.") + tvNote
     }
 
+    /**
+     * Alleen verzoeken van de eigen pagina's. Een website die je op je telefoon opent, kan anders de tv bereiken:
+     * - Host moet een ip-adres of localhost zijn (geen domeinnaam), tegen "DNS rebinding";
+     * - opdrachten (POST) moeten JSON zijn: dat mag een andere website alleen na toestemming van deze server,
+     *   en die geven we nooit (geen CORS-kopregels);
+     * - stuurt de browser een Origin mee, dan moet die gelijk zijn aan het adres van deze pagina.
+     */
+    private fun allowed(method: String, host: String, origin: String?, contentType: String): Boolean {
+        val name = host.substringBeforeLast(':').removePrefix("[").removeSuffix("]")
+        if (!(name == "localhost" || name.matches(IPV4))) return false
+        if (origin != null && origin != "http://$host") return false
+        if (method == "GET") return true
+        return method == "POST" && contentType.startsWith("application/json", ignoreCase = true)
+    }
+
     /** Adres dat de telefoon opent (via de QR-code). */
     fun phoneLink(): String? = localIp()?.let { "http://$it:$port/" }
 
     companion object {
+        val IPV4 = Regex("""\d{1,3}(\.\d{1,3}){3}""")
+        /** Groeps-id's komen in de pagina terecht: alleen letters, cijfers, - en _. */
+        private val SAFE_ID = Regex("[A-Za-z0-9_-]{1,40}")
         private val STATIC = mapOf(
             "/" to "text/html; charset=utf-8", "/index.html" to "text/html; charset=utf-8",
             "/tv.html" to "text/html; charset=utf-8", "/room.js" to "application/javascript; charset=utf-8",

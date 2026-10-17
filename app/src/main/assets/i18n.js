@@ -193,3 +193,5 @@ const I18N = (() => {
   return { t, apply, notes, set(l) { lang = l === 'en' ? 'en' : 'nl'; }, get lang() { return lang; } };
 })();
 const t = I18N.t;
+/** Tekst veilig in HTML zetten (namen van lampen en groepen komen van buiten: cloud, Bridge, telefoon). */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);

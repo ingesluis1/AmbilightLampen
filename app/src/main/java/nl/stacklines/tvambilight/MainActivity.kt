@@ -47,7 +47,12 @@ class MainActivity : Activity() {
     override fun onResume() {
         super.onResume()
         // Bij openen van de app meteen kijken of er een nieuwe versie is
-        Thread { Updater.check(force = true) }.start()
+        Thread { Updater.check(maxAgeMs = 10 * 60_000L) }.start()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        web.evaluateJavascript("window.onHide && window.onHide()", null)
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {

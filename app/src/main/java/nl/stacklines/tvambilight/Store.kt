@@ -121,7 +121,8 @@ object Store {
 
     /** Instellingen die voor deze lamp gelden: die van zijn groepje, anders de algemene. */
     fun settingsFor(l: Lamp): Settings = groups.firstOrNull { it.id == l.group }?.settings ?: settings
-    fun settingsForId(id: String): Settings = lamps.firstOrNull { it.id == id }?.let { settingsFor(it) } ?: settings
+    // Via de kopie: lampthreads roepen dit steeds aan terwijl de lijst elders (onder het slot) verandert
+    fun settingsForId(id: String): Settings = lampsSnapshot().firstOrNull { it.id == id }?.let { settingsFor(it) } ?: settings
     @Volatile var tvHost = "127.0.0.1"
     @Volatile var tvUser: String? = null
     @Volatile var tvPass: String? = null
@@ -135,6 +136,8 @@ object Store {
     @Volatile var hueKey: String? = null
     @Volatile var hueClientKey: String? = null
     @Volatile var hueArea: String? = null
+    /** Vingerafdruk (SHA-256) van het certificaat van de Bridge, vastgelegd bij het koppelen. */
+    @Volatile var hueCert: String? = null
     /** Verwijderde lampen (id naar naam): komen bij zoeken in de cloud niet vanzelf terug. */
     val hidden = LinkedHashMap<String, String>()
     /** Definitief verwijderde lampen (id naar naam): niet meer in de lijst en ook niet terug bij zoeken; alleen via devices.json. */
@@ -148,14 +151,20 @@ object Store {
     fun load(ctx: Context) {
         file = File(ctx.filesDir, "config.json")
         if (!file.exists()) return
-        try {
-            val o = JSONObject(file.readText())
-            o.optJSONObject("layout")?.let { layout = it }
-            lamps.clear()
-            o.optJSONArray("lamps")?.let { a -> for (i in 0 until a.length()) lamps += Lamp.fromJson(a.getJSONObject(i)) }
-            o.optJSONObject("settings")?.let { settings.apply(it) }
-            customScenes = o.optJSONArray("scenes")?.let { a -> (0 until a.length()).map { Scene.fromStore(a.getJSONObject(it)) } } ?: emptyList()
-            groups = o.optJSONArray("groups")?.let { a -> (0 until a.length()).map { Group.fromJson(a.getJSONObject(it)) } } ?: emptyList()
+        val o = try { JSONObject(file.readText()) } catch (_: Exception) {
+            // Onleesbaar: bewaren voordat het eerstvolgende opslaan het overschrijft
+            try { file.copyTo(File(file.parentFile, "config.json.bad"), overwrite = true) } catch (_: Exception) { }
+            return
+        }
+        // Per onderdeel inlezen: één kapot veld mag de rest (sleutels, koppelingen) niet meenemen
+        fun part(block: () -> Unit) = try { block() } catch (_: Exception) { }
+        part { o.optJSONObject("layout")?.let { layout = it } }
+        lamps.clear()
+        o.optJSONArray("lamps")?.let { a -> for (i in 0 until a.length()) part { lamps += Lamp.fromJson(a.getJSONObject(i)) } }
+        part { o.optJSONObject("settings")?.let { settings.apply(it) } }
+        part { customScenes = o.optJSONArray("scenes")?.let { a -> (0 until a.length()).mapNotNull { try { Scene.fromStore(a.getJSONObject(it)) } catch (_: Exception) { null } } } ?: emptyList() }
+        part { groups = o.optJSONArray("groups")?.let { a -> (0 until a.length()).mapNotNull { try { Group.fromJson(a.getJSONObject(it)) } catch (_: Exception) { null } } } ?: emptyList() }
+        part {
             tvHost = o.optString("tvHost", tvHost)
             tvUser = o.optString("tvUser").ifBlank { null }
             tvPass = o.optString("tvPass").ifBlank { null }
@@ -168,11 +177,11 @@ object Store {
             hueKey = o.optString("hueKey").ifBlank { null }
             hueClientKey = o.optString("hueClientKey").ifBlank { null }
             hueArea = o.optString("hueArea").ifBlank { null }
-            hidden.clear()
-            o.optJSONObject("hidden")?.let { h -> h.keys().forEach { k -> hidden[k] = h.getString(k) } }
-            forgotten.clear()
-            o.optJSONObject("forgotten")?.let { h -> h.keys().forEach { k -> forgotten[k] = h.getString(k) } }
-        } catch (_: Exception) { }
+            hueCert = o.optString("hueCert").ifBlank { null }
+        }
+        hidden.clear(); forgotten.clear()
+        part { o.optJSONObject("hidden")?.let { h -> h.keys().forEach { k -> hidden[k] = h.optString(k) } } }
+        part { o.optJSONObject("forgotten")?.let { h -> h.keys().forEach { k -> forgotten[k] = h.optString(k) } } }
         version++
     }
 
@@ -191,7 +200,7 @@ object Store {
             put("hidden", JSONObject(hidden as Map<*, *>))
             put("forgotten", JSONObject(forgotten as Map<*, *>))
             put("cloudId", cloudId ?: ""); put("cloudSecret", cloudSecret ?: ""); put("cloudRegion", cloudRegion)
-            put("hueIp", hueIp ?: ""); put("hueBridgeId", hueBridgeId ?: ""); put("hueKey", hueKey ?: ""); put("hueClientKey", hueClientKey ?: ""); put("hueArea", hueArea ?: "")
+            put("hueIp", hueIp ?: ""); put("hueBridgeId", hueBridgeId ?: ""); put("hueKey", hueKey ?: ""); put("hueClientKey", hueClientKey ?: ""); put("hueArea", hueArea ?: ""); put("hueCert", hueCert ?: "")
         }
         val tmp = File(file.parentFile, "config.json.tmp")
         tmp.writeText(o.toString())

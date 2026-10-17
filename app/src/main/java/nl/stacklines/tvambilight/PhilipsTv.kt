@@ -4,14 +4,9 @@ import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
 import java.security.MessageDigest
-import java.security.SecureRandom
-import java.security.cert.X509Certificate
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import javax.net.ssl.HttpsURLConnection
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManager
-import javax.net.ssl.X509TrustManager
 
 /** Randkleuren van het beeld: per zone r, g, b (0..255). Links en rechts van onder naar boven, boven van links naar rechts. */
 class ZoneSample(val left: List<IntArray>, val top: List<IntArray>, val right: List<IntArray>)
@@ -21,14 +16,6 @@ class ZoneSample(val left: List<IntArray>, val top: List<IntArray>, val right: L
  * Op de tv zelf is dat 127.0.0.1; op de emulator het ip-adres van de tv.
  */
 object PhilipsTv {
-    private val sslFactory by lazy {
-        val trustAll = arrayOf<TrustManager>(object : X509TrustManager {
-            override fun checkClientTrusted(chain: Array<X509Certificate>?, authType: String?) {}
-            override fun checkServerTrusted(chain: Array<X509Certificate>?, authType: String?) {}
-            override fun getAcceptedIssuers(): Array<X509Certificate> = arrayOf()
-        })
-        SSLContext.getInstance("TLS").apply { init(null, trustAll, SecureRandom()) }.socketFactory
-    }
     private val sharedKey = android.util.Base64.decode(
         "ZmVay1EQVFOaZhwQ4Kv81ypLAZNczV9sG4KkseXWn1NEk6cXmPKO/MCa9sryslvLCFMnNe4Z4CPXzToowvhHvA==", 0)
 
@@ -40,7 +27,7 @@ object PhilipsTv {
 
     private fun exec(host: String, method: String, path: String, body: String?, auth: String?): Resp {
         val c = URL("https://$host:1926/6$path").openConnection() as HttpsURLConnection
-        c.sslSocketFactory = sslFactory
+        c.sslSocketFactory = Tls.trustAll
         c.setHostnameVerifier { _, _ -> true }
         c.connectTimeout = 2000; c.readTimeout = 3000
         c.requestMethod = method

@@ -70,7 +70,9 @@ object TuyaCloud {
         try {
             var lastRow = ""
             do {
-                val r = call("GET", "/v1.0/iot-01/associated-users/devices?size=50" + (if (lastRow.isNotEmpty()) "&last_row_key=$lastRow" else ""), token)
+                // Tuya ondertekent de parameters op alfabetische volgorde: last_row_key voor size
+                val q = if (lastRow.isNotEmpty()) "last_row_key=$lastRow&size=50" else "size=50"
+                val r = call("GET", "/v1.0/iot-01/associated-users/devices?$q", token)
                     .getJSONObject("result")
                 r.optJSONArray("devices")?.let { a -> for (i in 0 until a.length()) devices += a.getJSONObject(i) }
                 lastRow = r.optString("last_row_key")

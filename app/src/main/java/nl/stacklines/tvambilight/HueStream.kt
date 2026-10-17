@@ -65,6 +65,8 @@ object HueStream {
     /** Laatste melding (fout of "actief"), voor de telefoon. */
     @Volatile var status = ""
         private set
+    /** Loopt de stream-thread (ook tijdens het verbinden)? */
+    val running get() = thread?.isAlive == true
 
     private val colors = ConcurrentHashMap<Int, IntArray>()
     @Volatile private var thread: Thread? = null
@@ -72,9 +74,15 @@ object HueStream {
     @Volatile private var failedUntil = 0L
     /** Mislukte pogingen achter elkaar; de wachttijd loopt op (20 s, 40 s, ... tot 10 minuten). */
     private var fails = 0
+    /** Stoppen gevraagd (ontkoppelen, opnieuw koppelen): ook als de sync gewoon doorloopt. */
+    @Volatile private var halt = false
 
-    private fun wanted() = (Engine.running || SceneEngine.active != null) && Store.hueKey != null &&
-        Store.hueClientKey != null && areaId != null && channels.isNotEmpty()
+    /**
+     * Alleen streamen als er echt beweging is: tijdens de sync (niet in de pauze bij zwart beeld) en bij bewegende scènes.
+     * Vaste en witte scènes gaan via gewone opdrachten, dan krijgen witte lampen een echte kleurtemperatuur.
+     */
+    private fun wanted() = !halt && ((Engine.running && !Engine.pausedTvOff) || SceneEngine.active?.kind.let { it == "drift" || it == "flicker" }) &&
+        Store.hueKey != null && Store.hueClientKey != null && Store.hueCert != null && areaId != null && channels.isNotEmpty()
 
     /** Hoort deze lamp bij de stream (zit hij in de Entertainment-ruimte)? */
     fun holds(lampId: String) = channels.containsKey(lampId)
@@ -104,48 +112,52 @@ object HueStream {
         t.join(3000)
     }
 
-    private fun area(action: String): Boolean {
-        val host = Store.hueIp ?: return false
-        val id = areaId ?: return false
-        val (code, text) = Hue.request("PUT", "https://$host/clip/v2/resource/entertainment_configuration/$id",
-            JSONObject().put("action", action).toString())
-        if (code != 200 && action == "start") status = tr("Bridge wil de stream niet starten: ", "Bridge won't start the stream: ") + "HTTP $code " + text.take(100)
-        return code == 200
+    /** Stream nu stoppen en wachten tot de Bridge "stop" heeft gekregen, wat de sync ook doet. */
+    fun stopNow() {
+        val t = thread ?: return
+        halt = true
+        try { t.interrupt(); t.join(3000) } finally { halt = false }
     }
+
+    private fun areaAction(host: String, key: String, id: String, action: String): Pair<Int, String> =
+        Hue.bridge("PUT", host, "/clip/v2/resource/entertainment_configuration/$id", JSONObject().put("action", action).toString(), key = key)
 
     private fun run() {
         var udp: DatagramSocket? = null
         var dtls: DTLSTransport? = null
+        // Vastleggen bij de start: "stop" moet naar dezelfde ruimte en met dezelfde sleutel, ook als die intussen wijzigen
+        val host = Store.hueIp; val key = Store.hueKey; val clientKey = Store.hueClientKey; val area = areaId
         var started = false
         var seq = 0
         try {
-            while (wanted()) {
+            if (host == null || key == null || clientKey == null || area == null) return
+            while (wanted() && areaId == area) {
                 if (dtls == null) {
                     status = tr("Stream starten...", "Starting stream...")
-                    if (!area("start")) throw Hue.HueException(status)
+                    val (code, text) = areaAction(host, key, area, "start")
+                    if (code != 200) throw Hue.HueException(tr("Bridge wil de stream niet starten: ", "Bridge won't start the stream: ") + "HTTP $code " + text.take(100))
                     started = true
-                    val host = Store.hueIp!!.substringBefore(':')
-                    val c = HueDtls.open(host, HueDtls.PORT, Store.hueKey!!, Store.hueClientKey!!)
+                    val c = HueDtls.open(host.substringBefore(':'), HueDtls.PORT, Hue.applicationId() ?: key, clientKey)
                     udp = c.first; dtls = c.second
                     live = true; fails = 0; status = tr("Stream actief", "Stream active")
                 }
-                val area = areaId ?: break
                 val f = HueDtls.frame(area, HashMap(colors), seq++)
                 dtls.send(f, 0, f.size)
                 Thread.sleep(20)
             }
         } catch (_: InterruptedException) {
         } catch (e: Exception) {
-            if (status.isBlank() || live || status == tr("Stream starten...", "Starting stream...")) status = tr("Stream mislukt: ", "Stream failed: ") + (e.message ?: e.javaClass.simpleName)
+            status = tr("Stream mislukt: ", "Stream failed: ") + (e.message ?: e.javaClass.simpleName)
             fails++
             failedUntil = SystemClock.elapsedRealtime() + minOf(600_000L, 20_000L shl minOf(fails - 1, 5))
         } finally {
+            val wasLive = live
             live = false
             try { dtls?.close() } catch (_: Exception) { }
             try { udp?.close() } catch (_: Exception) { }
-            if (started) try { area("stop") } catch (_: Exception) { }
+            if (started && host != null && key != null && area != null) try { areaAction(host, key, area, "stop") } catch (_: Exception) { }
             colors.clear()
-            if (status == tr("Stream actief", "Stream active")) status = ""
+            if (wasLive && fails == 0) status = ""
         }
     }
 }

@@ -46,10 +46,10 @@ object Updater {
         return false
     }
 
-    /** Hooguit eens per uur echt opvragen, tenzij force. */
-    fun check(force: Boolean = false) {
+    /** Hooguit eens per maxAgeMs echt opvragen (standaard eens per uur), tenzij force. */
+    fun check(force: Boolean = false, maxAgeMs: Long = 3_600_000) {
         val now = System.currentTimeMillis()
-        if (!force && now - lastCheck < 3_600_000) return
+        if (!force && now - lastCheck < maxAgeMs) return
         lastCheck = now
         try {
             val c = URL(API).openConnection() as HttpURLConnection

@@ -43,11 +43,15 @@ object Discovery {
         val ip = WebServer.localIp() ?: return
         val body = JSONObject().put("from", "app").put("ip", ip).toString().toByteArray()
         val frame = TuyaCodec.frameGcm(udpKey, 0, 0x25, body)
-        val s = sock7000 ?: DatagramSocket().apply { broadcast = true }
         val bcast = ip.substringBeforeLast('.') + ".255"
-        for (target in listOf(bcast, "255.255.255.255")) {
-            try { s.send(DatagramPacket(frame, frame.size, java.net.InetAddress.getByName(target), 7000)) } catch (_: Exception) { }
+        fun sendAll(s: DatagramSocket) {
+            for (target in listOf(bcast, "255.255.255.255")) {
+                try { s.send(DatagramPacket(frame, frame.size, java.net.InetAddress.getByName(target), 7000)) } catch (_: Exception) { }
+            }
         }
+        // Liefst vanaf de luisterpoort (dan komt het antwoord daar binnen); anders een tijdelijke socket die weer dicht gaat
+        sock7000?.let { sendAll(it); return }
+        DatagramSocket().use { it.broadcast = true; sendAll(it) }
     }
 
     private fun listen(port: Int, onFound: (String, String, String) -> Unit) {

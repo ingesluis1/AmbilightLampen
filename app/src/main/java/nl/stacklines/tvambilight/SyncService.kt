@@ -18,6 +18,7 @@ class App : Application() {
         super.onCreate()
         Store.load(this)
         Discovery.start(this) { id, ip, version ->
+            if (!ip.matches(WebServer.IPV4)) return@start
             val l = Store.lampsSnapshot().firstOrNull { it.id == id } ?: return@start
             if (l.ip != ip || l.version != version) {
                 l.ip = ip; l.version = version
@@ -40,12 +41,17 @@ class App : Application() {
  */
 class SyncService : Service() {
     private var pausedByScreen = false
+    /** Scherm uit/aan na elkaar afhandelen, in volgorde en niet op de hoofdthread (stoppen kan even duren). */
+    private val screenQueue = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     private val screen = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
-            when (i.action) {
-                Intent.ACTION_SCREEN_OFF -> if (Engine.running) { pausedByScreen = true; Thread { Engine.stop() }.start() }
-                Intent.ACTION_SCREEN_ON -> if (pausedByScreen && Store.syncWanted) { pausedByScreen = false; Engine.start() }
+            val action = i.action
+            screenQueue.execute {
+                when (action) {
+                    Intent.ACTION_SCREEN_OFF -> if (Engine.running) { pausedByScreen = true; Engine.stop() }
+                    Intent.ACTION_SCREEN_ON -> if (pausedByScreen) { pausedByScreen = false; if (Store.syncWanted) Engine.start() }
+                }
             }
         }
     }
@@ -77,6 +83,7 @@ class SyncService : Service() {
 
     override fun onDestroy() {
         try { unregisterReceiver(screen) } catch (_: Exception) { }
+        screenQueue.shutdown()
         Engine.stop()
         App.server?.stop(); App.server = null
         super.onDestroy()

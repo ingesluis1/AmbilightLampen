@@ -118,7 +118,6 @@ object Engine {
 
     /** Kalibratie: de tv toont gekleurde banden; tot dit tijdstip (elapsedRealtime) staat hij aan. */
     @Volatile private var calibUntil = 0L
-    @Volatile private var calibStartedSync = false
     val calibrating get() = calibUntil > SystemClock.elapsedRealtime()
 
     /** Aantal banden = aantal zones aan de zijkant, zodat elke band precies één zone vult. */
@@ -127,14 +126,14 @@ object Engine {
     fun calib(on: Boolean) {
         if (on) {
             calibUntil = SystemClock.elapsedRealtime() + 10 * 60_000
-            if (!running) { calibStartedSync = true; start() }
+            tempStart("calib")
         } else endCalib()
     }
 
     /** Stopt de kalibratie, ook als de telefoon is weggelegd (na tien minuten). */
     fun endCalib() {
         calibUntil = 0L
-        if (calibStartedSync) { calibStartedSync = false; if (!Store.syncWanted) stop() }
+        tempEnd("calib")
     }
 
     fun checkCalib() { if (calibUntil != 0L && !calibrating) endCalib(); checkDemo() }
@@ -143,32 +142,62 @@ object Engine {
     @Volatile var demoKey = ""
         private set
     @Volatile private var demoUntil = 0L
-    @Volatile private var demoStartedSync = false
 
     fun demo(key: String) {
         if (key.isBlank()) { endDemo(); return }
         demoKey = key
         demoUntil = SystemClock.elapsedRealtime() + 30_000
-        if (!running) { demoStartedSync = true; start() }
+        tempStart("demo")
     }
 
     private fun endDemo() {
         demoKey = ""; demoUntil = 0L
-        if (demoStartedSync) { demoStartedSync = false; if (!Store.syncWanted && !calibrating) stop() }
+        tempEnd("demo")
+    }
+
+    /**
+     * Redenen waarom de sync tijdelijk draait (demo, calib, rainbow) terwijl je hem zelf niet hebt aangezet.
+     * Pas als de laatste reden klaar is, stopt hij weer; heb je de sync zelf aangezet, dan blijft hij aan.
+     */
+    private val tempReasons = HashSet<String>()
+
+    fun tempStart(reason: String) {
+        synchronized(tempReasons) {
+            if (running && tempReasons.isEmpty()) return   // draait al omdat jij hem aanzette
+            tempReasons += reason
+        }
+        start()
+    }
+
+    fun tempEnd(reason: String) {
+        val last = synchronized(tempReasons) { tempReasons.remove(reason) && tempReasons.isEmpty() }
+        if (last && !Store.syncWanted) stop()
     }
 
     private fun checkDemo() { if (demoUntil != 0L && demoUntil < SystemClock.elapsedRealtime()) endDemo() }
     private var thread: Thread? = null
 
-    /** Houdt de verbindingen in lijn met de lampenlijst (nieuw, verwijderd, ander ip-adres). */
-    @Synchronized
-    fun syncWorkers() {
+    /**
+     * Houdt de verbindingen in lijn met de lampenlijst (nieuw, verwijderd, ander ip-adres, sleutel of protocol).
+     * Een eigen slot, zodat de sync-lus dit kan aanroepen terwijl stop() op die lus wacht.
+     */
+    private val workersLock = Object()
+    fun syncWorkers() = synchronized(workersLock) {
         val lamps = Store.lampsSnapshot().associateBy { it.id }
         for ((id, w) in workers) {
             val l = lamps[id]
-            if (l == null || l.ip != w.lamp.ip || l.key != w.lamp.key) { w.stop(); workers.remove(id) }
+            // De Lamp wordt ter plekke aangepast; de verbinding houdt de waarden waarmee hij gestart is
+            if (l == null || l.ip != w.connIp || l.key != w.connKey || l.version != w.connVersion) { w.stop(); workers.remove(id) }
         }
         for (l in lamps.values) if (!workers.containsKey(l.id) && l.ip.isNotBlank()) workers[l.id] = TuyaLamp(l)
+    }
+
+    /** Vraagt de stand van een stel lampen tegelijk op (wacht hooguit één keer, niet per lamp). */
+    fun queryAll(ids: Collection<String>): Map<String, JSONObject> {
+        val out = ConcurrentHashMap<String, JSONObject>()
+        val threads = ids.mapNotNull { id -> workers[id]?.let { w -> Thread { w.queryStatus()?.let { out[id] = it } }.apply { isDaemon = true; start() } } }
+        try { threads.forEach { it.join(3000) } } catch (e: InterruptedException) { threads.forEach { it.interrupt() }; throw e }
+        return out
     }
 
     /**
@@ -278,7 +307,7 @@ object Engine {
         val l = Store.lampsSnapshot().firstOrNull { it.id == id } ?: return tr("Lamp niet gevonden", "Lamp not found")
         if (l.key != before.key) notes += tr("nieuwe sleutel", "new key")
         if (l.ip != before.ip) notes += tr("nieuw adres ", "new address ") + l.ip
-        synchronized(this) { workers.remove(id)?.stop() }
+        synchronized(workersLock) { workers.remove(id)?.stop() }
         syncWorkers()
         val w = workers[id] ?: return tr("Geen ip-adres bekend", "No IP address known")
         val until = SystemClock.elapsedRealtime() + 6000
@@ -331,24 +360,34 @@ object Engine {
         lampsOff = !on
     }
 
-    @Synchronized
     fun start() {
-        if (running) return
-        lampsOff = false
-        SceneEngine.stop()
-        syncWorkers()
-        running = true
-        thread = Thread(::loop, "sync").apply { isDaemon = true; start() }
+        // Buiten het slot van de Engine: SceneEngine.start houdt zijn eigen slot vast en roept Engine.stop aan
+        if (!running) SceneEngine.stop()
+        synchronized(this) {
+            if (running) return
+            // Vorige lus eerst laten terugzetten, anders lopen twee lussen door elkaar
+            thread?.let { if (it.isAlive) it.join(3000) }
+            lampsOff = false
+            syncWorkers()
+            running = true
+            thread = Thread(::loop, "sync").apply { isDaemon = true; start() }
+        }
     }
 
-    @Synchronized
     fun stop() {
-        if (!running) return
-        running = false
-        thread?.interrupt()
-        thread?.join(3000)
-        thread = null
+        val t = synchronized(this) {
+            if (!running) return
+            running = false
+            synchronized(tempReasons) { tempReasons.clear() }
+            thread
+        } ?: return
+        t.interrupt()
+        if (t !== Thread.currentThread()) t.join(3000)
     }
+
+    /** Pauze omdat het beeld al 20 seconden zwart is (tv uit of standby); lampen staan dan in hun gewone stand. */
+    @Volatile var pausedTvOff = false
+        private set
 
     /** Lamp met aparte lagen: per laag gladstrijken, opvoeren en alleen versturen als hij genoeg veranderd is. */
     private fun syncLayers(l: Lamp, worker: TuyaLamp, sample: ZoneSample, s: Settings, alpha: Double,
@@ -416,9 +455,9 @@ object Engine {
     }
     private const val WHITE_NEUTRAL = 600
 
-    /** Hoe witlicht met deze temperatuur en helderheid eruitziet, voor de kaart en de telefoon. */
-    private fun whiteRgb(temp: Int, vv: Int): Int {
-        val t = temp / 1000f; val k = max(0.15f, vv / 1000f)
+    /** Hoe witlicht met deze temperatuur (0 warm..1000 koel) en helderheid eruitziet; floor = minimale helderheid voor de weergave. */
+    fun whiteRgb(temp: Int, vv: Int, floor: Float = 0.15f): Int {
+        val t = temp / 1000f; val k = max(floor, (vv / 1000f).coerceAtMost(1f))
         return Color.rgb(((255 - 35 * t) * k).roundToInt(), ((190 + 50 * t) * k).roundToInt(), ((110 + 145 * t) * k).roundToInt())
     }
 
@@ -518,16 +557,18 @@ object Engine {
 
         val startLamps = Store.lampsSnapshot().filter { it.enabled && workers.containsKey(it.id) }
         val touched = LinkedHashSet<String>()
-        var blackSince = 0L; var paused = false
-        for (l in startLamps) {
-            val w = workers[l.id] ?: continue
-            saved[l.id] = if (Store.settings.after == "restore") w.queryStatus() else null
-            w.send(mapOf("20" to true, "21" to "colour"))
-            lampOn[l.id] = true
-            touched += l.id
-        }
+        var blackSince = 0L
+        pausedTvOff = false
 
         try {
+            // Binnen try: wordt de sync tijdens het opvragen al gestopt, dan worden de lampen toch teruggezet
+            if (Store.settings.after == "restore") saved.putAll(queryAll(startLamps.map { it.id }))
+            for (l in startLamps) {
+                val w = workers[l.id] ?: continue
+                touched += l.id
+                w.send(mapOf("20" to true, "21" to "colour"))
+                lampOn[l.id] = true
+            }
             while (running) {
                 val t0 = SystemClock.elapsedRealtime()
                 val s = Store.settings
@@ -540,11 +581,14 @@ object Engine {
                     val maxC = (sample.left + sample.top + sample.right).maxOfOrNull { it.max() } ?: 0
                     if (maxC > 10) blackSince = 0L else if (blackSince == 0L) blackSince = t0
                     if (blackSince != 0L && t0 - blackSince > 20_000) {
-                        if (!paused) { paused = true; restoreAll(touched, saved); lampOn.clear(); last.clear(); smooth.clear() }
+                        if (!pausedTvOff) {
+                            pausedTvOff = true; restoreAll(touched, saved)
+                            lampOn.clear(); last.clear(); smooth.clear(); whiteMode.clear(); lastWhite.clear()
+                        }
                         tvStatus = "Tv lijkt uit"; Thread.sleep(500); continue
                     }
                 }
-                if (paused) { paused = false }
+                pausedTvOff = false
                 if (sample == null) {
                     tvStatus = if (Store.tvPaired) "Tv niet bereikbaar" else "Tv nog niet gekoppeld"
                     Thread.sleep(2000); continue
@@ -654,6 +698,7 @@ object Engine {
             }
         } catch (_: InterruptedException) {
         } finally {
+            pausedTvOff = false
             restoreAll(touched, saved)
             tvStatus = "Gestopt"
         }
