@@ -74,8 +74,49 @@ object Reporter {
             "Hue: ${if (Store.hueKey != null) "gekoppeld" else "-"} ${Hue.status} ${HueStream.status}\n" +
             "IKEA: ${if (Store.ikeaToken != null) "gekoppeld" else "-"} ${Dirigera.status}\n\n" +
             "Lampen:\n$lamps\n\nLaatste meldingen:\n" + AppLog.dump() +
-            (lastSendError?.let { "\n\nVersturen naar ntfy mislukte eerder: $it" } ?: "")
+            (lastSendError?.let { "\n\nVersturen naar ntfy mislukte eerder: $it" } ?: "") + exitReasons() + unsentCrash()
         return scrub(text)
+    }
+
+    /**
+     * Waarom de app de laatste keren stopte (Android 11+). Een stop door geheugentekort is geen crash en laat dus
+     * geen crashbestand achter; zo zien we toch het verschil tussen crash, geheugen en vastgelopen.
+     */
+    private fun exitReasons(): String {
+        if (Build.VERSION.SDK_INT < 30) return ""
+        val am = ctx?.getSystemService(android.app.ActivityManager::class.java) ?: return ""
+        // Alleen de app zelf, niet de processen van de ingebouwde browser
+        val list = try { am.getHistoricalProcessExitReasons(ctx!!.packageName, 0, 20) } catch (_: Exception) { return "" }
+            .filter { it.processName == ctx!!.packageName }.take(5)
+        if (list.isEmpty()) return ""
+        val fmt = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.ROOT)
+        return "\n\nVorige keren gestopt:\n" + list.joinToString("\n") { e ->
+            val why = when (e.reason) {
+                android.app.ApplicationExitInfo.REASON_CRASH -> "crash"
+                android.app.ApplicationExitInfo.REASON_CRASH_NATIVE -> "crash (native)"
+                android.app.ApplicationExitInfo.REASON_ANR -> "vastgelopen (ANR)"
+                android.app.ApplicationExitInfo.REASON_LOW_MEMORY -> "geheugentekort"
+                android.app.ApplicationExitInfo.REASON_SIGNALED -> "gestopt door systeem (signaal ${e.status})"
+                android.app.ApplicationExitInfo.REASON_USER_REQUESTED -> "door gebruiker"
+                android.app.ApplicationExitInfo.REASON_PACKAGE_UPDATED -> "update"
+                android.app.ApplicationExitInfo.REASON_EXIT_SELF -> "zelf afgesloten"
+                android.app.ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "onderdeel gestopt"
+                android.app.ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "te veel verbruik"
+                android.app.ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "toestemming gewijzigd"
+                android.app.ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "start mislukt"
+                else -> "anders (${e.reason})"
+            }
+            "- ${fmt.format(Date(e.timestamp))} $why, geheugen ${e.pss / 1024} MB" +
+                (e.description?.takeIf { it.isNotBlank() }?.let { " | ${it.take(120)}" } ?: "")
+        }
+    }
+
+    /** Laatste crash die nog niet verstuurd kon worden (geen internet op de tv): mee in de melding, zodat hij via kopiëren toch aankomt. */
+    private fun unsentCrash(): String {
+        val files = dir().listFiles()?.sortedBy { it.name } ?: return ""
+        val last = files.lastOrNull() ?: return ""
+        val more = if (files.size > 1) " (en nog ${files.size - 1} eerdere)" else ""
+        return "\n\nLaatste crash, nog niet verstuurd$more:\n" + last.readText().take(3500)
     }
 
     /** Waarom het laatste versturen mislukte (HTTP-code of foutmelding), of null. */

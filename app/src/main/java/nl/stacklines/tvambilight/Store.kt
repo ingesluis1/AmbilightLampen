@@ -26,7 +26,9 @@ class Lamp(
     var lowHue: Double = 190.0,       // kleurcorrectie bij weinig licht: richting (tint 0..360) waarheen bijgestuurd wordt
     var lowStrength: Double = 0.0,    // en hoe sterk (0 = geen correctie, 0.6 = veel)
     var maxBright: Double = 1.0,      // maximale helderheid van deze lamp bij sync en scènes (0.1..1), bv. een felle lamp dichtbij
-    var look: String = ""             // uiterlijk op de kaart: spot, pendant, floor, arc, table, globe, rod ("" = oude weergave)
+    var look: String = "",            // uiterlijk op de kaart: spot, pendant, floor, arc, table, globe, rod ("" = oude weergave)
+    var balWarm: Double = 0.0,        // kleurbalans, om lampen onderling gelijk te krijgen: -1 koeler .. 1 warmer
+    var balTint: Double = 0.0         // en -1 groener .. 1 rozer
 ) {
     /** Ledstrips tonen kleuren witter dan lampen; die standaard iets voller. */
     val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
@@ -38,6 +40,7 @@ class Lamp(
         put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers); put("category", category); put("satBoost", satBoost); put("satFactor", satFactor); put("group", group)
         heightY?.let { put("heightY", it) }
         put("lowHue", lowHue); put("lowStrength", lowStrength); put("maxBright", maxBright); put("look", look)
+        put("balWarm", balWarm); put("balTint", balTint)
         if (withKey) put("key", key)
     }
 
@@ -52,7 +55,8 @@ class Lamp(
             if (o.has("heightY")) o.optDouble("heightY") else null,
             o.optDouble("lowHue", 190.0), o.optDouble("lowStrength", 0.0),
             o.optDouble("maxBright", 1.0).coerceIn(0.1, 1.0),
-            o.optString("look")
+            o.optString("look"),
+            o.optDouble("balWarm", 0.0).coerceIn(-1.0, 1.0), o.optDouble("balTint", 0.0).coerceIn(-1.0, 1.0)
         )
     }
 }

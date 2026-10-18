@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Ambilight Lampen</title>
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/ui.css">
 <style>
 html,body{height:100%;overflow:hidden;transition:background .6s}
@@ -164,7 +163,8 @@ function status(){
   document.body.classList.toggle('night',s.sync);
   $('iSync').className=s.sync||s.activeScene?'on':'';
   const scn=(s.scenes||[]).find(x=>x.id===s.activeScene);
-  $('tSync').textContent=scn?t('Scène')+': '+t(scn.name):'Sync: '+t(s.sync?'aan':'uit');
+  const scName=scn?scn.name:s.activeName;
+  $('tSync').textContent=scName?t('Scène')+': '+t(scName):'Sync: '+t(s.sync?'aan':'uit');
   $('iTv').className=!s.tv.paired?'off':(s.sync&&s.tv.status!=='Verbonden'?'warn':'on');
   $('tTv').textContent=t('Tv')+': '+(!s.tv.paired?t('nog niet gekoppeld'):s.sync?t(s.tv.status).toLowerCase():t('gekoppeld'));
   $('iLamps').className=!s.lamps.length?'off':on===s.lamps.length?'on':'warn';

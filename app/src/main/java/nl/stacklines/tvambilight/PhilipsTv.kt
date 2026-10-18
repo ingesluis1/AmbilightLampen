@@ -55,6 +55,16 @@ object PhilipsTv {
         return r
     }
 
+    /** Aantal Ambilight-zones aan de zijkant (links), of null als de tv het niet zegt. */
+    fun sideZones(): Int? {
+        val u = Store.tvUser ?: return null
+        val p = Store.tvPass ?: return null
+        return try {
+            val r = call("GET", "/ambilight/topology", user = u, pass = p)
+            if (r.code == 200) JSONObject(r.body).optInt("left", 0).takeIf { it > 0 } else null
+        } catch (_: Exception) { null }
+    }
+
     /** Huidige randkleuren, of null als de tv niet bereikbaar of niet gekoppeld is. */
     fun measured(): ZoneSample? {
         val u = Store.tvUser ?: return null

@@ -11,20 +11,23 @@ Android TV app that makes ordinary Tuya Wi-Fi lamps (Trust, LSC/Action and other
   <img src="docs/tv-instellingen.png" width="49%" alt="Settings on the TV">
 </p>
 <p>
-  <img src="docs/telefoon-home.png" width="24%" alt="Phone: controls with the room, sync and scenes">
-  <img src="docs/telefoon-room.png" width="24%" alt="Phone: draw your room">
-  <img src="docs/telefoon-lamps.png" width="24%" alt="Phone: lamps">
-  <img src="docs/telefoon-settings.png" width="24%" alt="Phone: settings">
+  <img src="docs/telefoon-home.png" width="19%" alt="Phone: controls with the room, sync and scenes">
+  <img src="docs/telefoon-kaart.png" width="19%" alt="Phone: control lamps on the map, with colour and effect">
+  <img src="docs/telefoon-room.png" width="19%" alt="Phone: draw your room, with fixtures">
+  <img src="docs/telefoon-lamps.png" width="19%" alt="Phone: lamps">
+  <img src="docs/telefoon-settings.png" width="19%" alt="Phone: settings">
 </p>
 
 ## What it does
 
 - **Follow the picture:** the TV measures the colours along the edges of the picture itself (Ambilight). The app reads them about 15 times per second and sends every lamp the colour of the part of the picture that matches its place in the room. This works with everything on the TV, including Netflix, Disney+ and HDMI devices.
-- **Draw your room:** the TV shows a QR code. Scan it with your phone to get an editor in pixel-art style: lay floor per 1-metre square (8 floor types), place furniture (sofa, corner sofa, armchair, coffee table, dining table, plant, rug, cabinet, bed; rotate, mirror, resize), place the TV and your lamps (ceiling, table or floor; spot or rod lamp).
+- **Draw your room:** the TV shows a QR code. Scan it with your phone to get an editor in pixel-art style: lay floor per 1-metre square (8 floor types, grow or shrink the room on any side), 21 kinds of furniture (from sofa and dining table to kitchen unit, fireplace and piano; rotate, mirror, resize), doors, windows and window sills in the walls, place the TV and your lamps. Zoom in to place things precisely.
+- **Lamp types and fixtures:** spot, wall spot, pendant, floor lamp, arc lamp, table, globe, rod, wall, ceiling and desk lamp, light bar and LED strip. Lamps that form one fixture go in a track, a pendant bar or a floor lamp with spots, which you move and rotate as a whole. Spots and wall spots can point a direction (and a wall spot can tilt); this also counts for the colour.
 - **Position decides colour:** a lamp to the left of the TV follows the left side of the picture, a ceiling lamp in front of the TV follows the part of the top edge above it, a rod lamp follows its side from bottom to top. The further a lamp is from the TV, the wider it looks.
 - **Test and tune:** blink or test each lamp, pick a colour, a rotating rainbow test pattern with your room in view (move lamps with the remote), and settings on the TV and on your phone.
 - **Updates:** the app checks GitHub for new releases and shows what's new before updating.
-- **Per lamp:** what it follows (automatic by position, top edge, whole side or whole picture), height (ceiling, window sill, table, floor), and for lamps with several colour layers (like a Eurodomest wall washer) each layer separately.
+- **Per lamp:** what it follows (automatic by position, top edge, whole side or whole picture), height (calibrate with colour bands on the TV), colour in low light (also for several lamps at once), colour balance to match lamps of different brands, maximum brightness, and for lamps with several colour layers (like a Eurodomest wall washer) each layer separately.
+- **Scenes:** 13 built-in scenes, import scenes from the Philips Hue app, and make your own scene on the map: tap a lamp to switch it on or off, hold for colour, brightness and an effect (breathe, pulse, flicker, fireplace, colour cycle, wave, twinkle, thunderstorm, party).
 - **Smooth and fast:** small changes fade, scene changes are instant; dark scenes become really dark. Every lamp gets the pace it can handle.
 - **TV off:** after 20 seconds of black picture the lamps go back to normal.
 - **Languages:** Dutch and English (Settings, Language).

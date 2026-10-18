@@ -109,6 +109,25 @@ class MainActivity : Activity() {
         web?.evaluateJavascript("window.onHide && window.onHide()", null)
     }
 
+    /** Terug in beeld: de browser is bij het weggaan vrijgegeven, dus opnieuw aanmaken en laden. */
+    override fun onStart() {
+        super.onStart()
+        if (web == null && rebuilds <= 3) { createWebView(); waitForServer() }
+    }
+
+    /**
+     * Uit beeld (film kijken): de ingebouwde browser vrijgeven. Het geheugen van de tv is krap en anders
+     * sluit Android bij tekort de hele app, ook de sync.
+     */
+    override fun onStop() {
+        super.onStop()
+        val w = web ?: return
+        web = null
+        ui.removeCallbacksAndMessages(null)
+        (w.parent as? ViewGroup)?.removeView(w)
+        w.destroy()
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         if (keyCode == KeyEvent.KEYCODE_BACK) {
             val w = web ?: run { finish(); return true }

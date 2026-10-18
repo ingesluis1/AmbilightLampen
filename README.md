@@ -11,19 +11,22 @@ Android TV-app die gewone Tuya-wifilampen (Trust, LSC/Action en andere merken di
   <img src="docs/tv-instellingen.png" width="49%" alt="Instellingen op de tv">
 </p>
 <p>
-  <img src="docs/telefoon-home.png" width="24%" alt="Telefoon: bediening met de kamer, sync en scènes">
-  <img src="docs/telefoon-room.png" width="24%" alt="Telefoon: kamer tekenen">
-  <img src="docs/telefoon-lamps.png" width="24%" alt="Telefoon: lampen">
-  <img src="docs/telefoon-settings.png" width="24%" alt="Telefoon: instellingen">
+  <img src="docs/telefoon-home.png" width="19%" alt="Telefoon: bediening met de kamer, sync en scènes">
+  <img src="docs/telefoon-kaart.png" width="19%" alt="Telefoon: lampen bedienen op de kaart, met kleur en effect">
+  <img src="docs/telefoon-room.png" width="19%" alt="Telefoon: kamer tekenen, met armaturen">
+  <img src="docs/telefoon-lamps.png" width="19%" alt="Telefoon: lampen">
+  <img src="docs/telefoon-settings.png" width="19%" alt="Telefoon: instellingen">
 </p>
 
 ## Wat de app doet
 
 - **Meekleuren:** de tv meet zelf de kleuren aan de randen van het beeld (Ambilight). De app leest die ongeveer 15 keer per seconde uit en stuurt elke lamp de kleur van het stuk beeld dat bij zijn plek in de kamer hoort. Dat werkt bij alles wat op de tv speelt, ook Netflix, Disney+ en HDMI-apparaten.
-- **Je kamer tekenen:** op het tv-scherm staat een QR-code. Scan die met je telefoon en je krijgt een editor in pixel-art-stijl: vloer leggen per vakje van 1 meter (8 vloersoorten), meubels neerzetten (bank, hoekbank, fauteuil, salontafel, eettafel, plant, kleed, kast, bed; draaien, spiegelen, maat aanpassen), de tv plaatsen en je lampen ophangen (plafond, tafel of vloer).
+- **Je kamer tekenen:** op het tv-scherm staat een QR-code. Scan die met je telefoon en je krijgt een editor in pixel-art-stijl: vloer leggen per vakje van 1 meter (8 vloersoorten, kamer aan elke kant groter of kleiner maken), 21 soorten meubels (van bank en eettafel tot keukenblok, haard en piano; draaien, spiegelen, maat aanpassen), deuren, ramen en vensterbanken in de muren, de tv plaatsen en je lampen ophangen. Inzoomen om precies te plaatsen.
+- **Lampsoorten en armaturen:** spot, wandspot, hanglamp, staande lamp, booglamp, tafel-, bol-, staaf-, wand-, plafond- en bureaulamp, lichtbalk en ledstrip. Lampen die samen één armatuur vormen zet je in een rails, een hanglamp-balk of een staande lamp met spots; die verschuif en draai je als geheel. Spots en wandspots kun je een kant op laten wijzen (en een wandspot kantelen); dat telt ook mee voor de kleur.
 - **Plek bepaalt kleur:** een lamp links van de tv volgt de linkerkant van het beeld, een plafondlamp recht voor de tv het stuk bovenrand erboven. Hoe verder een lamp van de tv hangt, hoe breder hij meekijkt.
 - **Instellingen:** reactiesnelheid, kleurintensiteit, helderheid, licht bij zwart beeld, blikveld van de lampen, wat de lampen na afloop doen (terug naar hoe ze stonden, warm wit of uit) en automatisch starten als de tv aangaat.
-- **Per lamp instelbaar:** wat hij volgt (automatisch op plek, bovenrand, hele zijkant of hele beeld), hoogte (plafond, vensterbank, tafel, vloer), en bij lampen met meerdere kleurlagen (zoals een Eurodomest Wall Washer) elke laag apart.
+- **Per lamp instelbaar:** wat hij volgt (automatisch op plek, bovenrand, hele zijkant of hele beeld), hoogte (kalibreren met kleurbanden op de tv), kleur bij weinig licht (ook voor meerdere lampen tegelijk), kleurbalans om lampen van verschillende merken gelijk te krijgen, maximale helderheid, en bij lampen met meerdere kleurlagen (zoals een Eurodomest Wall Washer) elke laag apart.
+- **Scènes:** 13 ingebouwde scènes, scènes overnemen uit de Philips Hue-app, en zelf een scène maken op de kaart: tik op een lamp om hem aan of uit te zetten, houd vast voor kleur, helderheid en een effect (ademen, pulseren, flikkeren, haardvuur, kleurenloop, golf, twinkelen, onweer, feest).
 - **Vloeiend en snel:** kleine veranderingen vloeien over, scènewissels gaan direct; donkere scènes worden echt donker. Elke lamp krijgt het tempo dat hij aankan.
 - **Tv uit:** na 20 seconden zwart beeld gaan de lampen terug naar hun gewone stand.
 - **Talen:** Nederlands en Engels (Instellingen, Taal).

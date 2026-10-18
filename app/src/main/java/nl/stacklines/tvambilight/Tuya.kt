@@ -14,6 +14,8 @@ import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 /**
  * Lokaal Tuya-protocol.
@@ -245,13 +247,43 @@ class TuyaLamp(val lamp: Lamp) {
 
     private val thread = Thread(::loop, "lamp-${lamp.id}").apply { isDaemon = true; start() }
 
-    fun send(dps: Map<String, Any>) {
-        synchronized(lock) { pending.putAll(dps); lock.notifyAll() }
-        noteState(dps)
+    /**
+     * Opdracht naar de lamp. Een kleur (functie 24) krijgt eerst de kleurbalans van deze lamp; raw = een stand die de
+     * lamp zelf meldde (terugzetten), die is al gecorrigeerd.
+     */
+    fun send(dps: Map<String, Any>, raw: Boolean = false) {
+        val d = if (raw) dps else (dps["24"] as? String)?.takeIf { it.length == 12 && hasBalance() }?.let { c ->
+            val (h, s, v) = parseHsvHex(c); val b = balanced(h, s, v)
+            LinkedHashMap(dps).apply { put("24", hsvHex(b[0], b[1], b[2])) }
+        } ?: dps
+        synchronized(lock) { pending.putAll(d); lock.notifyAll() }
+        noteState(d)
+    }
+
+    private fun hasBalance() = abs(lamp.balWarm) > 0.005 || abs(lamp.balTint) > 0.005
+
+    /**
+     * Kleurbalans: zoals witbalans op een tv dempen we per lamp het rood, groen of blauw een beetje, zodat lampen van
+     * verschillende merken dezelfde kleur geven. Warmer = minder blauw, koeler = minder rood, rozer = minder groen,
+     * groener = minder rood en blauw. h 0..360, s en v 0..1000.
+     */
+    fun balanced(h: Int, s: Int, v: Int): IntArray {
+        if (!hasBalance()) return intArrayOf(h, s, v)
+        val w = lamp.balWarm; val t = lamp.balTint
+        val gr = (1 - 0.5 * maxOf(0.0, -w)) * (1 - 0.5 * maxOf(0.0, -t))
+        val gg = 1 - 0.5 * maxOf(0.0, t)
+        val gb = (1 - 0.5 * maxOf(0.0, w)) * (1 - 0.5 * maxOf(0.0, -t))
+        val rgb = android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), s / 1000f, 1f))
+        val hsv = FloatArray(3)
+        android.graphics.Color.RGBToHSV((android.graphics.Color.red(rgb) * gr).roundToInt(), (android.graphics.Color.green(rgb) * gg).roundToInt(),
+            (android.graphics.Color.blue(rgb) * gb).roundToInt(), hsv)
+        // De gedempte kleur is iets minder fel; die verhouding gaat mee in de helderheid
+        return intArrayOf(hsv[0].roundToInt() % 360, (hsv[1] * 1000).roundToInt(), (v * hsv[2]).roundToInt().coerceIn(if (v > 0) 10 else 0, 1000))
     }
 
     /** Eén laag een kleur geven (h 0..360, s en v 0..1000). Alleen de nieuwste kleur per laag wordt verstuurd. */
-    fun sendLayer(segment: Int, h: Int, s: Int, v: Int, priority: Int = 0) {
+    fun sendLayer(segment: Int, hIn: Int, sIn: Int, vIn: Int, priority: Int = 0) {
+        val (h, s, v) = balanced(hIn, sIn, vIn).let { Triple(it[0], it[1], it[2]) }
         synchronized(lock) {
             val old = layerPending[segment]
             layerPending[segment] = intArrayOf(h, s, v, maxOf(priority, old?.getOrNull(3) ?: 0)); lock.notifyAll()
@@ -260,7 +292,8 @@ class TuyaLamp(val lamp: Lamp) {
 
     /** Ledstrip: hele lamp één kleur via het schilderbericht (functie 24 laat deze lampen traag overvloeien). */
     fun sendAllSegments(h: Int, s: Int, v: Int) {
-        synchronized(lock) { layerPending.clear(); layerPending[0] = intArrayOf(h, s, v, 0); lock.notifyAll() }
+        val b = balanced(h, s, v)
+        synchronized(lock) { layerPending.clear(); layerPending[0] = intArrayOf(b[0], b[1], b[2], 0); lock.notifyAll() }
     }
 
     /** Zet een kleur in het formaat dat deze lamp verwacht (v2: hhhhssssvvvv met 0..1000, v1: rrggbbhhhhssvv). */
@@ -326,7 +359,7 @@ class TuyaLamp(val lamp: Lamp) {
     fun restore(st: JSONObject?) {
         val m = LinkedHashMap<String, Any>()
         if (st != null) for (k in STATE_KEYS) if (st.has(k)) m[k] = st.get(k)
-        send(if (m.isNotEmpty()) m else WARM_WHITE)
+        send(if (m.isNotEmpty()) m else WARM_WHITE, raw = true)
         shownColor = 0xFF555555.toInt()
     }
 
@@ -430,6 +463,8 @@ class TuyaLamp(val lamp: Lamp) {
                 val now = SystemClock.elapsedRealtime()
                 if (queryWanted || lastBeat == 0L) {
                     queryWanted = false; lastBeat = now
+                    // Ook statusvragen op hun beurt: met veel lampen vroegen ze anders allemaal tegelijk en liep de hub vast (timeouts)
+                    hub.waitTurn()
                     val d = hub.light(hueId)
                     if (d != null) { mode = d.optString("21", mode); statusResult = d; noteState(d); alive(now) }
                     else if (now - lastRx > 12_000) online = false
@@ -458,6 +493,7 @@ class TuyaLamp(val lamp: Lamp) {
                     alive(lastSend)
                 } else if (now - lastBeat > 5000 && !hub.streaming()) {
                     lastBeat = now
+                    hub.waitTurn()
                     val d = hub.light(hueId)
                     if (d != null) { noteState(d); alive(now) } else if (now - lastRx > 12_000) online = false
                 } else {

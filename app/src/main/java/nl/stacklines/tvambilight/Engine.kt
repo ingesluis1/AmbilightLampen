@@ -29,12 +29,55 @@ object Mixer {
         val a = Math.toRadians(tv.optDouble("dir", 90.0))
         val fx = cos(a); val fy = sin(a)       // kijkrichting van het scherm, de kamer in
         val rx = fy; val ry = -fx               // "rechts" gezien vanaf de bank
-        val dx = lamp.x - tx; val dy = lamp.y - ty
+        // Een gerichte spot rekent vanaf waar zijn licht ongeveer valt, niet vanaf de lamp zelf
+        val (ax, ay) = aimShift(layout, lamp)
+        val dx = lamp.x + ax - tx; val dy = lamp.y + ay - ty
         val lateral = dx * rx + dy * ry
         val depth = max(0.0, dx * fx + dy * fy)
         val xs = (lateral / (w / 2)).coerceIn(-1.8, 1.8)
-        val ys = lamp.heightY ?: when (lamp.height) { "ceiling" -> 1.0; "sill" -> 0.4; "table" -> 0.1; else -> -0.7 }
+        val ys = (lamp.heightY ?: when (lamp.height) { "ceiling" -> 1.0; "sill" -> 0.4; "table" -> 0.1; else -> -0.7 }) + tiltShift(layout, lamp)
         return doubleArrayOf(xs, ys, depth)
+    }
+
+    /** Wandspot omhoog of omlaag gekanteld (op de kaart): hij volgt dan een hoger of lager stuk van het beeld. */
+    private fun tiltShift(layout: JSONObject, lamp: Lamp): Double {
+        if (lamp.look != "wallspot") return 0.0
+        return when (layout.optJSONObject("tilts")?.optString(lamp.id)) { "up" -> 0.45; "down" -> -0.45; else -> 0.0 }
+    }
+
+    /** Hoe ver (meter) het licht van een gerichte spot van de lamp af valt. */
+    private const val AIM_REACH = 0.8
+
+    /**
+     * Verschuiving (meter) door de richting van een spot of wandspot, zoals ingesteld op de kaart: van de lamp zelf
+     * (aims, gaat voor) of van de rails waar hij in zit (fixtures[].aim). 0 = rechts, 90 = naar voren op de kaart; geen richting =
+     * recht omlaag, dus geen verschuiving. Een wandspot zonder richting schijnt naar voren (90).
+     */
+    fun aimShift(layout: JSONObject, lamp: Lamp): Pair<Double, Double> {
+        if (lamp.look != "spot" && lamp.look != "wallspot") return 0.0 to 0.0
+        var aim: Double? = null
+        // Eigen richting van de lamp gaat voor die van de rails (-1 = recht omlaag)
+        val aims = layout.optJSONObject("aims")
+        if (aims != null && aims.has(lamp.id) && !aims.isNull(lamp.id)) {
+            val own = aims.optDouble(lamp.id)
+            if (own < 0) return 0.0 to 0.0
+            val r = Math.toRadians(own)
+            return AIM_REACH * cos(r) to AIM_REACH * sin(r)
+        }
+        var inFixture = false
+        val fs = layout.optJSONArray("fixtures")
+        if (fs != null) for (i in 0 until fs.length()) {
+            val f = fs.optJSONObject(i) ?: continue
+            val ls = f.optJSONArray("lamps") ?: continue
+            if ((0 until ls.length()).none { ls.optString(it) == lamp.id }) continue
+            inFixture = true
+            if (f.has("aim") && !f.isNull("aim")) aim = f.optDouble("aim")
+            break
+        }
+        if (aim == null && !inFixture && lamp.look == "wallspot") aim = 90.0
+        val deg = aim ?: return 0.0 to 0.0
+        val r = Math.toRadians(deg)
+        return AIM_REACH * cos(r) to AIM_REACH * sin(r)
     }
 
     fun weights(layout: JSONObject, lamp: Lamp, spread: Double, nLeft: Int, nTop: Int, nRight: Int, topX: Double? = null): Weights {
@@ -120,11 +163,18 @@ object Engine {
     @Volatile private var calibUntil = 0L
     val calibrating get() = calibUntil > SystemClock.elapsedRealtime()
 
-    /** Aantal banden = aantal zones aan de zijkant, zodat elke band precies één zone vult. */
-    fun calibBands() = (lastSample?.left?.size ?: 0).let { if (it in 3..9) it else 5 }
+    /** Zones aan de zijkant volgens de tv zelf (topology); opgehaald bij het begin van de kalibratie. */
+    @Volatile private var sideZones: Int? = null
+
+    /**
+     * Aantal banden = aantal zones aan de zijkant, zodat elke band precies één zone vult (de lamp toont dan zuiver
+     * de kleur van zijn band). Tussenhoogtes kiest de telefoon zelf, tussen twee banden in.
+     */
+    fun calibBands() = (sideZones ?: lastSample?.left?.size ?: 3).let { if (it in 2..9) it else 3 }
 
     fun calib(on: Boolean) {
         if (on) {
+            if (sideZones == null) sideZones = PhilipsTv.sideZones()
             calibUntil = SystemClock.elapsedRealtime() + 10 * 60_000
             tempStart("calib")
         } else endCalib()
@@ -222,11 +272,11 @@ object Engine {
     private val previewSaved = ConcurrentHashMap<String, JSONObject>()
     private fun inPreview(id: String) = (preview[id] ?: 0L) > SystemClock.elapsedRealtime()
     @Volatile private var previewBase = "grey"
-    /** Voorbeeldkleur die de tv laat zien zolang er een lamp gekalibreerd wordt (grey/blue), anders null. */
-    val previewRef get() = if (preview.keys.any { inPreview(it) }) previewBase else null
+    /** Voorbeeldkleur die de tv laat zien zolang er een lamp gekalibreerd wordt (grey/blue), anders null. Niet bij kleurbalans. */
+    val previewRef get() = if (preview.keys.any { inPreview(it) && previewArgs[it]?.solid == null }) previewBase else null
 
     /** Instellingen van het lopende voorbeeld per lamp: helderheid (0..1000), tint, sterkte, soort (white/blue). */
-    private class Preview(val vv: Int, val hue: Double, val strength: Double, val base: String)
+    private class Preview(val vv: Int, val hue: Double, val strength: Double, val base: String, val solid: IntArray? = null)
     private val previewArgs = ConcurrentHashMap<String, Preview>()
     @Volatile private var previewThread: Thread? = null
 
@@ -242,24 +292,36 @@ object Engine {
         previewBase = base
         previewArgs[id] = Preview((level * 1000).roundToInt().coerceIn(10, 1000), hue, strength, base)
         showPreview(id, colour = true)
-        synchronized(this) {
-            if (previewThread?.isAlive != true) previewThread = Thread({
-                var colour = true
-                while (previewArgs.isNotEmpty()) {
-                    try { Thread.sleep(1500) } catch (_: InterruptedException) { break }
-                    colour = !colour
-                    for (pid in previewArgs.keys) {
-                        if (!inPreview(pid)) { endPreview(pid); continue }
-                        if (previewArgs[pid]?.base == "white") showPreview(pid, colour)
-                    }
-                }
-            }, "preview").apply { isDaemon = true; start() }
-        }
+        ensurePreviewThread()
     }
 
-    private fun showPreview(id: String, colour: Boolean) {
+    /** Eén thread voor alle voorbeelden: wisselt "white" elke 1,5 seconde en ruimt verlopen voorbeelden op. */
+    private fun ensurePreviewThread() = synchronized(this) {
+        if (previewThread?.isAlive != true) previewThread = Thread({
+            var colour = true
+            while (previewArgs.isNotEmpty()) {
+                try { Thread.sleep(1500) } catch (_: InterruptedException) { break }
+                colour = !colour
+                for (pid in previewArgs.keys) {
+                    if (!inPreview(pid)) { endPreview(pid); continue }
+                    if (previewArgs[pid]?.base == "white") showPreview(pid, colour)
+                }
+            }
+        }, "preview").apply { isDaemon = true; start() }
+    }
+
+    /** Voorbeeld tonen en stoppen na elkaar: anders kon de voorbeeld-thread net na het stoppen nog één kleur sturen. */
+    private val previewLock = Object()
+
+    private fun showPreview(id: String, colour: Boolean): Unit = synchronized(previewLock) {
         val p = previewArgs[id] ?: return
         val w = workers[id] ?: return
+        // Kleurbalans: vaste testkleur; de balans van de lamp komt er bij het versturen overheen
+        p.solid?.let { c ->
+            w.send(mapOf("20" to true, "21" to "colour", "24" to TuyaLamp.hsvHex(c[0], c[1], c[2])))
+            w.shownColor = Scene.hsv(c)
+            return
+        }
         if (!colour) {
             w.send(mapOf("20" to true, "21" to "white", "22" to max(10, p.vv), "23" to WHITE_REF))
             w.shownColor = Color.rgb(255, 244, 229)
@@ -274,12 +336,27 @@ object Engine {
     private const val WHITE_REF = 600
 
     fun endPreview(id: String) {
-        preview.remove(id); previewArgs.remove(id)
-        val saved = previewSaved.remove(id)
+        val saved = synchronized(previewLock) { preview.remove(id); previewArgs.remove(id); previewSaved.remove(id) }
         if (!running) workers[id]?.restore(saved)
     }
 
     fun endAllPreviews() { for (id in preview.keys.toList()) endPreview(id) }
+
+    /**
+     * Kleurbalans instellen: deze lamp en de referentielamp tonen allebei dezelfde testkleur (h, s, v), zodat je
+     * de schuiven kunt bijstellen tot ze gelijk zijn. Opnieuw aanroepen (na het schuiven) stuurt de kleur opnieuw.
+     */
+    fun previewMatch(id: String, ref: String, colour: IntArray) {
+        syncWorkers()
+        for (x in listOf(id, ref).distinct()) {
+            val w = workers[x] ?: continue
+            if (!inPreview(x) && !running) w.queryStatus()?.let { previewSaved[x] = it }
+            preview[x] = SystemClock.elapsedRealtime() + 5 * 60_000
+            previewArgs[x] = Preview(colour[2], 0.0, 0.0, "solid", colour)
+            showPreview(x, colour = true)
+        }
+        ensurePreviewThread()
+    }
 
     fun blink(id: String) { syncWorkers(); workers[id]?.blink() }
 
@@ -336,6 +413,9 @@ object Engine {
     }
     fun test(id: String) { syncWorkers(); workers[id]?.test() }
     fun setColor(id: String, rgb: Int) { syncWorkers(); workers[id]?.setColor(rgb) }
+
+    /** Eén lamp aan of uit (buiten sync en scènes). */
+    fun power(id: String, on: Boolean) { syncWorkers(); workers[id]?.send(mapOf("20" to on)) }
 
     /** Alle lampen na elkaar testen, zodat je ziet welke welke is. */
     fun testAll() {
@@ -555,7 +635,8 @@ object Engine {
         var weights = HashMap<String, Mixer.Weights>()
         var zoneCount = Triple(0, 0, 0)
 
-        val startLamps = Store.lampsSnapshot().filter { it.enabled && workers.containsKey(it.id) }
+        // Alleen lampen die in de kamer staan: een niet-geplaatste lamp hoort (nog) niet bij de tv
+        val startLamps = Store.lampsSnapshot().filter { it.enabled && it.placed && workers.containsKey(it.id) }
         val touched = LinkedHashSet<String>()
         var blackSince = 0L
         paused = false
@@ -604,6 +685,8 @@ object Engine {
                 if (Store.version != weightsVersion || zc != zoneCount) {
                     weightsVersion = Store.version; zoneCount = zc
                     weights = HashMap()
+                    // Instellingen gewijzigd (kleurbalans, helderheid...): elke lamp één keer opnieuw sturen, ook bij stilstaand beeld
+                    last.clear(); lastWhite.clear()
                     // Lampen op "Bovenrand" krijgen op volgorde van links naar rechts een gelijk verdeelde plek op de bovenrand
                     val topLamps = frameLamps.filter { it.follow == "top" && it.placed }
                         .sortedBy { Mixer.project(Store.layout, it)?.get(0) ?: 0.0 }
@@ -631,9 +714,15 @@ object Engine {
                 for (l in frameLamps) {
                     val id = l.id
                     val worker = workers[id] ?: continue
-                    if (!l.enabled) continue
-                    // Lamp toont een kalibratievoorbeeld: niet overschrijven, en daarna opnieuw sturen
-                    if (inPreview(id)) { last.remove(id); (0..5).forEach { last.remove("$id#$it") }; continue }
+                    if (!l.enabled || !l.placed) continue
+                    // Lamp toont een kalibratievoorbeeld: niet overschrijven, en daarna alles opnieuw sturen.
+                    // Het voorbeeld zet de lamp zelf aan en in wit- of kleurmodus; zonder dit vergeten stuurde de sync
+                    // daarna soms geen "21" mee of sloeg hij de lamp over, en bleef die op de voorbeeldkleur hangen.
+                    if (inPreview(id)) {
+                        last.remove(id); (0..5).forEach { last.remove("$id#$it") }
+                        lampOn.remove(id); whiteMode.remove(id); lastWhite.remove(id)
+                        continue
+                    }
                     val ls = Store.settingsFor(l)
                     val la = 1 - Math.pow(1 - ls.smooth.coerceIn(0.01, 1.0), 15.0 / hzEff)
                     if (touched.add(id)) syncWorkers()

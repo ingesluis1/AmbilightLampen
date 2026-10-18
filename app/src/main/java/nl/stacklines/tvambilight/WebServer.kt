@@ -10,6 +10,7 @@ import java.net.Inet4Address
 import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
+import kotlin.math.roundToInt
 
 /**
  * Mini-webserver op de tv. De telefoon opent http://<tv-ip>:<poort>/ via de QR-code
@@ -139,6 +140,16 @@ class WebServer(private val ctx: Context) {
                     path == "/api/identify" && method == "POST" -> {
                         if (Engine.running) msg(false, tr("Stop eerst de sync", "Stop the sync first")) else { Engine.blink(JSONObject(req).getString("id")); msg(true, tr("Lamp knippert", "Lamp is blinking")) }
                     }
+                    path == "/api/lamp/power" && method == "POST" -> {
+                        // Eén lamp aan of uit (lampenlijst). Loopt de eigen indeling van de kaart, dan via die indeling.
+                        val j = JSONObject(req); val id = j.optString("id"); val on = j.optBoolean("on")
+                        when {
+                            Store.lampsSnapshot().none { it.id == id } -> msg(false, tr("Lamp niet gevonden", "Lamp not found"))
+                            Engine.running -> msg(false, tr("Stop eerst de sync", "Stop the sync first"))
+                            SceneEngine.active?.id == SceneEngine.LIVE -> { SceneEngine.liveSet(id, on, null, null, null); msg(true, if (on) tr("Lamp aan", "Lamp on") else tr("Lamp uit", "Lamp off")) }
+                            else -> { Engine.power(id, on); msg(true, if (on) tr("Lamp aan", "Lamp on") else tr("Lamp uit", "Lamp off")) }
+                        }
+                    }
                     path == "/api/test" && method == "POST" -> {
                         val id = JSONObject(req).optString("id")
                         when {
@@ -170,6 +181,22 @@ class WebServer(private val ctx: Context) {
                         val id = j.optString("id", "*")
                         if (!j.optBoolean("on", true)) { if (id == "*") Engine.endAllPreviews() else Engine.endPreview(id); msg(true, tr("Klaar", "Done")) }
                         else { Engine.previewLow(id, j.optDouble("level", 0.05), j.optDouble("hue", 190.0), j.optDouble("strength", 0.0), j.optString("base", "grey")); msg(true, "") }
+                    }
+                    path == "/api/match" && method == "POST" -> {
+                        // Kleurbalans: twee lampen dezelfde testkleur laten tonen, of (on: false) terug naar normaal
+                        val j = JSONObject(req); val id = j.optString("id"); val ref = j.optString("ref")
+                        if (!j.optBoolean("on", true)) { Engine.endPreview(id); if (ref.isNotBlank()) Engine.endPreview(ref); msg(true, tr("Klaar", "Done")) }
+                        else {
+                            // Schuifwaarden meteen gebruiken; de pagina slaat ze daarna ook gewoon op
+                            Store.lampsSnapshot().firstOrNull { it.id == id }?.let { l ->
+                                if (j.has("balWarm")) l.balWarm = j.optDouble("balWarm", l.balWarm).coerceIn(-1.0, 1.0)
+                                if (j.has("balTint")) l.balTint = j.optDouble("balTint", l.balTint).coerceIn(-1.0, 1.0)
+                            }
+                            val c = j.optJSONArray("colour")
+                            val col = intArrayOf(c?.optInt(0, 0) ?: 0, c?.optInt(1, 0) ?: 0, c?.optInt(2, 700) ?: 700)
+                            Engine.previewMatch(id, ref.ifBlank { id }, intArrayOf(((col[0] % 360) + 360) % 360, col[1].coerceIn(0, 1000), col[2].coerceIn(10, 1000)))
+                            msg(true, "")
+                        }
                     }
                     path == "/api/lamp/revive" && method == "POST" -> msg(true, Engine.revive(JSONObject(req).getString("id")))
                     path == "/api/demo" && method == "POST" -> { Engine.demo(JSONObject(req).optString("k")); msg(true, "") }
@@ -262,9 +289,46 @@ class WebServer(private val ctx: Context) {
                         if (sc == null) { SceneEngine.stop(); msg(true, tr("Scène gestopt", "Scene stopped")) }
                         else { SceneEngine.start(sc); msg(true, tr("Scène: ", "Scene: ") + sc.name) }
                     }
+                    path == "/api/live" && method == "POST" -> {
+                        // Kaart op de telefoon: lamp aan/uit, kleur (#rrggbb), helderheid (0..1) en effect
+                        val j = JSONObject(req); val id = j.optString("id").ifBlank { null }
+                        if (id != null && Store.lampsSnapshot().none { it.id == id }) msg(false, tr("Lamp niet gevonden", "Lamp not found"))
+                        else {
+                            val colour = j.optString("colour").takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) }?.let {
+                                val hsv = FloatArray(3); android.graphics.Color.colorToHSV(android.graphics.Color.parseColor(it), hsv)
+                                intArrayOf(hsv[0].roundToInt() % 360, (hsv[1] * 1000).roundToInt(), 1000)
+                            }
+                            SceneEngine.liveSet(id, if (j.has("on")) j.optBoolean("on") else null, colour,
+                                if (j.has("bright")) j.optDouble("bright", 1.0).coerceIn(0.01, 1.0) else null,
+                                j.optString("effect").ifBlank { null })
+                            msg(true, "")
+                        }
+                    }
                     path == "/api/scene/save" && method == "POST" -> {
                         val sc = SceneEngine.saveCurrent(JSONObject(req).optString("name").trim())
                         msg(true, tr("Opgeslagen als scène: ", "Saved as scene: ") + sc.name)
+                    }
+                    path == "/api/hue/scenes" && method == "GET" -> {
+                        // Scènes uit de Hue-app, om te kiezen welke de app overneemt
+                        try {
+                            val have = Store.customScenes.map { it.id }.toSet()
+                            val list = JSONArray()
+                            for (h in Hue.scenes().sortedWith(compareBy({ it.room.lowercase() }, { it.name.lowercase() }))) {
+                                if (h.perLamp.isEmpty() && h.palette.isEmpty()) continue
+                                list.put(JSONObject().put("id", h.id).put("name", h.name).put("room", h.room).put("lamps", h.perLamp.size)
+                                    .put("imported", SceneEngine.hueId(h.id) in have)
+                                    .put("preview", JSONArray().apply { Scene.swatches(h.perLamp.values + h.palette).take(6).forEach { put("#%06x".format(it and 0xffffff)) } }))
+                            }
+                            json(JSONObject().put("ok", true).put("scenes", list))
+                        } catch (e: Exception) { msg(false, tr("Scènes ophalen mislukt: ", "Fetching scenes failed: ") + e.message) }
+                    }
+                    path == "/api/hue/scenes/import" && method == "POST" -> {
+                        val a = JSONObject(req).optJSONArray("ids") ?: JSONArray()
+                        val ids = (0 until a.length()).map { a.getString(it) }.toSet()
+                        try {
+                            val n = SceneEngine.importHue(ids)
+                            msg(true, tr("$n scène(s) uit Hue overgenomen", "$n scene(s) imported from Hue"))
+                        } catch (e: Exception) { msg(false, tr("Importeren mislukt: ", "Import failed: ") + e.message) }
                     }
                     path == "/api/scene/delete" && method == "POST" -> {
                         val id = JSONObject(req).optString("id")
@@ -347,6 +411,13 @@ class WebServer(private val ctx: Context) {
             put("sun", AutoDark.info())
             put("scenes", JSONArray().apply { SceneEngine.all().forEach { put(it.toJson()) } })
             put("activeScene", SceneEngine.active?.id ?: "")
+            put("activeName", SceneEngine.active?.name ?: "")
+            SceneEngine.liveLamps()?.let { m ->
+                put("liveLamps", JSONObject().apply { m.forEach { (k, p) ->
+                    put(k, JSONObject().put("colour", "#%06x".format(android.graphics.Color.HSVToColor(floatArrayOf(p.first[0].toFloat(), p.first[1] / 1000f, 1f)) and 0xffffff))
+                        .put("bright", p.first[2] / 1000.0).put("effect", p.second ?: "none"))
+                } })
+            }
             put("update", JSONObject().put("current", Updater.current(ctx)).put("latest", Updater.latest ?: "")
                 .put("available", Updater.available(ctx)).put("status", Updater.status).put("notes", Updater.notes))
             put("hidden", JSONArray().apply { Store.hidden.forEach { (k, n) -> put(JSONObject().put("id", k).put("name", n)) } })
@@ -397,6 +468,8 @@ class WebServer(private val ctx: Context) {
                     if (j.has("maxBright")) l.maxBright = j.optDouble("maxBright", l.maxBright).coerceIn(0.1, 1.0)
                     if (j.has("lowHue")) l.lowHue = ((j.optDouble("lowHue", l.lowHue) % 360) + 360) % 360
                     if (j.has("lowStrength")) l.lowStrength = j.optDouble("lowStrength", l.lowStrength).coerceIn(0.0, 0.8)
+                    if (j.has("balWarm")) l.balWarm = j.optDouble("balWarm", l.balWarm).coerceIn(-1.0, 1.0)
+                    if (j.has("balTint")) l.balTint = j.optDouble("balTint", l.balTint).coerceIn(-1.0, 1.0)
                     if (j.has("group")) l.group = j.optString("group")
                     l.enabled = j.optBoolean("enabled", l.enabled)
                     j.optString("ip").trim().takeIf { it.matches(IPV4) }?.let { l.ip = it }
@@ -467,13 +540,13 @@ class WebServer(private val ctx: Context) {
         val IPV4 = Regex("""\d{1,3}(\.\d{1,3}){3}""")
         /** Groeps-id's komen in de pagina terecht: alleen letters, cijfers, - en _. */
         private val SAFE_ID = Regex("[A-Za-z0-9_-]{1,40}")
-        private val LOOKS = setOf("", "spot", "pendant", "floor", "arc", "table", "globe", "rod")
+        private val LOOKS = setOf("", "spot", "pendant", "floor", "arc", "table", "globe", "rod", "wall", "flush", "lightbar", "strip", "desk", "head", "wallspot")
         private val STATIC = mapOf(
             "/" to "text/html; charset=utf-8", "/index.html" to "text/html; charset=utf-8",
             "/tv.html" to "text/html; charset=utf-8", "/room.js" to "application/javascript; charset=utf-8",
             "/i18n.js" to "application/javascript; charset=utf-8",
             "/calib.html" to "text/html; charset=utf-8",
-            "/ui.css" to "text/css; charset=utf-8"
+            "/ui.css" to "text/css; charset=utf-8", "/pixelify-sans.woff2" to "font/woff2"
         )
 
         fun localIp(): String? {

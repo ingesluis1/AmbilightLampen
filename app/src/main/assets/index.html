@@ -4,8 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Ambilight Lampen</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/ui.css">
 <style>
 body{padding-bottom:84px}
@@ -16,10 +14,42 @@ body{padding-bottom:84px}
 .btn.big{display:block;width:100%;font-size:20px;padding:14px}
 .lrow.sel{background:var(--parch-dk)}
 .ldetail{border:3px solid var(--ink);background:var(--cream);padding:10px;margin:2px 0 10px}
+#roomFull{touch-action:manipulation;position:fixed;inset:0;z-index:60;background:var(--void);display:flex;flex-direction:column;padding:10px 10px calc(10px + env(safe-area-inset-bottom))}
+#roomFull .bar{display:flex;gap:6px;align-items:center}
+#roomFull .bar b{flex:1;color:var(--cream);font-size:17px}
+#roomFull .fhint{color:var(--cream);opacity:.75;font-size:13px;margin-top:6px}
+#fullMapSlot{flex:1;min-height:0;display:flex;overflow:auto;margin-top:8px}
+#fullMapSlot>.mapwrap{margin:auto;flex-shrink:0}
+#roomFull canvas{touch-action:pan-x pan-y;-webkit-touch-callout:none;user-select:none;-webkit-user-select:none}
+.zoomrow{display:flex;justify-content:center;gap:8px;margin-top:6px}
+.zoomrow .btn{min-width:64px;font-size:18px;padding:4px 12px}
+/* Kamer ingezoomd: de kaart past niet meer en wordt verschuifbaar (met twee vingers of de schuifbalken) */
+#roomMapSlot.zoomed{display:flex;overflow:auto;max-height:72vh}
+#roomMapSlot.zoomed>.mapwrap{margin:auto;flex-shrink:0}
+#lampSheet{background:var(--parch);border:4px solid var(--ink);padding:10px;margin-top:8px}
+.swatches{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.swatches button{width:34px;height:34px;border:3px solid var(--ink);padding:0;cursor:pointer}
+.swatches button.on{box-shadow:0 0 0 3px var(--gold)}
+.swatches input[type=color]{width:34px;height:34px;padding:0;border:3px solid var(--ink);background:var(--cream)}
+.lrow .btn.x{padding:6px 10px}
+.sect{margin-top:16px;font-size:15px;font-weight:700;border-bottom:2px dashed var(--parch-dk);padding-bottom:2px}
+textarea{font:inherit;font-size:14px;background:var(--cream);color:var(--text);border:3px solid var(--ink);padding:7px 9px;width:100%;border-radius:0}
+a.btn{display:inline-block;text-decoration:none}
+label.btn{display:inline-block}
+.acc{border:3px solid var(--ink);margin-top:6px;background:var(--cream)}
+.acc .acch{display:flex;width:100%;align-items:center;gap:8px;text-align:left;border:0;padding:9px 10px}
+.acc .acch::before{content:'\25B8';flex-shrink:0}
+.acc .acch.open::before{content:'\25BE'}
+.acc .acch.open{background:var(--gold)}
+.acc .acch .st{margin-left:auto;font-size:12px;font-weight:400;opacity:.8;text-align:right}
+.accb{padding:8px 10px 10px}
+.lrow .name .chev{display:inline-block;width:1em}
+.btn.up::before{content:'\25B4\00a0'}
 .gcard{border:3px solid var(--ink);background:var(--parch-dk);padding:8px;margin-bottom:8px}
 .gcard .gl{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
 .gcard .gl .btn{padding:6px 9px;font-size:14px}
-.lrow .name{cursor:pointer;text-decoration:underline dotted}
+.gcard .gset:not(:empty){border-top:3px solid var(--ink);margin-top:10px;padding-top:2px}
+.lrow .name{cursor:pointer}
 header{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--wood);border-bottom:4px solid var(--ink);box-shadow:inset 0 -3px 0 var(--wood-dk),inset 0 3px 0 var(--wood-lt)}
 header h1{font-size:20px;margin:0;flex:1;color:var(--cream);text-shadow:2px 2px 0 var(--ink)}
 #saved{font-size:13px;color:var(--cream);opacity:.85}
@@ -30,17 +60,21 @@ main{max-width:640px;margin:0 auto;padding:0 12px}
 .mapwrap{background:#1d1124;padding:6px;border:4px solid var(--ink);box-shadow:inset 0 0 0 3px #3b2240;display:flex;justify-content:center;overflow:hidden;min-width:0}
 #map{display:block;touch-action:none;image-rendering:pixelated;max-width:100%;height:auto!important}
 .sizes{display:flex;justify-content:space-between;gap:10px;margin-top:10px}
+#roomSize .btn{padding:3px 11px;font-size:18px}
+.sizeRow{display:flex;flex-wrap:wrap;justify-content:space-between;gap:6px;margin-top:3px}
+.sizeRow .sg{display:flex;align-items:center;gap:4px}
+.sideLbl{font-size:14px;margin-right:2px}
 .sizes .row .btn{padding:4px 14px;font-size:18px}
-.palette{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 8px}
+.palette{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:6px 0 8px}
 .palette .btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 1px;font-size:11px}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 10px}
 .chip{display:flex;align-items:center;gap:6px;padding:5px 10px;font-size:14px}
 .chip.sel{background:var(--gold);}
 .dot{width:12px;height:12px;background:#555;border:2px solid var(--ink)}
-.seg{display:flex;gap:4px}
+.seg{display:flex;gap:4px;flex-wrap:wrap}
 .looks{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:3px}
 .looks .btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 2px;font-size:11px}
-.seg .btn{flex:1;padding:7px 4px}
+.seg .btn{flex:1 1 auto;min-width:0;padding:7px 4px}
 label.s{display:block;margin:12px 0 2px;font-size:15px}
 label.s span{float:right;opacity:.8}
 .hint{font-size:13px;opacity:.8;margin-top:8px}
@@ -49,6 +83,10 @@ label.s span{float:right;opacity:.8}
 .scard.on{background:var(--gold)}
 .scard .sw{display:flex;gap:2px;margin-top:5px;height:10px}
 .scard .sw i{flex:1;border:2px solid var(--ink)}
+.hsc{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:15px}
+.hsc input{flex-shrink:0;margin:0}
+.hsc .sw{display:flex;gap:2px;width:72px;height:12px;margin-left:auto;flex-shrink:0}
+.hsc .sw i{flex:1;border:2px solid var(--ink)}
 .scard .x{position:absolute;top:2px;right:4px;font-size:12px;opacity:.7}
 .lrow{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:2px dashed var(--parch-dk)}
 .lrow:last-child{border-bottom:0}
@@ -78,6 +116,7 @@ label.s span{float:right;opacity:.8}
 
 <section class="panel" id="homeMapPanel">
   <div id="homeMapSlot"></div>
+  <button class="btn" id="fullOpen" style="margin-top:8px;width:100%">Lampen bedienen op de kaart</button>
 </section>
 
 <section class="panel">
@@ -93,6 +132,11 @@ label.s span{float:right;opacity:.8}
   <div class="sgrid" id="sgrid"></div>
   <div class="row" style="margin-top:10px"><button class="btn" id="sceneStop">Scène stoppen</button></div>
   <div class="row" style="margin-top:8px"><input type="text" id="sceneName" class="grow" placeholder="Naam voor je eigen scène"><button class="btn" id="sceneSave">Huidige kleuren opslaan</button></div>
+  <div id="hueScenesBox" class="hidden" style="margin-top:12px">
+    <div class="row"><button class="btn" id="hueScenesLoad">Scènes uit Hue ophalen</button></div>
+    <div id="hueScenesList"></div>
+    <div class="row hidden" id="hueScenesGo" style="margin-top:8px"><button class="btn gold" id="hueScenesImport">Gekozen scènes overnemen</button></div>
+  </div>
 </section>
 </div>
 
@@ -103,13 +147,18 @@ label.s span{float:right;opacity:.8}
   <p id="toolHelp"></p>
   <div class="tools" id="tools"></div>
   <div id="roomMapSlot"><div class="mapwrap" id="mapwrap"><canvas id="map"></canvas></div></div>
+  <div class="zoomrow"><button class="btn" id="roomZoomOut" aria-label="Uitzoomen">&#128269;&minus;</button><button class="btn" id="roomZoomIn" aria-label="Inzoomen">&#128269;+</button></div>
+  <div class="hint" id="roomZoomHint" style="text-align:center;margin-top:2px">Ingezoomd verschuif je de kamer met twee vingers.</div>
 
   <div id="panelFloor" style="margin-top:12px">
     <div class="palette" id="floors" style="grid-template-columns:repeat(4,1fr)"></div>
     <div class="row"><span class="grow">Kies een vloer en veeg over de vakjes.</span><button class="btn" id="fillAll">Hele kamer</button><button class="btn" id="sizeBtn">Kamermaat</button></div>
-  <div class="sizes hidden" id="roomSize">
-    <div>Breedte <b id="wv"></b> m<div class="row"><button class="btn" data-size="w,-1">-</button><button class="btn" data-size="w,1">+</button></div></div>
-    <div style="text-align:right">Diepte <b id="hv"></b> m<div class="row" style="justify-content:flex-end"><button class="btn" data-size="h,-1">-</button><button class="btn" data-size="h,1">+</button></div></div>
+  <div class="hidden" id="roomSize" style="margin-top:10px">
+    <div>Breedte <b id="wv"></b> m</div>
+    <div class="sizeRow"><div class="sg"><span class="sideLbl">Links</span><button class="btn" data-size="w,-1,start">-</button><button class="btn" data-size="w,1,start">+</button></div><div class="sg"><span class="sideLbl">Rechts</span><button class="btn" data-size="w,-1">-</button><button class="btn" data-size="w,1">+</button></div></div>
+    <div style="margin-top:8px">Diepte <b id="hv"></b> m</div>
+    <div class="sizeRow"><div class="sg"><span class="sideLbl">Achterkant</span><button class="btn" data-size="h,-1,start">-</button><button class="btn" data-size="h,1,start">+</button></div><div class="sg"><span class="sideLbl">Voorkant</span><button class="btn" data-size="h,-1">-</button><button class="btn" data-size="h,1">+</button></div></div>
+    <div class="hint">Links of achter iets aanpassen schuift je meubels, tv en lampen mee, zodat alles op zijn plek blijft.</div>
   </div>
   </div>
   <div id="panelTv" class="hidden" style="margin-top:12px">
@@ -128,10 +177,29 @@ label.s span{float:right;opacity:.8}
     <div class="hint">Kies een meubel en tik op de kaart. Tik op een meubel om het te kiezen, sleep om te verschuiven.</div>
   </div>
   <div id="panelLamp" class="hidden" style="margin-top:12px">
+    <div class="seg" id="modeSeg" style="margin-bottom:8px"><button class="btn" data-m="lamp">Lamp</button><button class="btn" data-m="fx">Armatuur</button></div>
+    <div id="lampMode">
     <div class="chips" id="chips"></div>
     <div class="row hidden" id="roomLampRow" style="margin-bottom:6px"><b class="grow" id="roomLampName"></b><button class="btn" id="roomLampSettings">Instellingen van deze lamp</button></div>
-    <div class="hidden" id="roomLookBox" style="margin-bottom:8px"><div style="font-size:14px">Soort lamp</div><div class="looks" id="lookGrid"></div></div>
+    <div class="row hidden" id="roomFxNote" style="margin-bottom:6px"><span class="grow" id="roomFxText" style="font-size:14px"></span><button class="btn" id="roomFxEdit">Armatuur bewerken</button></div>
+    <div class="hidden" id="roomLookBox" style="margin-bottom:8px"><div style="font-size:14px">Soort lamp</div><div class="looks" id="lookGrid"></div>
+      <div class="row hidden" id="stripBox" style="margin-top:6px"><span class="grow">Lengte <b id="stripLen"></b> m</span><button class="btn" data-strip="-0.25">-</button><button class="btn" data-strip="0.25">+</button><button class="btn" id="stripRot"></button></div>
+      <div class="hidden" id="aimBox" style="margin-top:6px"><div class="row"><span class="grow">Richting</span><button class="btn" id="aimBtn"></button><button class="btn hidden" id="tiltBtn"></button></div><div class="hint">Telt mee voor de kleur: de lamp volgt het stuk beeld waar zijn licht naartoe valt.</div></div></div>
     <div class="hint">Kies een lamp en tik op de kaart om hem op te hangen. Sleep om te verschuiven.</div>
+    </div>
+    <div id="fxMode" class="hidden">
+      <div class="chips" id="fxChips"></div>
+      <div id="fxTypes" class="looks hidden" style="grid-template-columns:repeat(3,1fr);margin-top:6px"></div>
+      <div id="fxEdit" class="hidden" style="margin-top:8px">
+        <div class="row"><b class="grow" id="fxName"></b><button class="btn" id="fxAim"></button><button class="btn" id="fxRot"></button></div>
+        <div style="font-size:14px;margin-top:8px">Lampen in dit armatuur</div>
+        <div id="fxLamps" style="display:flex;flex-wrap:wrap;gap:5px;margin-top:3px"></div>
+        <div class="hint" id="fxAimHint">Spots wijzen telt mee voor de kleur: elke spot volgt het stuk beeld waar zijn licht naartoe valt. Eén spot een andere kant op? Kies hem onder Lamp en druk op Richting.</div>
+        <div class="row" style="margin-top:8px"><span class="grow">Tussenafstand <b id="fxGap"></b> m</span><button class="btn" data-gap="-0.1">-</button><button class="btn" data-gap="0.1">+</button></div>
+        <div class="row" style="margin-top:10px;flex-wrap:wrap"><button class="btn gold" id="fxDone">Klaar</button><button class="btn" id="fxUndo">Terugdraaien</button><span class="grow"></span><button class="btn red" id="fxDel">Armatuur verwijderen</button></div>
+      </div>
+      <div class="hint">Tik op de kaart op een lamp om hem in het armatuur te zetten, of op een lege plek om het armatuur daarheen te verplaatsen. Sleep om te verschuiven. Draai draait telkens 45 graden.</div>
+    </div>
   </div>
 </section>
 </div>
@@ -141,16 +209,13 @@ label.s span{float:right;opacity:.8}
 <section class="panel">
   <h2>Je lampen</h2>
   <p class="hint" style="margin:0 0 8px">Tik op de naam van een lamp om hem in te stellen.</p>
-  <p>Knipper laat een lamp aan en uit gaan zodat je hem vindt. Test laat hem rood, groen, blauw en wit zien en zet hem daarna terug. Met het kleurvakje kies je zelf een kleur.</p>
+  <p>Knipper laat een lamp aan en uit gaan zodat je hem vindt. Aan en Uit zetten hem aan of uit. Met het kleurvakje kies je zelf een kleur. Het kruisje haalt een lamp weg; je zet hem terug onder Lampen toevoegen.</p>
   <div id="lampList"></div>
   <div id="lampDetailHold"><div class="ldetail hidden" id="lampDetailPanel">
-  <div class="row" style="margin-bottom:8px"><b id="lampDetailTitle" class="grow" style="font-size:17px"></b><button class="btn" id="lampClose">Sluiten</button></div>
+  <div class="row" style="margin-bottom:8px"><b id="lampDetailTitle" class="grow" style="font-size:17px"></b><button class="btn up" id="lampClose">Sluiten</button></div>
     <div id="lampDetail">
       <div class="row"><input type="text" id="lampName" class="grow" placeholder="Naam"><button class="btn" id="blinkBtn">Knipper</button></div>
       <div class="row" id="reviveRow" style="margin-top:6px"><span class="grow" style="font-size:14px">Reageert deze lamp niet?</span><button class="btn gold" id="reviveBtn">Opnieuw verbinden</button></div>
-      <div class="seg" id="heightSeg" style="margin-top:6px">
-        <button class="btn" data-h="ceiling">Plafond</button><button class="btn" data-h="sill">Vensterbank</button><button class="btn" data-h="table">Tafel</button><button class="btn" data-h="floor">Vloer</button>
-      </div>
       <div style="margin-top:8px;font-size:14px">Volgt</div>
       <div class="seg" id="followSeg" style="margin-top:3px">
         <button class="btn" data-f="auto">Automatisch</button><button class="btn" data-f="top">Bovenrand</button><button class="btn" data-f="side">Hele zijkant</button><button class="btn" data-f="all">Hele beeld</button>
@@ -168,26 +233,38 @@ label.s span{float:right;opacity:.8}
       <div class="seg" id="briSeg" style="margin-top:3px">
         <button class="btn" data-k="0.25">25%</button><button class="btn" data-k="0.5">50%</button><button class="btn" data-k="0.75">75%</button><button class="btn" data-k="1">100%</button>
       </div>
-      <div style="margin-top:8px;font-size:14px">Kalibreren</div>
-      <div class="row" style="margin-top:3px"><button class="btn" id="calibBtn">Hoogte</button><button class="btn" id="lowBtn">Kleur bij weinig licht</button></div>
-      <div id="calibState" style="font-size:14px;margin-top:4px"></div>
-      <div id="lowState" style="font-size:14px;margin-top:2px"></div>
-      <div id="calibPick" class="hidden" style="margin-top:6px">
-          <p class="hint" style="margin:0 0 6px">De tv toont nu gekleurde banden. Tik de kleur die op dezelfde hoogte staat als deze lamp. De lamp neemt die kleur dan over, zo zie je meteen of het klopt.</p>
+      <div class="sect">Kalibreren</div>
+      <div class="acc"><button class="btn acch" id="calibBtn"><span class="ttl">Hoogte</span><span class="st" id="calibState"></span></button>
+      <div id="calibPick" class="hidden accb">
+          <p class="hint" style="margin:0 0 6px">De tv toont nu gekleurde banden. Tik de kleur die op dezelfde hoogte staat als deze lamp. De lamp neemt die kleur dan over, zo zie je meteen of het klopt. Hangt de lamp aan het plafond, kies dan Plafond.</p>
           <div id="calibBands" style="display:flex;flex-direction:column;gap:3px"></div>
           <button class="btn gold" id="calibDone" style="margin-top:6px">Klaar</button>
-        </div>
-      <div id="lowPick" class="hidden" style="margin-top:6px">
+        </div></div>
+      <div class="acc"><button class="btn acch" id="lowBtn"><span class="ttl">Kleur bij weinig licht</span><span class="st" id="lowState"></span></button>
+      <div id="lowPick" class="hidden accb">
         <p class="hint" style="margin:0 0 6px">Bij Wit wisselt de lamp steeds tussen zijn eigen witte licht en kleurlicht. Schuif de tegenkleur en de sterkte tot je bij het wisselen geen verschil in tint meer ziet. Is het kleurlicht roze, schuif dan naar cyaan of groen. Bij Donkerblauw laat de tv dezelfde kleur zien om mee te vergelijken. De correctie werkt alleen als de lamp zacht brandt.</p>
-        <div class="seg" id="lowBase"><button class="btn" data-b="white">Wit</button><button class="btn" data-b="blue">Donkerblauw</button></div>
+        <label class="s">Tegelijk instellen</label>
+        <div class="gl" id="lowMulti" style="display:flex;flex-wrap:wrap;gap:5px"></div>
+        <div class="hint" style="margin-top:4px">Aangezette lampen tonen hetzelfde testlicht en krijgen dezelfde correctie zodra je schuift. Lampen uit dezelfde groep staan al aan.</div>
+        <div class="seg" id="lowBase" style="margin-top:8px"><button class="btn" data-b="white">Wit</button><button class="btn" data-b="blue">Donkerblauw</button></div>
         <label class="s">Helderheid voor de test <span id="v_lowLevel"></span></label><input type="range" id="lowLevel" min="0.01" max="0.3" step="0.01" value="0.05">
         <label class="s">Tegenkleur</label><input type="range" id="lowHue" min="0" max="359" step="1" style="height:18px;background:linear-gradient(90deg,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)">
         <label class="s">Sterkte <span id="v_lowStrength"></span></label><input type="range" id="lowStrength" min="0" max="0.6" step="0.01">
         <div class="row" style="margin-top:6px"><button class="btn gold" id="lowDone">Klaar</button><button class="btn" id="lowReset">Geen correctie</button></div>
-      </div>
+      </div></div>
+      <div class="acc"><button class="btn acch" id="matchBtn"><span class="ttl">Kleur gelijk aan andere lamp</span><span class="st" id="matchState"></span></button>
+      <div id="matchPick" class="hidden accb">
+        <p class="hint" style="margin:0 0 6px">Kies een lamp om mee te vergelijken. Beide lampen tonen dezelfde testkleur. Schuif tot deze lamp dezelfde kleur geeft als de andere. Begin met Wit, kijk daarna bij de andere kleuren of het ook klopt.</p>
+        <label class="s">Vergelijken met</label><select id="matchRef"></select>
+        <div class="seg" id="matchCol" style="margin-top:8px;flex-wrap:wrap"><button class="btn" data-c="0,0,700">Wit</button><button class="btn" data-c="30,550,700">Warm wit</button><button class="btn" data-c="25,950,700">Oranje</button><button class="btn" data-c="330,650,700">Roze</button><button class="btn" data-c="205,850,700">Blauw</button></div>
+        <label class="s">Koeler of warmer <span id="v_balWarm"></span></label><input type="range" id="balWarm" min="-1" max="1" step="0.02">
+        <label class="s">Groener of rozer <span id="v_balTint"></span></label><input type="range" id="balTint" min="-1" max="1" step="0.02">
+        <div class="row" style="margin-top:6px"><button class="btn gold" id="matchDone">Klaar</button><button class="btn" id="matchReset">Geen kleurbalans</button></div>
+      </div></div>
       <div class="row" style="margin-top:8px"><span class="grow" id="follows"></span><button class="btn" id="unplaceBtn">Van kaart</button></div>
       <div class="row" style="margin-top:8px"><label class="grow"><input type="checkbox" id="lampEnabled"> Doet mee met sync</label><span id="lampIp" style="font-size:13px"></span></div>
       <div class="row" style="margin-top:6px"><span>Ip-adres</span><input type="text" id="lampIpEdit" class="grow" placeholder="wordt vanzelf gevonden" inputmode="decimal"></div>
+      <div class="row" style="margin-top:10px;justify-content:flex-end"><button class="btn up" id="lampClose2">Lamp sluiten</button></div>
     </div>
 </div></div>
   <button class="btn" id="testAll" style="margin-top:8px">Alle lampen na elkaar testen</button>
@@ -264,10 +341,12 @@ label.s span{float:right;opacity:.8}
 <div class="page hidden" id="page-settings">
 <section class="panel">
   <h2>Instellingen</h2>
-  <p style="margin:0 0 8px">Kies voor welke lampen je instelt: alle lampen, of een groep. Groepen maak je onder Lampen.</p>
+  <p style="margin:0 0 8px">Hoe de lampen het beeld volgen. Kies voor welke lampen je instelt: alle lampen, of een groep. Groepen maak je onder Lampen.</p>
   <div class="row"><span>Voor</span><select id="setTarget" class="grow"></select></div>
   <div class="hint" id="grpHint"></div>
+  <div id="setHome"><div id="setBody">
   <div class="hint">Verander je iets, dan laat de tv een testbeeld zien waarop je ziet wat het met je lampen doet.</div>
+  <div class="sect">Kleur en licht</div>
   <label class="s">Reactiesnelheid <span id="v_smooth"></span></label><input type="range" id="smooth" min="0.08" max="1" step="0.01">
   <label class="s">Kleurintensiteit <span id="v_saturation"></span></label><input type="range" id="saturation" min="0.8" max="2.6" step="0.05">
   <label class="s">Helderheid <span id="v_brightness"></span></label><input type="range" id="brightness" min="0.5" max="2.6" step="0.05">
@@ -275,50 +354,65 @@ label.s span{float:right;opacity:.8}
   <label class="s">Blikveld van de lampen <span id="v_spread"></span></label><input type="range" id="spread" min="0.4" max="2.5" step="0.05">
   <div class="hint">Smal: elke lamp volgt zijn eigen stukje rand van het beeld. Breed: lampen nemen meer van het hele beeld mee, rustiger en meer één kleur.</div>
   <label class="s">Kleur bij donker beeld</label>
-  <select id="darkColor"><option value="half">Gemiddelde van de schermhelft aan de kant van de lamp</option><option value="lamp">Kleur van de dichtstbijzijnde lamp</option></select>
+  <select id="darkColor"><option value="half">Schermhelft aan de kant van de lamp</option><option value="lamp">Dichtstbijzijnde lamp</option></select>
+  <div class="sect">Overgangen</div>
   <label class="s"><input type="checkbox" id="fade"> Vloeiende overgangen</label>
-  <label class="s"><input type="checkbox" id="cuts"> Scènewissels direct (uit = alles vloeit)</label>
-  <label class="s"><input type="checkbox" id="whiteLeds"> Witte leds gebruiken voor witte, gele en donkere tinten (beter wit en geel, minder roze; kan bij wisselen kort knipperen)</label>
+  <label class="s"><input type="checkbox" id="cuts"> Scènewissels direct</label>
+  <div class="hint">Uit: ook bij een nieuwe scène in de film vloeit de kleur langzaam over.</div>
+  <div class="sect">Witte leds</div>
+  <label class="s"><input type="checkbox" id="whiteLeds"> Witte leds gebruiken</label>
+  <div class="hint">Voor witte, gele en donkere tinten: beter wit en geel, minder roze. Kan bij wisselen kort knipperen.</div>
   <label class="s">Helderheid witte leds <span id="v_whiteLevel"></span></label><input type="range" id="whiteLevel" min="0.1" max="1" step="0.05">
-  <div id="globalOnly">
-  <label class="s">Na stoppen</label>
-  <select id="after"><option value="restore">Terug naar hoe ze stonden</option><option value="white">Warm wit</option><option value="off">Uit</option></select>
-  <label class="s"><input type="checkbox" id="followAmbi"> Lampen terug als de tv uit staat (20 seconden zwart beeld)</label>
-  <label class="s"><input type="checkbox" id="fixBars"> Zwarte balken opvangen (films in breedbeeld): lampen bij de lege rand nemen de kleur van de randen ernaast over</label>
-  <label class="s"><input type="checkbox" id="pauseHome"> Pauzeren op het startscherm (ook bij schermbeveiliging en tv-instellingen); verder zodra je een app opent</label>
-  <div class="hint hidden" id="pauseHomeHint">Hiervoor heeft de app "Gebruikstoegang" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.</div>
+  </div></div>
+</section>
+
+<section class="panel" id="globalOnly">
+  <h2>Starten en stoppen</h2>
+  <p style="margin:0 0 8px">Geldt altijd voor alle lampen.</p>
   <label class="s"><input type="checkbox" id="autostart"> Automatisch starten als de tv aangaat</label>
-  <label class="s"><input type="checkbox" id="autoDark"> Alleen automatisch syncen na zonsondergang (overdag zet je hem zelf aan)</label>
+  <label class="s"><input type="checkbox" id="autoDark"> Alleen na zonsondergang automatisch starten</label>
+  <div class="hint">Overdag zet je de sync zelf aan.</div>
   <div id="autoDarkBox" class="hidden">
     <label class="s">Starten <span id="v_darkOffset"></span></label><input type="range" id="darkOffset" min="-120" max="60" step="15">
     <div class="hint" id="sunInfo"></div>
-    <div class="row" style="margin-top:6px"><span>Plek</span><input type="text" id="lat" inputmode="decimal" class="grow" placeholder="52.1"><input type="text" id="lon" inputmode="decimal" class="grow" placeholder="5.3"></div>
-    <div class="hint">Breedte- en lengtegraad voor de zonsondergang, standaard het midden van Nederland. Een paar tientallen kilometer verschil scheelt maar een paar minuten.</div>
+    <div class="row" style="margin-top:6px;align-items:flex-end"><label class="grow" style="font-size:14px">Breedtegraad<input type="text" id="lat" inputmode="decimal" placeholder="52.1"></label><label class="grow" style="font-size:14px">Lengtegraad<input type="text" id="lon" inputmode="decimal" placeholder="5.3"></label></div>
+    <div class="hint">Voor de tijd van de zonsondergang, standaard het midden van Nederland. Een paar tientallen kilometer verschil scheelt maar een paar minuten.</div>
   </div>
-  <label class="s">Taal</label>
-  <select id="lang"><option value="nl">Nederlands</option><option value="en">English</option></select>
-  </div>
+  <label class="s"><input type="checkbox" id="pauseHome"> Pauzeren op het startscherm</label>
+  <div class="hint">Ook bij schermbeveiliging en tv-instellingen; verder zodra je een app opent.</div>
+  <div class="hint hidden" id="pauseHomeHint">Hiervoor heeft de app "Gebruikstoegang" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.</div>
+  <label class="s"><input type="checkbox" id="followAmbi"> Lampen terug als de tv uit staat</label>
+  <div class="hint">Na 20 seconden zwart beeld.</div>
+  <label class="s"><input type="checkbox" id="fixBars"> Zwarte balken opvangen</label>
+  <div class="hint">Films in breedbeeld: lampen bij de lege rand nemen de kleur van de randen ernaast over.</div>
+  <label class="s">Na stoppen</label>
+  <select id="after"><option value="restore">Terug naar hoe ze stonden</option><option value="white">Warm wit</option><option value="off">Uit</option></select>
 </section>
 
 <section class="panel">
   <h2>Bewaren en terugzetten</h2>
   <p style="margin:0 0 8px">Bewaar je kamer, lampen, groepen, kalibraties, scènes en instellingen in een bestand, bijvoorbeeld voor het opnieuw installeren van de app.</p>
-  <label class="s"><input type="checkbox" id="bkKeys"> Met sleutels (lampen, Tuya, Hue, tv-koppeling). Bewaar het bestand dan goed: wie het heeft, kan je lampen bedienen.</label>
+  <label class="s"><input type="checkbox" id="bkKeys"> Met sleutels</label>
+  <div class="hint">Lampen, Tuya, Hue en tv-koppeling. Bewaar het bestand dan goed: wie het heeft, kan je lampen bedienen.</div>
   <div class="row" style="margin-top:6px"><a class="btn" id="bkDown" href="/api/backup" download>Bestand downloaden</a></div>
   <p style="margin:10px 0 6px">Terugzetten uit een bestand. Sleutels die niet in het bestand staan, blijven zoals ze nu zijn.</p>
-  <input type="file" id="bkFile" accept=".json,application/json">
+  <label class="btn" for="bkFile">Bestand kiezen</label><input type="file" id="bkFile" accept=".json,application/json" class="hidden">
 </section>
 
 <section class="panel">
   <h2>App</h2>
   <div class="row"><span class="grow" id="appVersion"></span><button class="btn" id="updCheck">Zoeken naar updates</button></div>
-  <label class="s"><input type="checkbox" id="reports"> Fouten naar de maker sturen (crashes en probleemmeldingen; zonder sleutels, wachtwoorden of ip-adressen)</label>
+  <label class="s">Taal</label>
+  <select id="lang"><option value="nl">Nederlands</option><option value="en">English</option></select>
+  <div class="sect">Problemen</div>
+  <label class="s"><input type="checkbox" id="reports"> Fouten naar de maker sturen</label>
+  <div class="hint">Crashes en probleemmeldingen, zonder sleutels, wachtwoorden of ip-adressen.</div>
   <p style="margin:10px 0 6px">Gaat er iets mis? Schrijf kort wat er gebeurde en stuur het op. De stand van de app gaat mee.</p>
-  <textarea id="reportNote" rows="3" style="width:100%" placeholder="Wat ging er mis? (mag leeg)"></textarea>
+  <textarea id="reportNote" rows="3" placeholder="Wat ging er mis? (mag leeg)"></textarea>
   <button class="btn" id="reportBtn" style="margin-top:6px">Probleem melden</button>
   <div class="hidden" id="reportOut" style="margin-top:8px">
     <p style="margin:0 0 6px">Kopieer deze tekst en stuur hem naar de maker (bijvoorbeeld via WhatsApp):</p>
-    <textarea id="reportText" rows="8" readonly style="width:100%;font-size:12px"></textarea>
+    <textarea id="reportText" rows="8" readonly style="font-size:12px"></textarea>
     <button class="btn gold" id="reportCopy" style="margin-top:6px">Tekst kopiëren</button>
   </div>
 </section>
@@ -329,6 +423,20 @@ label.s span{float:right;opacity:.8}
 </section>
 </div>
 </main>
+
+<div id="roomFull" class="hidden">
+  <div class="bar"><b>Lampen bedienen</b><button class="btn" id="fullSave">Opslaan als scène</button><button class="btn gold" id="fullClose">Klaar</button></div>
+  <div class="fhint">Tik op een lamp: aan of uit. Houd vast: kleur en effect.</div>
+  <div id="fullMapSlot"></div>
+  <div class="zoomrow"><button class="btn" id="zoomOut" aria-label="Uitzoomen">&#128269;&minus;</button><button class="btn" id="zoomIn" aria-label="Inzoomen">&#128269;+</button></div>
+  <div id="lampSheet" class="hidden">
+    <div class="row"><b class="grow" id="sheetName"></b><button class="btn" id="sheetOff">Uit</button><button class="btn gold" id="sheetDone">Klaar</button></div>
+    <div class="swatches" id="sheetCols"></div>
+    <label class="s">Helderheid <span id="v_sheetBri"></span></label><input type="range" id="sheetBri" min="0.05" max="1" step="0.05">
+    <label class="s">Effect</label>
+    <select id="sheetFx"><option value="none">Vast</option><option value="breathe">Ademen (kleur golft zacht)</option><option value="pulse">Pulseren (helderheid)</option><option value="flicker">Flikkeren (kaars)</option><option value="fire">Haardvuur</option><option value="cycle">Kleurenloop</option><option value="wave">Golf door de kamer</option><option value="twinkle">Twinkelen</option><option value="storm">Onweer</option><option value="party">Feest</option></select>
+  </div>
+</div>
 
 <nav class="tabbar">
   <button class="btn" data-tab="home"><span class="ic">▶</span>Bediening</button>
@@ -348,7 +456,7 @@ let dirty = false, saveTimer = null, baseImg = null, baseKey = '', view = null, 
 const TOOLS = [['floor','Vloer'],['erase','Gum'],['item','Meubels'],['tv','Tv'],['lamp','Lampen']];
 const HELP = {floor:'Leg vloer door over de vakjes te vegen. De muren komen er vanzelf omheen. 1 vakje is 1 meter.',
   erase:'Veeg over vakjes om ze weg te halen, bijvoorbeeld voor een L-vormige kamer.',
-  item:'Zet je meubels neer zodat je de kamer herkent.', tv:'Tik waar de tv staat.', lamp:'Kies een lamp en hang hem op.'};
+  item:'Zet je meubels neer zodat je de kamer herkent.', tv:'Tik waar de tv staat.', lamp:'Hang je lampen op, of maak een armatuur met meerdere lampen (rails, hanglamp-balk, staande lamp met spots).'};
 const INCH = [43,48,50,55,65,75,77,83,85];
 
 // Langere meldingen blijven langer staan (ongeveer 70 ms per teken, 2,5 tot 10 seconden); tikken sluit hem
@@ -367,7 +475,7 @@ function preview(draw, size){
 }
 function spriteThumb(type){
   const def=Room.ITEMS[type], s=Math.max(def.w,def.d), size=18;
-  return preview(g=>{const t=document.createElement('canvas');const w=Math.round(def.w*16),d=Math.round(def.d*16);t.width=w+2;t.height=d+2;
+  return preview(g=>{const t=document.createElement('canvas');const w=Math.round(def.w*16),d=Math.round((def.thumbD||def.d)*16);t.width=w+2;t.height=d+2;
     Room.SPRITES[type](t.getContext('2d'),w,d);const k=Math.min(size/(w+2),size/(d+2));g.imageSmoothingEnabled=false;
     g.drawImage(t,(size-(w+2)*k)/2,(size-(d+2)*k)/2,(w+2)*k,(d+2)*k)},size);
 }
@@ -402,13 +510,14 @@ function paletteState(){
   const it=L&&L.items[selItem];$('itemActions').classList.toggle('hidden',!it);
   if(it){const def=Room.ITEMS[it.type];$('itemName').textContent=t(def.name);
     $('iw').textContent=(it.w||def.w).toFixed(1);$('id_').textContent=(it.d||def.d).toFixed(1);
-    $('itemFlip').classList.toggle('hidden',it.type!=='corner')}
+    $('itemFlip').classList.toggle('hidden',it.type!=='corner');$('itemRot').classList.toggle('hidden',!!def.wall)}
 }
 function setTool(k){
   tool=k;
   document.querySelectorAll('#tools .btn').forEach(b=>b.classList.toggle('on',b.dataset.tool===k));
   $('panelFloor').classList.toggle('hidden',k!=='floor');floorState();
   $('panelTv').classList.toggle('hidden',k!=='tv');$('panelItem').classList.toggle('hidden',k!=='item');$('panelLamp').classList.toggle('hidden',k!=='lamp');
+  if(k==='lamp')fxUI();
   $('toolHelp').textContent=t(HELP[k]);
   if(k!=='item'){selItem=null;newItemType=null}
   if(k!=='lamp')selLamp=null;
@@ -421,23 +530,41 @@ function draw(){
   const key=JSON.stringify(L);
   if(key!==baseKey){baseImg=Room.base(L,lamps);baseKey=key}
   const img=Room.frame(baseImg,L,lamps,live,S&&(S.sync||!!S.activeScene||S.lampsOff),S&&S.sync&&S.top);
-  const maxW=Math.min($('mapwrap').clientWidth,document.documentElement.clientWidth-56)-20;
-  const ro=curTab==='home';
-  view=Room.present($("map"),img,maxW,ro?window.innerHeight*0.42:Math.max(window.innerHeight*0.8,maxW*0.75),true);
+  const ro=curTab==='home'||fullOpen;
+  // Kamer ingezoomd: maat van het vak (niet van de kaart zelf, die groeit mee) maal de zoomstand
+  const rz=curTab==='room'&&!fullOpen?ZOOMS[roomZoom]:1;
+  const baseW=Math.min(rz>1?$('roomMapSlot').clientWidth:$('mapwrap').clientWidth,document.documentElement.clientWidth-56)-20;
+  const maxW=fullOpen?(document.documentElement.clientWidth-44)*ZOOMS[fullZoom]:baseW*rz;
+  const maxH=fullOpen?Math.max(160,$('fullMapSlot').clientHeight-24)*ZOOMS[fullZoom]:ro?window.innerHeight*0.42:Math.max(window.innerHeight*0.8,baseW*0.75)*rz;
+  // Ingezoomd geen afronding op hele pixels, anders wordt de stap naar 1,5x bijna niets
+  view=Room.present($("map"),img,maxW,maxH,!(fullOpen&&fullZoom>0)&&rz===1);
   const g=view.g,k=view.scale;
   const sc=(x,y)=>[(x+1)*k,(y+1)*k];
   g.lineWidth=2;g.setLineDash([6,4]);g.strokeStyle='#ffe08a';
   $('wv').textContent=L.w;$('hv').textContent=L.h;
+  if(fullOpen){g.setLineDash([]);g.font='600 '+Math.max(11,k*.22)+'px "Pixelify Sans",monospace';g.textAlign='center';
+    // Geen namen; alleen een kader om de lamp die je bewerkt en een sterretje bij een lamp met een effect
+    for(const l of lamps){if(l.x<0)continue;const [x,y]=sc(l.x,l.y),fx=S&&S.liveLamps&&S.liveLamps[l.id]&&S.liveLamps[l.id].effect;
+      if(sheet&&sheet.id===l.id){g.strokeStyle='#ffe08a';g.lineWidth=3;g.strokeRect(x-k*.32,y-k*.32,k*.64,k*.64)}
+      if(fx&&fx!=='none'){g.fillStyle='#ffe08a';g.fillText('\u2726',x+k*.34,y-k*.16)}}
+    return}
   if(ro)return;
   if(tool==='item'&&L.items[selItem]){const it=L.items[selItem],def=Room.ITEMS[it.type],rot=((it.dir||90)/90)%2===0;
     const w=(rot?(it.d||def.d):(it.w||def.w))*k,d=(rot?(it.w||def.w):(it.d||def.d))*k,[x,y]=sc(it.x,it.y);g.strokeRect(x-w/2-3,y-d/2-3,w+6,d+6)}
   if(tool==='tv'&&L.tv){const t=L.tv,rot=(t.dir/90)%2===0,w=(rot?.45:t.w+.4)*k,d=(rot?t.w+.4:.45)*k,[x,y]=sc(t.x,t.y);g.strokeRect(x-w/2-3,y-d/2-3,w+6,d+6)}
+  if(tool==='lamp'&&lampMode==='fx'){const f=fxSel();if(f){const pts=Room.fixtureSpots(f).map(q=>sc(q[1],q[2]));pts.push(sc(f.x,f.y));
+    const xs=pts.map(q=>q[0]),ys=pts.map(q=>q[1]),up=f.type==='pole'?1.6:f.type==='bar'?1.1:.45;
+    g.strokeRect(Math.min(...xs)-k*.45,Math.min(...ys)-k*up,Math.max(...xs)-Math.min(...xs)+k*.9,Math.max(...ys)-Math.min(...ys)+k*(up+.45))}}
   g.setLineDash([]);
   for(const l of lamps){ if(l.x<0)continue; const [x,y]=sc(l.x,l.y);
     if(l.id===selLamp){g.strokeStyle='#ffe08a';g.strokeRect(x-k*.3,y-k*.3,k*.6,k*.6)}
-    if(tool==='lamp'||l.id===selLamp){g.font='600 '+Math.max(11,k*.22)+'px "Pixelify Sans",monospace';g.textAlign='center';
+    if((tool==='lamp'&&!fxOf(l.id))||(l.id===selLamp&&!fxOf(l.id))){g.font='600 '+Math.max(11,k*.22)+'px "Pixelify Sans",monospace';g.textAlign='center';
       const t=l.name.slice(0,14),tw=g.measureText(t).width+8;g.fillStyle='rgba(29,17,36,.85)';g.fillRect(x-tw/2,y+k*.32,tw,k*.3+4);g.fillStyle='#fff3d6';g.fillText(t,x,y+k*.32+k*.24)}
   }
+  if(tool==='lamp')for(const f of (L.fixtures||[])){if(!f.lamps.length)continue;const pts=Room.fixtureSpots(f).map(q=>sc(q[1],q[2]));
+    const x=pts.reduce((a,q)=>a+q[0],0)/pts.length,y=Math.max(...pts.map(q=>q[1]));
+    g.font='600 '+Math.max(11,k*.22)+'px "Pixelify Sans",monospace';g.textAlign='center';const tx=fxName(f).slice(0,18),tw=g.measureText(tx).width+8;
+    g.fillStyle='rgba(29,17,36,.85)';g.fillRect(x-tw/2,y+k*.32,tw,k*.3+4);g.fillStyle=f.id===selFx&&lampMode==='fx'?'#ffe08a':'#fff3d6';g.fillText(tx,x,y+k*.32+k*.24)}
   $('wv').textContent=L.w;$('hv').textContent=L.h;
 }
 
@@ -447,7 +574,13 @@ let drag=null,painting=false;
 function pos(e){const r=$('map').getBoundingClientRect(),k=view.scale*(r.width/view.W);return [(e.clientX-r.left)/k-1,(e.clientY-r.top)/k-1]}
 function paint(mx,my){const x=Math.floor(mx),y=Math.floor(my);if(x<0||y<0||x>=L.w||y>=L.h)return;
   const row=L.floor[y].split(''),v=tool==='floor'?floorMat:'0';if(row[x]!==v){row[x]=v;L.floor[y]=row.join('');changed()}}
+/* Deur of raam: naar de dichtstbijzijnde muur */
+function wallFix(it){const def=Room.ITEMS[it.type];if(!def||!def.wall)return;const s=Room.wallSnap(L,it.x,it.y);it.x=s.x;it.y=s.y;it.dir=s.dir}
 function itemAt(mx,my){for(let i=L.items.length-1;i>=0;i--){const it=L.items[i],def=Room.ITEMS[it.type],rot=((it.dir||90)/90)%2===0;
+  // deur of raam op de achtermuur: de hele muur erboven telt mee
+  if(def&&def.wall){const s=Room.wallSnap(L,it.x,it.y),half=(it.w||def.w)/2+.1,vert=s.wall==='w'||s.wall==='e';
+    const along=vert?Math.abs(my-s.y):Math.abs(mx-s.x),across=s.wall==='n'?(my<=s.y+.3&&my>=s.y-1.1):vert?Math.abs(mx-s.x)<.35:Math.abs(my-s.y)<.35;
+    if(along<=half&&across)return i;continue}
   const w=rot?(it.d||def.d):(it.w||def.w),d=rot?(it.w||def.w):(it.d||def.d);if(Math.abs(mx-it.x)<=w/2&&Math.abs(my-it.y)<=d/2)return i}return -1}
 const cv=$('map');
 cv.addEventListener('pointerdown',e=>{if(!L||!view||curTab!=='room')return;cv.setPointerCapture(e.pointerId);const [mx,my]=pos(e);
@@ -455,30 +588,127 @@ cv.addEventListener('pointerdown',e=>{if(!L||!view||curTab!=='room')return;cv.se
   else if(tool==='tv'){L.tv.x=snap(mx);L.tv.y=snap(my);drag='tv';changed()}
   else if(tool==='item'){
     const hit=itemAt(mx,my);
-    if(newItemType&&hit<0){L.items.push({type:newItemType,x:snap(mx),y:snap(my),dir:['sofa','armchair','corner'].includes(newItemType)?270:90});selItem=L.items.length-1;newItemType=null;drag='item';changed()}
+    if(newItemType&&hit<0){L.items.push({type:newItemType,x:snap(mx),y:snap(my),dir:['sofa','armchair','corner'].includes(newItemType)?270:90});selItem=L.items.length-1;wallFix(L.items[selItem]);newItemType=null;drag='item';changed()}
     else if(hit>=0){selItem=hit;newItemType=null;drag='item';draw()}
     else{selItem=null}
     paletteState();
   }
+  else if(tool==='lamp'&&lampMode==='fx'){
+    // Armatuur (of een lamp erin) aantikken = dat armatuur kiezen en verslepen; losse lamp = toevoegen; lege plek = armatuur daarheen.
+    // Een lamp uit een ander armatuur halen gaat met de knoppen, zodat slepen nooit per ongeluk een lamp verhuist.
+    const f=fxSel(),hitL=lampHit(mx,my),hitF=(hitL&&fxOf(hitL.id))||(!hitL&&fxAt(mx,my));
+    if(hitF){selFx=hitF.id;fxNew=false;drag='fx';fxOff=[hitF.x-mx,hitF.y-my];fxUI();draw()}
+    else if(!f)toast(t('Kies of maak eerst een armatuur'));
+    else if(hitL)fxToggle(f,hitL.id);
+    else{f.x=snap(mx);f.y=snap(my);fxPlace(f);drag='fx';fxOff=[0,0];changed()}
+  }
   else if(tool==='lamp'){
-    const hit=lamps.filter(l=>l.x>=0).find(l=>Math.hypot(l.x-mx,l.y-my)<.35);
-    if(hit){selectLamp(hit.id);drag='lamp'}
-    else if(selLamp){const l=lamps.find(l=>l.id===selLamp);l.x=snap(mx);l.y=snap(my);drag='lamp';changed();showLamp();chips()}
+    const hit=lampHit(mx,my),hf=hit&&fxOf(hit.id);
+    if(hf){selectLamp(hit.id);selFx=hf.id;drag='fx';fxOff=[hf.x-mx,hf.y-my]}
+    else if(hit){selectLamp(hit.id);drag='lamp'}
+    else if(selLamp){const sf=fxOf(selLamp);
+      if(sf){selFx=sf.id;sf.x=snap(mx);sf.y=snap(my);fxPlace(sf);drag='fx';fxOff=[0,0];changed();showLamp();chips()}
+      else{const l=lamps.find(l=>l.id===selLamp);l.x=snap(mx);l.y=snap(my);drag='lamp';changed();showLamp();chips()}}
     else toast(t('Kies eerst een lamp hieronder'));
   }
 });
 cv.addEventListener('pointermove',e=>{if(!L||!view)return;const [mx,my]=pos(e);
   if(painting)paint(mx,my);
   else if(drag==='tv'){L.tv.x=snap(mx);L.tv.y=snap(my);changed()}
-  else if(drag==='item'&&L.items[selItem]){L.items[selItem].x=snap(mx);L.items[selItem].y=snap(my);changed()}
+  else if(drag==='item'&&L.items[selItem]){L.items[selItem].x=snap(mx);L.items[selItem].y=snap(my);wallFix(L.items[selItem]);changed()}
+  else if(drag==='fx'){const f=fxSel();if(f){f.x=Math.max(0,snap(mx+fxOff[0]));f.y=Math.max(0,snap(my+fxOff[1]));fxPlace(f);changed()}}
   else if(drag==='lamp'&&selLamp){const l=lamps.find(l=>l.id===selLamp);l.x=Math.max(0,snap(mx));l.y=Math.max(0,snap(my));changed();showLamp()}
 });
 const up=()=>{painting=false;drag=null};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+/* ---------- kamer groot: lampen bedienen op de kaart ----------
+   Tikken: lamp aan of uit. Vasthouden: paneel met kleur, helderheid en effect. Samen een "eigen indeling" (scène). */
+let fullOpen=false,press=null,sheet=null,sheetTimer=null,fullZoom=0,roomZoom=0;
+const ZOOMS=[1,1.5,2];
+/* Zoomen in stappen tot 2x; het midden van wat je ziet blijft op zijn plek */
+function setZoom(z){const box=$('fullMapSlot');z=Math.max(0,Math.min(ZOOMS.length-1,z));
+  const cx=(box.scrollLeft+box.clientWidth/2)/Math.max(1,box.scrollWidth),cy=(box.scrollTop+box.clientHeight/2)/Math.max(1,box.scrollHeight);
+  fullZoom=z;draw();box.scrollLeft=cx*box.scrollWidth-box.clientWidth/2;box.scrollTop=cy*box.scrollHeight-box.clientHeight/2;
+  $('zoomOut').disabled=z===0;$('zoomIn').disabled=z===ZOOMS.length-1}
+$('zoomIn').onclick=()=>setZoom(fullZoom+1);$('zoomOut').onclick=()=>setZoom(fullZoom-1);
+/* Zoomen onder Kamer, om preciezer te plaatsen; het midden van wat je ziet blijft staan */
+function setRoomZoom(z){const box=$('roomMapSlot');z=Math.max(0,Math.min(ZOOMS.length-1,z));
+  const cx=(box.scrollLeft+box.clientWidth/2)/Math.max(1,box.scrollWidth),cy=(box.scrollTop+box.clientHeight/2)/Math.max(1,box.scrollHeight);
+  roomZoom=z;box.classList.toggle('zoomed',z>0);draw();
+  box.scrollLeft=cx*box.scrollWidth-box.clientWidth/2;box.scrollTop=cy*box.scrollHeight-box.clientHeight/2;
+  $('roomZoomOut').disabled=z===0;$('roomZoomIn').disabled=z===ZOOMS.length-1;$('roomZoomHint').classList.toggle('hidden',z===0)}
+$('roomZoomIn').onclick=()=>setRoomZoom(roomZoom+1);$('roomZoomOut').onclick=()=>setRoomZoom(roomZoom-1);
+setRoomZoom(0);
+/* Twee vingers op de kaart onder Kamer: verschuiven in plaats van tekenen of slepen (gaat voor het gewone aanraken) */
+const roomPtrs=new Map();let roomPan=null;
+const ptrMid=()=>{const v=[...roomPtrs.values()];return [(v[0][0]+v[1][0])/2,(v[0][1]+v[1][1])/2]};
+// De eerste vinger kan al iets gedaan hebben (vloer, lamp of meubel); komt de tweede erbij, dan wordt dat teruggedraaid
+let roomBefore=null;
+cv.addEventListener('pointerdown',e=>{if(curTab!=='room'||fullOpen)return;roomPtrs.set(e.pointerId,[e.clientX,e.clientY]);
+  if(roomPtrs.size===1)roomBefore={L:JSON.stringify(L),lamps:lamps.map(l=>({id:l.id,x:l.x,y:l.y,look:l.look,shape:l.shape,height:l.height}))};
+  if(roomPtrs.size>=2){painting=false;drag=null;roomPan=ptrMid();e.stopImmediatePropagation();
+    if(roomBefore&&roomBefore.L!==JSON.stringify(L)||roomBefore&&roomBefore.lamps.some(q=>{const l=lamps.find(x=>x.id===q.id);return l&&(l.x!==q.x||l.y!==q.y)})){
+      L=JSON.parse(roomBefore.L);for(const q of roomBefore.lamps){const l=lamps.find(x=>x.id===q.id);if(l)Object.assign(l,q)}baseKey='';changed()}
+    roomBefore=null}},true);
+cv.addEventListener('pointermove',e=>{if(!roomPtrs.has(e.pointerId))return;roomPtrs.set(e.pointerId,[e.clientX,e.clientY]);
+  if(roomPan&&roomPtrs.size>=2){const m=ptrMid(),box=$('roomMapSlot');box.scrollLeft-=m[0]-roomPan[0];box.scrollTop-=m[1]-roomPan[1];roomPan=m;e.stopImmediatePropagation()}},true);
+const ptrEnd=e=>{roomPtrs.delete(e.pointerId);if(roomPtrs.size<2)roomPan=null};
+cv.addEventListener('pointerup',ptrEnd,true);cv.addEventListener('pointercancel',ptrEnd,true);
+const SHEET_COLS=['#ff2a1a','#ff7a00','#ffc400','#b4ff00','#00e05a','#00e0c8','#00a0ff','#2a40ff','#8a2aff','#ff2ad0','#ff5a8a','#ffd29a','#ffffff'];
+function openFull(){fullOpen=true;fullZoom=0;$('roomFull').classList.remove('hidden');$('fullMapSlot').append($('mapwrap'));document.body.style.overflow='hidden';setTimeout(()=>setZoom(0),0)}
+function closeFull(){closeSheet();fullOpen=false;$('roomFull').classList.add('hidden');$(curTab==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));document.body.style.overflow='';setTimeout(draw,0)}
+$('fullOpen').onclick=openFull;$('fullClose').onclick=closeFull;
+$('fullSave').onclick=async()=>{const n=(prompt(t('Naam voor de scène'))||'').trim();if(!n)return;toast((await api('/api/scene/save',{name:n})).message);poll()};
+function lampOnNow(id){const ll=S&&S.liveLamps&&S.liveLamps[id];if(ll)return ll.bright>0;const lv=live[id];return !!lv&&lv.on!==false}
+async function liveSend(b){const r=await api('/api/live',b);if(!r.ok)toast(r.message);poll()}
+/* Lamp onder je vinger: de hele getekende lamp telt (ook de kap van een staande lamp of booglamp).
+   Liggen er twee over elkaar, dan wint de lamp waarvan het midden het dichtstbij is. */
+function lampHit(mx,my){let best=null,bd=1e9;
+  for(const l of lamps){if(l.x<0)continue;const b=Room.lampBox(l,L),x0=l.x+b[0],y0=l.y+b[1],x1=l.x+b[2],y1=l.y+b[3];
+    if(mx<x0||mx>x1||my<y0||my>y1)continue;const d=Math.hypot((x0+x1)/2-mx,(y0+y1)/2-my);if(d<bd){bd=d;best=l}}
+  return best}
+cv.addEventListener('pointerdown',e=>{if(!fullOpen||!view)return;const [mx,my]=pos(e);const l=lampHit(mx,my);if(!l)return;
+  e.preventDefault();const p={id:l.id,long:false,x:e.clientX,y:e.clientY};press=p;
+  p.timer=setTimeout(()=>{if(press!==p)return;p.long=true;if(navigator.vibrate)navigator.vibrate(20);openSheet(p.id)},450)});
+cv.addEventListener('pointermove',e=>{if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>12){clearTimeout(press.timer);press=null}});
+cv.addEventListener('pointerup',()=>{if(!fullOpen||!press)return;clearTimeout(press.timer);const p=press;press=null;if(p.long)return;
+  const on=lampOnNow(p.id);if(live[p.id])live[p.id].on=!on;if(S&&S.liveLamps&&S.liveLamps[p.id])S.liveLamps[p.id].bright=on?0:1;draw();liveSend({id:p.id,on:!on})});
+cv.addEventListener('pointercancel',()=>{if(press){clearTimeout(press.timer);press=null}});
+cv.addEventListener('contextmenu',e=>{if(fullOpen)e.preventDefault()});
+cv.addEventListener('click',()=>{if(curTab==='home'&&!fullOpen)openFull()});
+function openSheet(id){const l=lamps.find(x=>x.id===id);if(!l)return;const ll=S&&S.liveLamps&&S.liveLamps[id],lv=live[id];
+  const shown=lv&&/^#[0-9a-f]{6}$/i.test(lv.color||'')&&lv.color!=='#555555'?lv.color:'#ffd29a';
+  sheet={id,colour:ll?ll.colour:shown,bright:ll&&ll.bright>0?ll.bright:1,effect:ll?ll.effect:'none'};
+  $('sheetName').textContent=l.name;
+  const box=$('sheetCols');if(!box.children.length){for(const c of SHEET_COLS){const b=document.createElement('button');b.style.background=c;b.dataset.c=c;b.onclick=()=>{sheet.colour=c;sheetUI();sheetSend()};box.append(b)}
+    const ci=document.createElement('input');ci.type='color';ci.id='sheetCustom';ci.title=t('Eigen kleur');ci.oninput=e=>{sheet.colour=e.target.value;sheetUI();sheetSend()};box.append(ci)}
+  $('lampSheet').classList.remove('hidden');sheetUI();setTimeout(draw,0)}
+function sheetUI(){if(!sheet)return;$('sheetCols').querySelectorAll('button').forEach(b=>b.classList.toggle('on',b.dataset.c.toLowerCase()===sheet.colour.toLowerCase()));
+  $('sheetCustom').value=sheet.colour;$('sheetBri').value=sheet.bright;$('v_sheetBri').textContent=Math.round(sheet.bright*100)+'%';
+  $('sheetFx').value=sheet.effect||'none'}
+function sheetSend(){if(!sheet)return;clearTimeout(sheetTimer);const s=sheet;sheetTimer=setTimeout(()=>liveSend({id:s.id,colour:s.colour,bright:s.bright,effect:s.effect}),120)}
+function closeSheet(){sheet=null;$('lampSheet').classList.add('hidden');if(fullOpen)setTimeout(draw,0)}
+$('sheetBri').oninput=e=>{if(!sheet)return;sheet.bright=+e.target.value;sheetUI();sheetSend()};
+$('sheetFx').onchange=e=>{if(!sheet)return;sheet.effect=e.target.value;sheetUI();sheetSend()};
+$('sheetOff').onclick=()=>{if(!sheet)return;liveSend({id:sheet.id,on:false});closeSheet()};
+$('sheetDone').onclick=closeSheet;
+
+/* Kamermaat: rechts en voor zoals altijd; links en achter schuift alles mee zodat het op zijn plek blijft */
+function roomShift(dx,dy){
+  // Bij weghalen: wat buiten de kamer zou vallen naar de rand; iets dat al tegen de muur stond (tv op -0,25) blijft daar
+  const sh=(v,d,lo)=>d<0?Math.max(v+d,Math.min(v,lo)):v+d,mv=(o,lo=0)=>{if(dx)o.x=sh(o.x,dx,lo);if(dy)o.y=sh(o.y,dy,lo)};
+  for(const it of L.items||[])mv(it);if(L.tv)mv(L.tv,-0.25);for(const f of L.fixtures||[])mv(f);
+  for(const l of lamps)if(l.x>=0&&l.y>=0)mv(l)}
 document.querySelectorAll('[data-size]').forEach(b=>b.onclick=()=>{
-  const [k,dd]=b.dataset.size.split(',');const v=Math.max(2,Math.min(20,L[k]+(+dd)));if(v===L[k])return;
-  if(k==='w')L.floor=L.floor.map(r=>v>L.w?r+floorMat.repeat(v-L.w):r.slice(0,v));
-  else{if(v>L.h)for(let i=L.h;i<v;i++)L.floor.push(floorMat.repeat(L.w));else L.floor=L.floor.slice(0,v)}
-  L[k]=v;changed();
+  const [k,dd,side]=b.dataset.size.split(',');const v=Math.max(2,Math.min(20,L[k]+(+dd)));if(v===L[k])return;const n=v-L[k];
+  if(side==='start'){
+    if(k==='w')L.floor=L.floor.map(r=>n>0?floorMat.repeat(n)+r:r.slice(-n));
+    else{if(n>0)for(let i=0;i<n;i++)L.floor.unshift(floorMat.repeat(L.w));else L.floor=L.floor.slice(-n)}
+    roomShift(k==='w'?n:0,k==='h'?n:0);
+  }else{
+    if(k==='w')L.floor=L.floor.map(r=>v>L.w?r+floorMat.repeat(v-L.w):r.slice(0,v));
+    else{if(v>L.h)for(let i=L.h;i<v;i++)L.floor.push(floorMat.repeat(L.w));else L.floor=L.floor.slice(0,v)}
+  }
+  L[k]=v;baseKey='';changed();
 });
 $('sizeBtn').onclick=()=>{const h=$('roomSize').classList.toggle('hidden');$('sizeBtn').classList.toggle('on',!h)};
 $('fillAll').onclick=()=>{L.floor=L.floor.map(r=>r.replace(/[^0]/g,floorMat));changed();toast(t('Hele vloer aangepast'))};
@@ -512,10 +742,11 @@ function lampList(){
     box.dataset.ids=lamps.map(l=>l.id+l.name).join();$('lampDetailHold').append($('lampDetailPanel'));box.innerHTML='';
     for(const l of lamps){
       const r=document.createElement('div');r.className='lrow';r.dataset.id=l.id;
-      r.innerHTML=`<span class="name"></span><button class="btn" data-a="blink">${t('Knipper')}</button><button class="btn" data-a="test">${t('Test')}</button><input type="color" value="#ffb050"><button class="btn red" data-a="del">${t('Weg')}</button>`;
-      r.querySelector('.name').textContent=l.name;r.querySelector('.name').onclick=()=>{if(selLamp===l.id){closeLamp();return}selectLamp(l.id);setTimeout(()=>r.scrollIntoView({block:'start'}),50)};
+      r.innerHTML=`<span class="name"><span class="chev"></span><span class="nm"></span></span><button class="btn" data-a="blink">${t('Knipper')}</button><button class="btn" data-a="power"></button><input type="color" value="#ffb050"><button class="btn red x" data-a="del" title="${t('Verwijderen')}" aria-label="${t('Verwijderen')}">\u2715</button>`;
+      r.querySelector('.nm').textContent=l.name;r.querySelector('.name').onclick=()=>{if(selLamp===l.id){closeLamp();return}selectLamp(l.id);setTimeout(()=>r.scrollIntoView({block:'start'}),50)};
       r.querySelector('[data-a=blink]').onclick=async()=>toast((await api('/api/identify',{id:l.id})).message);
-      r.querySelector('[data-a=test]').onclick=async()=>toast((await api('/api/test',{id:l.id})).message);
+      r.querySelector('[data-a=power]').onclick=async()=>{const lv=live[l.id],on=!!lv&&lv.on!==false;
+        const res=await api('/api/lamp/power',{id:l.id,on:!on});toast(res.message);if(res.ok&&lv){lv.on=!on;lampList()}poll()};
       r.querySelector('[data-a=del]').onclick=async()=>{if(!confirm(t('"{n}" verwijderen? Je kunt hem later terugzetten onder Lampen toevoegen.',{n:l.name})))return;
         const res=await api('/api/lamp/delete',{id:l.id});toast(res.message);if(selLamp===l.id)selLamp=null;load()};
       r.querySelector('input').onchange=async e=>toast((await api('/api/color',{id:l.id,color:e.target.value})).message);
@@ -526,13 +757,15 @@ function lampList(){
     const off=lv.online&&lv.on===false;
     const ci=r.querySelector('input[type=color]');if(ci&&document.activeElement!==ci&&/^#[0-9a-f]{6}$/i.test(lv.color||'')&&lv.color!=='#555555'&&!off)ci.value=lv.color;
     if(ci){ci.style.opacity=!lv.online||off?'.35':'1';ci.title=!lv.online?t('niet bereikbaar'):off?t('uit'):t('aan')}
+    // Aan/uit: de knop zegt wat hij doet (Aan als de lamp uit staat, Uit als hij aan staat)
+    const pb=r.querySelector('[data-a=power]');if(pb){pb.textContent=t(lv.on===false?'Aan':'Uit');pb.disabled=!lv.online}
     r.querySelector('.name').title=lv.online?t('bereikbaar'):t('niet bereikbaar')}
-  for(const r of box.children)r.classList.toggle('sel',r.dataset.id===selLamp);
+  for(const r of box.children){r.classList.toggle('sel',r.dataset.id===selLamp);const c=r.querySelector('.chev');if(c)c.textContent=r.dataset.id===selLamp?'\u25BE':'\u25B8'}
 }
 $('testAll').onclick=async()=>toast((await api('/api/test',{})).message);
 function selectLamp(id){selLamp=id;chips();showLamp();draw()}
 function follows(l){
-  if(l.x<0||!L.tv)return t('Nog niet opgehangen');
+  if(l.x<0||!L.tv)return t('Nog niet opgehangen: doet niet mee met de sync');
   const a=L.tv.dir*Math.PI/180,fx=Math.cos(a),fy=Math.sin(a),xs=((l.x-L.tv.x)*fy+(l.y-L.tv.y)*-fx)/(L.tv.w/2);
   if((l.layers||0)>0)return t(xs<0?'Elke laag volgt zijn hoogte aan de linkerkant van het beeld':'Elke laag volgt zijn hoogte aan de rechterkant van het beeld');
   if(l.follow==='all')return t('Volgt het hele beeld');
@@ -549,15 +782,14 @@ function follows(l){
 function showLamp(){
   const l=lamps.find(l=>l.id===selLamp);$('lampDetailPanel').classList.toggle('hidden',!l);$('roomLampRow').classList.toggle('hidden',!l);$('roomLookBox').classList.toggle('hidden',!l);
   const row=l&&[...$('lampList').children].find(r=>r.dataset.id===l.id);if(row&&row.nextSibling!==$('lampDetailPanel'))row.after($('lampDetailPanel'));
-  for(const r of $('lampList').children)r.classList.toggle('sel',r.dataset.id===selLamp);if(!l)return;
+  for(const r of $('lampList').children){r.classList.toggle('sel',r.dataset.id===selLamp);const c=r.querySelector('.chev');if(c)c.textContent=r.dataset.id===selLamp?'\u25BE':'\u25B8'}if(!l)return;
   $('lampDetailTitle').textContent=l.name;$('roomLampName').textContent=l.name;
   if(document.activeElement!==$('lampName'))$('lampName').value=l.name;
-  const cal=l.heightY!=null;
-  document.querySelectorAll('#heightSeg .btn').forEach(b=>b.classList.toggle('on',!cal&&b.dataset.h===l.height));
   const rod=(l.shape||'bulb')==='rod';
-  calibUI(l);lowUI(l);if(rod){$('calibBtn').classList.add('hidden');$('calibState').textContent=''}
+  calibUI(l);lowUI(l);matchUI(l);if(rod){$('calibBtn').classList.add('hidden');$('calibState').textContent=''}
   const curLook=l.look||(rod?'rod':'');document.querySelectorAll('#lookGrid .btn').forEach(b=>b.classList.toggle('on',b.dataset.k===curLook));
-  $('heightSeg').classList.toggle('hidden',rod);
+  roomFxUI(l);
+
   groupUI();
   document.querySelectorAll('#followSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.f===(l.follow||'auto')));
   document.querySelectorAll('#layerSeg .btn').forEach(b=>b.classList.toggle('on',+b.dataset.n===(l.layers||0)));
@@ -568,11 +800,105 @@ function showLamp(){
   if(document.activeElement!==$('lampIpEdit'))$('lampIpEdit').value=l.ip||'';
   const lv=live[l.id];$('lampIp').innerHTML=esc(l.ip||t('geen ip'))+' '+(lv&&lv.online?'<span class="ok">'+t('bereikbaar')+'</span>':'<span class="bad">'+t('niet bereikbaar')+'</span>');
 }
+/* ---------- armaturen: meerdere lampen die samen één lamp vormen (rails, hanglamp-balk, staande lamp met spots) ---------- */
+let lampMode='lamp',selFx=null,fxNew=false,fxOff=[0,0];
+const fxSel=()=>((L&&L.fixtures)||[]).find(f=>f.id===selFx);
+const fxOf=id=>((L&&L.fixtures)||[]).find(f=>f.lamps.includes(id));
+function fxName(f){const same=(L.fixtures||[]).filter(x=>x.type===f.type),n=same.indexOf(f)+1;return t(Room.FIXTURES[f.type].label)+(same.length>1?' '+n:'')}
+/* Lampen op hun plek in het armatuur zetten, met het bijpassende uiterlijk en (zonder kalibratie) de gebruikelijke hoogte */
+function fxPlace(f){const m=Room.FIXTURES[f.type];
+  for(const [id,x,y] of Room.fixtureSpots(f)){const l=lamps.find(q=>q.id===id);if(!l)continue;
+    l.x=Math.max(0,x);l.y=Math.max(0,y);l.look=m.look;l.shape='bulb';if(l.heightY==null)l.height=m.height}}
+/* Terugdraaien: zoals alles was toen je dit armatuur openklikte (bij een nieuw armatuur: zonder dat armatuur) */
+let fxSnap=null,fxSnapFor=null;
+function fxSnapshot(){return {fixtures:JSON.parse(JSON.stringify((L&&L.fixtures)||[])),lamps:lamps.map(l=>({id:l.id,x:l.x,y:l.y,look:l.look,shape:l.shape,height:l.height}))}}
+function fxNewOf(type){const snap=fxSnapshot();L.fixtures=L.fixtures||[];
+  const f={id:'f'+Date.now().toString(36),type,x:Math.round(L.w/2*4)/4,y:Math.round(L.h/2*4)/4,rot:0,gap:Room.FIXTURES[type].gap,lamps:[]};
+  L.fixtures.push(f);selFx=f.id;fxSnapFor=f.id;fxSnap=snap;fxNew=false;changed();fxUI();draw()}
+/* Lamp in of uit het armatuur; een lamp kan maar in één armatuur zitten.
+   Het armatuur onthoudt hoe de lamp stond voordat hij erin kwam (f.prev); eruit halen zet dat terug ("oeps, misklik").
+   Verhuist een lamp van het ene armatuur naar het andere, dan gaat die oude stand mee. */
+function fxToggle(f,id){const l=lamps.find(q=>q.id===id);
+  if(f.lamps.includes(id)){f.lamps=f.lamps.filter(x=>x!==id);const p=f.prev&&f.prev[id];if(p&&l)Object.assign(l,p);if(f.prev)delete f.prev[id]}
+  else{let p=null;
+    for(const o of L.fixtures){if(o.lamps.includes(id)){p=o.prev&&o.prev[id];if(o.prev)delete o.prev[id]}o.lamps=o.lamps.filter(x=>x!==id)}
+    if(!p&&l)p={x:l.x,y:l.y,look:l.look||'',shape:l.shape||'bulb',height:l.height};
+    f.prev=f.prev||{};if(p)f.prev[id]=p;f.lamps.push(id)}
+  for(const o of L.fixtures)fxPlace(o);changed();fxUI();chips();draw()}
+function segDist(px,py,x0,y0,x1,y1){const dx=x1-x0,dy=y1-y0,l2=dx*dx+dy*dy||1e-9,u=Math.max(0,Math.min(1,((px-x0)*dx+(py-y0)*dy)/l2));return Math.hypot(px-x0-u*dx,py-y0-u*dy)}
+/* Armatuur onder je vinger: de rails of balk, of voet en paal van een staande lamp */
+function fxAt(mx,my){for(const f of ((L&&L.fixtures)||[]).slice().reverse()){
+    if(f.type==='pole'){if(Math.abs(mx-f.x)<.35&&my<f.y+.3&&my>f.y-1.2)return f;continue}
+    const a=(f.rot||0)*Math.PI/180,h=(Math.max(1,f.lamps.length)-1)/2*f.gap+.3,dy=f.type==='bar'?-13/Room.PPM:0;
+    if(segDist(mx,my,f.x-Math.cos(a)*h,f.y+dy-Math.sin(a)*h,f.x+Math.cos(a)*h,f.y+dy+Math.sin(a)*h)<.3)return f}
+  return null}
+function fxUI(){
+  if(selFx!==fxSnapFor){fxSnapFor=selFx;fxSnap=selFx&&L?fxSnapshot():null}
+  document.querySelectorAll('#modeSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.m===lampMode));
+  $('lampMode').classList.toggle('hidden',lampMode!=='lamp');$('fxMode').classList.toggle('hidden',lampMode!=='fx');
+  if(lampMode!=='fx'||!L)return;
+  const fs=L.fixtures||[];if(selFx&&!fs.some(f=>f.id===selFx))selFx=null;
+  const c=$('fxChips');c.innerHTML='';
+  for(const f of fs){const b=document.createElement('button');b.className='btn chip'+(f.id===selFx&&!fxNew?' sel':'');b.textContent=fxName(f)+' ('+f.lamps.length+')';
+    b.onclick=()=>{selFx=f.id;fxNew=false;fxUI();draw()};c.append(b)}
+  const nb=document.createElement('button');nb.className='btn chip'+(fxNew?' sel':'');nb.textContent='+ '+t('Nieuw armatuur');nb.onclick=()=>{fxNew=!fxNew;fxUI()};c.append(nb);
+  $('fxTypes').classList.toggle('hidden',!fxNew);
+  const f=fxSel();$('fxEdit').classList.toggle('hidden',!f||fxNew);if(!f)return;
+  $('fxAim').classList.toggle('hidden',f.type!=='rail');$('fxAimHint').classList.toggle('hidden',f.type!=='rail');$('fxAim').textContent=t('Spots wijzen')+': '+aimText(f.aim);
+  $('fxName').textContent=fxName(f);$('fxRot').textContent=t('Draai')+' ('+(f.rot||0)+'°)';$('fxGap').textContent=f.gap.toFixed(1);
+  const box=$('fxLamps');box.innerHTML='';
+  for(const l of lamps){const k=f.lamps.indexOf(l.id),other=k<0&&fxOf(l.id);
+    const b=document.createElement('button');b.className='btn'+(k>=0?' on':'');b.style.cssText='padding:6px 9px;font-size:14px'+(other?';opacity:.6':'');
+    b.textContent=(k>=0?(k+1)+'. ':'')+l.name+(other?' · '+fxName(other):'');b.onclick=()=>fxToggle(f,l.id);box.append(b)}
+}
+document.querySelectorAll('#modeSeg .btn').forEach(b=>b.onclick=()=>{lampMode=b.dataset.m;fxNew=false;if(lampMode==='fx'&&!selFx&&selLamp){const f=fxOf(selLamp);if(f)selFx=f.id}fxUI();draw()});
+/* Plaatje per soort armatuur: een paar lampen met rails, balk of paal */
+function fxPreview(g,type){const m=Room.FIXTURES[type],P=Room.PPM,ids=type==='pole'?['a','b']:['a','b','c'];
+  const f={type,x:18/P-1,y:(type==='rail'?18:type==='bar'?26:30)/P-1,rot:0,gap:type==='pole'?0.5:0.6,lamps:ids};
+  const ls=Room.fixtureSpots(f).map(([id,x,y])=>({id,x,y,look:m.look,shape:'bulb',height:m.height}));
+  Room.drawFixtures(g,{fixtures:[f]},ls);for(const l of ls)Room.lampFixture(g,l,'#ffe2a8',null)}
+for(const [type,m] of Object.entries(Room.FIXTURES)){const b=document.createElement('button');b.className='btn';
+  b.append(preview(g=>fxPreview(g,type),36));const sp=document.createElement('span');sp.textContent=t(m.label);b.append(sp);b.onclick=()=>fxNewOf(type);$('fxTypes').append(b)}
+$('fxRot').onclick=()=>{const f=fxSel();if(!f)return;f.rot=((f.rot||0)+45)%360;fxPlace(f);changed();fxUI();draw()};
+document.querySelectorAll('[data-gap]').forEach(b=>b.onclick=()=>{const f=fxSel();if(!f)return;f.gap=Math.max(.2,Math.min(3,Math.round((f.gap+ +b.dataset.gap)*10)/10));fxPlace(f);changed();fxUI();draw()});
+$('fxDone').onclick=()=>{selFx=null;fxUI();draw()};
+$('fxUndo').onclick=()=>{if(!fxSnap)return;const snap=fxSnap;
+  L.fixtures=JSON.parse(JSON.stringify(snap.fixtures));for(const q of snap.lamps){const l=lamps.find(x=>x.id===q.id);if(l)Object.assign(l,q)}
+  if(!L.fixtures.some(f=>f.id===selFx))selFx=null;fxSnapFor=selFx;fxSnap=selFx?snap:null;changed();fxUI();chips();draw();toast(t('Teruggezet'))};
+$('fxDel').onclick=()=>{const f=fxSel();if(!f||!confirm(t('Armatuur verwijderen? De lampen blijven hangen waar ze zijn.')))return;
+  L.fixtures=L.fixtures.filter(x=>x!==f);selFx=null;changed();fxUI();chips();draw()};
+/* In het lampmenu van de kamer: hoort deze lamp bij een armatuur, en lengte en richting van een ledstrip */
+function roomFxUI(l){const f=l&&fxOf(l.id);$('roomFxNote').classList.toggle('hidden',!f);if(f)$('roomFxText').textContent=t('Hoort bij armatuur: {n}',{n:fxName(f)});
+  $('lookGrid').classList.toggle('hidden',!!f);
+  const strip=!!l&&l.look==='strip'&&!f;$('stripBox').classList.toggle('hidden',!strip);
+  // Richting: losse spot of wandspot, en ook een spot in een rails (eigen richting, of zoals de rails)
+  const inRail=!!f&&f.type==='rail',aimable=!!l&&(l.look==='spot'||l.look==='wallspot')&&(!f||inRail);$('aimBox').classList.toggle('hidden',!aimable);
+  if(aimable){const own=L.aims&&L.aims[l.id];
+    $('tiltBtn').classList.toggle('hidden',l.look!=='wallspot');$('tiltBtn').textContent=t('Kantelen')+': '+t({up:'omhoog',down:'omlaag'}[Room.tiltOf(L,l)]||'recht');
+    $('aimBtn').textContent=own==null?(inRail?t('zoals de rails')+' ('+aimText(f.aim)+')':aimText(l.look==='wallspot'?90:null)):aimText(own<0?null:own)}
+  if(strip){const st=Room.stripOf(L,l);$('stripLen').textContent=String(st.len);$('stripRot').textContent=t('Draai')+' ('+st.rot+'°)'}}
+$('roomFxEdit').onclick=()=>{const f=selLamp&&fxOf(selLamp);if(!f)return;lampMode='fx';selFx=f.id;fxNew=false;fxUI();draw()};
+function stripSet(fn){const l=lamps.find(q=>q.id===selLamp);if(!l)return;L.strips=L.strips||{};const st=Room.stripOf(L,l);fn(st);L.strips[l.id]=st;changed();showLamp()}
+document.querySelectorAll('[data-strip]').forEach(b=>b.onclick=()=>stripSet(st=>{st.len=Math.max(.25,Math.min(5,Math.round((st.len+ +b.dataset.strip)*4)/4))}));
+/* Richting van een spot: recht omlaag, of in stappen van 45 graden rond (pijltjes zoals op de kaart) */
+function aimText(a){return a==null?t('recht omlaag'):['→','↘','↓','↙','←','↖','↑','↗'][Math.round(a/45)%8]}
+const aimNext=a=>a==null?0:a>=315?null:a+45;
+$('fxAim').onclick=()=>{const f=fxSel();if(!f)return;f.aim=aimNext(f.aim);changed();fxUI();draw()};
+$('aimBtn').onclick=()=>{const l=lamps.find(q=>q.id===selLamp);if(!l)return;L.aims=L.aims||{};const cur=L.aims[l.id];let a;
+  // in een rails: zoals de rails, recht omlaag (-1), dan de acht richtingen, en weer zoals de rails
+  if(fxOf(l.id))a=cur==null?-1:cur<0?0:cur>=315?null:cur+45;
+  // los: een wandspot wijst altijd ergens heen, zonder "recht omlaag" in de rij
+  else{a=aimNext(cur??(l.look==='wallspot'?90:null));if(a==null&&l.look==='wallspot')a=0}
+  if(a==null)delete L.aims[l.id];else L.aims[l.id]=a;changed();showLamp();draw()};
+/* Wandspot kantelen: recht, omhoog, omlaag */
+$('tiltBtn').onclick=()=>{const l=lamps.find(q=>q.id===selLamp);if(!l)return;L.tilts=L.tilts||{};
+  const nx={'':'up',up:'down',down:''}[L.tilts[l.id]||''];if(nx)L.tilts[l.id]=nx;else delete L.tilts[l.id];changed();showLamp();draw()};
+$('stripRot').onclick=()=>stripSet(st=>{st.rot=(st.rot+45)%180});
 $('lampName').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.name=e.target.value;changed();chips()}};
 // Soort lamp: plaatje + naam; kiezen zet ook de gebruikelijke hoogte (aan te passen) en staaflamp of niet
-for(const k of Room.LOOKS){const b=document.createElement('button');b.className='btn';b.dataset.k=k.id;
-  // Elke tekening midden in zijn knop: kleine lampen hoger, booglamp iets naar links
-  const dx=k.id==='arc'?-4:0,ty={spot:15,pendant:20,table:20,globe:19}[k.id]||25;
+for(const k of Room.LOOKS){if(k.hidden)continue;const b=document.createElement('button');b.className='btn';b.dataset.k=k.id;
+  // Elke tekening midden in zijn knop: kleine lampen hoger, booglamp en bureaulamp iets naar links
+  const dx=k.id==='arc'||k.id==='desk'?-4:0,ty={spot:15,pendant:20,table:20,globe:19,flush:15,strip:15,desk:20,wall:22,lightbar:22,wallspot:22}[k.id]||25;
   b.append(preview(g=>Room.lampFixture(g,{x:(14+dx)/Room.PPM-1,y:ty/Room.PPM-1,look:k.id,shape:k.id==='rod'?'rod':'bulb',height:k.height},'#ffe2a8'),28));
   const s=document.createElement('span');s.textContent=t(k.label);b.append(s);
   b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.look=k.id;l.shape=k.id==='rod'?'rod':'bulb';l.height=k.height;changed();showLamp()}};
@@ -581,16 +907,26 @@ document.querySelectorAll('#satSeg .btn').forEach(b=>b.onclick=()=>{const l=lamp
 document.querySelectorAll('#briSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.maxBright=+b.dataset.k;changed();showLamp()}});
 document.querySelectorAll('#layerSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.layers=+b.dataset.n;changed();showLamp()}});
 document.querySelectorAll('#followSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.follow=b.dataset.f;changed();showLamp()}});
-document.querySelectorAll('#heightSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.height=b.dataset.h;l.heightY=null;changed();showLamp()}});
 
 /* ---------- kleurcorrectie bij weinig licht ---------- */
-let lowOpen=null,lowBase='white',lowTimer=null;
+let lowOpen=null,lowBase='white',lowTimer=null,lowWith=new Set();
+/* Lampen die samen met de geopende lamp worden ingesteld (bijvoorbeeld vier dezelfde spotjes) */
+const lowLamps=()=>[lowOpen,...lowWith].map(id=>lamps.find(l=>l.id===id)).filter(Boolean);
+function lowStop(){const ids=[lowOpen,...lowWith].filter(Boolean);lowOpen=null;lowWith=new Set();clearTimeout(lowTimer);
+  return Promise.all(ids.map(id=>api('/api/lowcal',{id,on:false}))).then(r=>r[0]||null)}
+/* Bij schuiven krijgen alle aangezette lampen de waarden van de geopende lamp (tint en sterkte samen) */
+function lowApply(){const l=lamps.find(l=>l.id===lowOpen);if(!l)return;for(const x of lowLamps()){x.lowHue=l.lowHue??190;x.lowStrength=l.lowStrength||0}changed(true)}
 function lowUI(l){
-  if(lowOpen&&lowOpen!==l.id){api('/api/lowcal',{id:lowOpen,on:false});lowOpen=null}
+  if(lowOpen&&lowOpen!==l.id)lowStop();
   const st=l.lowStrength||0;
   $('lowState').textContent=st<0.005?t('Geen correctie'):t('Naar {c}, sterkte {s}%',{c:t(hueName(l.lowHue??190)),s:Math.round(st*100)});
-  $('lowPick').classList.toggle('hidden',lowOpen!==l.id);$('lowBtn').classList.toggle('hidden',lowOpen===l.id);
+  $('lowPick').classList.toggle('hidden',lowOpen!==l.id);$('lowBtn').classList.toggle('open',lowOpen===l.id);
   if(lowOpen!==l.id)return;
+  const box=$('lowMulti'),others=lamps.filter(x=>x.id!==l.id),key=others.map(x=>x.id+x.name).join();
+  if(box.dataset.k!==key){box.dataset.k=key;box.innerHTML='';
+    for(const x of others){const b=document.createElement('button');b.className='btn';b.dataset.id=x.id;b.textContent=x.name;b.style.cssText='padding:6px 9px;font-size:14px';
+      b.onclick=()=>{if(lowWith.has(x.id)){lowWith.delete(x.id);api('/api/lowcal',{id:x.id,on:false})}else lowWith.add(x.id);showLamp();lowSend()};box.append(b)}}
+  box.querySelectorAll('.btn').forEach(b=>b.classList.toggle('on',lowWith.has(b.dataset.id)));
   if(document.activeElement!==$('lowHue'))$('lowHue').value=l.lowHue??190;
   if(document.activeElement!==$('lowStrength'))$('lowStrength').value=st;
   $('v_lowStrength').textContent=Math.round(st*100)+'%';$('v_lowLevel').textContent=Math.round(+$('lowLevel').value*100)+'%';
@@ -599,34 +935,75 @@ function lowUI(l){
 }
 function hueName(h){return h<20||h>=340?'rood':h<50?'oranje':h<75?'geel':h<160?'groen':h<200?'cyaan':h<260?'blauw':h<300?'paars':'roze'}
 function lowSend(){const l=lamps.find(l=>l.id===lowOpen);if(!l)return;clearTimeout(lowTimer);
-  lowTimer=setTimeout(()=>api('/api/lowcal',{id:l.id,level:+$('lowLevel').value,hue:l.lowHue??190,strength:l.lowStrength||0,base:lowBase}),120)}
-$('lowBtn').onclick=()=>{lowOpen=selLamp;showLamp();lowSend()};
-$('lowDone').onclick=async()=>{const id=lowOpen;lowOpen=null;showLamp();if(id)toast((await api('/api/lowcal',{id,on:false})).message)};
-$('lowReset').onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.lowStrength=0;changed(true);showLamp();lowSend()}};
+  lowTimer=setTimeout(()=>{for(const x of lowLamps())api('/api/lowcal',{id:x.id,level:+$('lowLevel').value,hue:l.lowHue??190,strength:l.lowStrength||0,base:lowBase})},120)}
+$('lowBtn').onclick=()=>{if(lowOpen){$('lowDone').click();return}closeCal('low');const l=lamps.find(l=>l.id===selLamp);lowOpen=selLamp;
+  // Lampen uit dezelfde groep doen vanzelf mee; ze tonen het testlicht met de waarden van deze lamp en nemen die over zodra je schuift
+  lowWith=new Set(l&&l.group?lamps.filter(x=>x.id!==l.id&&x.group===l.group).map(x=>x.id):[]);
+  showLamp();lowSend()};
+$('lowDone').onclick=async()=>{const r=await lowStop();showLamp();if(r)toast(r.message)};
+$('lowReset').onclick=()=>{const l=lamps.find(l=>l.id===lowOpen);if(!l)return;l.lowStrength=0;lowApply();showLamp();lowSend()};
 document.querySelectorAll('#lowBase .btn').forEach(b=>b.onclick=()=>{lowBase=b.dataset.b;showLamp();lowSend()});
 $('lowLevel').oninput=()=>{showLamp();lowSend()};
-$('lowHue').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.lowHue=+e.target.value;changed(true);showLamp();lowSend()}};
-$('lowStrength').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.lowStrength=+e.target.value;changed(true);showLamp();lowSend()}};
+$('lowHue').oninput=e=>{const l=lamps.find(l=>l.id===lowOpen);if(!l)return;l.lowHue=+e.target.value;lowApply();showLamp();lowSend()};
+$('lowStrength').oninput=e=>{const l=lamps.find(l=>l.id===lowOpen);if(!l)return;l.lowStrength=+e.target.value;lowApply();showLamp();lowSend()};
+
+/* ---------- kleurbalans: lampen onderling gelijk ---------- */
+let matchOpen=null,matchRef='',matchCol='0,0,700',matchTimer=null;
+function balText(l){const w=l.balWarm||0,m=l.balTint||0,p=[];
+  if(Math.abs(w)>=0.01)p.push(t(w>0?'warmer {n}%':'koeler {n}%',{n:Math.round(Math.abs(w)*100)}));
+  if(Math.abs(m)>=0.01)p.push(t(m>0?'rozer {n}%':'groener {n}%',{n:Math.round(Math.abs(m)*100)}));
+  return p.length?t('Kleurbalans: {b}',{b:p.join(', ')}):t('Geen kleurbalans')}
+function matchUI(l){
+  if(matchOpen&&matchOpen!==l.id)matchStop();
+  $('matchState').textContent=balText(l);
+  $('matchPick').classList.toggle('hidden',matchOpen!==l.id);$('matchBtn').classList.toggle('open',matchOpen===l.id);
+  if(matchOpen!==l.id)return;
+  const sel=$('matchRef'),others=lamps.filter(x=>x.id!==l.id),key=others.map(x=>x.id+x.name).join();
+  if(sel.dataset.k!==key){sel.dataset.k=key;sel.innerHTML='';for(const x of others){const o=document.createElement('option');o.value=x.id;o.textContent=x.name;sel.append(o)}}
+  if(!others.some(x=>x.id===matchRef))matchRef=others[0]?others[0].id:'';sel.value=matchRef;
+  if(document.activeElement!==$('balWarm'))$('balWarm').value=l.balWarm||0;
+  if(document.activeElement!==$('balTint'))$('balTint').value=l.balTint||0;
+  $('v_balWarm').textContent=Math.round((l.balWarm||0)*100)+'%';$('v_balTint').textContent=Math.round((l.balTint||0)*100)+'%';
+  document.querySelectorAll('#matchCol .btn').forEach(b=>b.classList.toggle('on',b.dataset.c===matchCol));
+}
+function matchSend(){const l=lamps.find(l=>l.id===matchOpen);if(!l)return;clearTimeout(matchTimer);
+  matchTimer=setTimeout(()=>api('/api/match',{id:l.id,ref:matchRef,colour:matchCol.split(',').map(Number),balWarm:l.balWarm||0,balTint:l.balTint||0}),120)}
+function matchStop(){const id=matchOpen,ref=matchRef;matchOpen=null;clearTimeout(matchTimer);return id?api('/api/match',{id,ref,on:false}):Promise.resolve(null)}
+$('matchBtn').onclick=()=>{if(matchOpen){$('matchDone').click();return}closeCal('match');matchOpen=selLamp;showLamp();matchSend()};
+/* Eén kalibratie tegelijk open: de andere eerst netjes afsluiten (tv-beeld en testlicht terug) */
+function closeCal(keep){if(keep!=='calib'&&calibOpen)$('calibDone').click();if(keep!=='low'&&lowOpen)$('lowDone').click();if(keep!=='match'&&matchOpen)$('matchDone').click()}
+$('matchDone').onclick=async()=>{const r=await matchStop();showLamp();if(r)toast(r.message)};
+$('matchReset').onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.balWarm=0;l.balTint=0;changed(true);showLamp();matchSend()}};
+$('matchRef').onchange=e=>{const old=matchRef;matchRef=e.target.value;if(old&&old!==matchOpen)api('/api/match',{id:old,on:false});matchSend()};
+document.querySelectorAll('#matchCol .btn').forEach(b=>b.onclick=()=>{matchCol=b.dataset.c;showLamp();matchSend()});
+$('balWarm').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.balWarm=+e.target.value;changed(true);showLamp();matchSend()}};
+$('balTint').oninput=e=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.balTint=+e.target.value;changed(true);showLamp();matchSend()}};
 
 /* ---------- hoogte kalibreren met kleurbanden op de tv ---------- */
 let calibOpen=false,calibN=5;
 function calibUI(l){
-  const n=calibN,b=Room.bandOf(l.heightY,n);
-  $('calibState').textContent=l.heightY==null?t('Of stel de hoogte precies af met kleuren op de tv.'):
-    b==='above'?t('Gekalibreerd: boven de tv'):b==='below'?t('Gekalibreerd: onder de tv'):t('Gekalibreerd: band {i} van {n} (van onder)',{i:b+1,n});
-  $('calibPick').classList.toggle('hidden',!calibOpen);$('calibBtn').classList.toggle('hidden',calibOpen);
+  const n=calibN,b=Room.bandPos(l.heightY,n);
+  // Zonder kalibratie geldt de vaste hoogte (nieuwe lampen: plafond; oudere lampen kunnen nog vensterbank, tafel of vloer hebben)
+  const fixed={ceiling:'Plafond',sill:'Vensterbank',table:'Tafel',floor:'Vloer'}[l.height]||'Plafond',ceil=l.heightY==null&&(l.height||'ceiling')==='ceiling';
+  $('calibState').textContent=l.heightY==null?t(fixed):
+    b==='above'?t('Gekalibreerd: boven de tv'):b==='below'?t('Gekalibreerd: onder de tv'):
+    b%1?t('Gekalibreerd: tussen band {a} en {c} (van onder)',{a:b+0.5,c:b+1.5}):t('Gekalibreerd: band {i} van {n} (van onder)',{i:b+1,n});
+  $('calibPick').classList.toggle('hidden',!calibOpen);$('calibBtn').classList.toggle('open',calibOpen);
   if(!calibOpen)return;
-  const cols=Room.calibColors(n),opts=[['above',t('Boven de tv')],...cols.map((c,i)=>[i,'',c]).reverse(),['below',t('Onder de tv')]];
+  const cols=Room.calibColors(n),mid=[];
+  for(let k=n-1;k>=0;k-=0.5)mid.push([k,'',k%1?`linear-gradient(${cols[k+0.5]} 0 50%,${cols[k-0.5]} 50% 100%)`:cols[k]]);
+  const opts=[['ceiling',t('Plafond')],['above',t('Boven de tv')],...mid,['below',t('Onder de tv')]];
   $('calibBands').innerHTML='';
-  for(const [v,label,c] of opts){const d=document.createElement('button');d.className='btn'+(v===b?' on':'');d.textContent=label||(v===b?'\u2713':'');
+  for(const [v,label,c] of opts){const d=document.createElement('button');const on=v==='ceiling'?ceil:v===b;d.className='btn'+(on?' on':'');d.textContent=label||(on?'\u2713':'');
     if(c)d.style.cssText='background:'+c+';height:30px;color:#000';d.onclick=()=>calibPick(v,n);$('calibBands').appendChild(d)}
 }
 function calibPick(v,n){
   const l=lamps.find(l=>l.id===selLamp);if(!l)return;
-  l.heightY=v==='above'?1.15:v==='below'?-1.15:Room.bandY(v,n);l.height=Room.presetFor(l.heightY);
+  if(v==='ceiling'){l.heightY=null;l.height='ceiling'}
+  else{l.heightY=v==='above'?1.15:v==='below'?-1.15:Room.bandY(v,n);l.height=Room.presetFor(l.heightY)}
   changed();showLamp();
 }
-$('calibBtn').onclick=async()=>{const r=await api('/api/calib',{on:true});toast(r.message);
+$('calibBtn').onclick=async()=>{if(calibOpen){$('calibDone').click();return}closeCal('calib');const r=await api('/api/calib',{on:true});toast(r.message);
   try{const s=await api('/api/state');calibN=s.calibBands||5}catch(e){}calibOpen=true;showLamp()};
 $('calibDone').onclick=async()=>{calibOpen=false;toast((await api('/api/calib',{on:false})).message);showLamp()};
 $('lampIpEdit').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);const v=e.target.value.trim();if(l&&/^\d+\.\d+\.\d+\.\d+$/.test(v)){l.ip=v;changed(true)}};
@@ -649,12 +1026,11 @@ function groupUI(){
   const sel=$('setTarget');sel.innerHTML='<option value="">'+t('Alle lampen (standaard)')+'</option>'+groups.map(g=>`<option value="${esc(g.id)}"></option>`).join('');
   [...sel.options].forEach((o,i)=>{if(i>0)o.textContent=groups[i-1].name});sel.value=setTarget;
   const g=groups.find(g=>g.id===setTarget);
-  $('globalOnly').classList.toggle('hidden',!!g);
   $('grpHint').textContent=g?t('Deze instellingen gelden voor de lampen in "{n}".',{n:g.name}):t('Geldt voor alle lampen, ook die in een groep. Kies een groep om die apart in te stellen.');
   groupList();
   const lg=$('lampGroup');if(lg){const v=(lamps.find(l=>l.id===selLamp)||{}).group||'';lg.innerHTML='<option value="">'+t('Geen (standaard)')+'</option>'+groups.map(g=>`<option value="${esc(g.id)}"></option>`).join('')+'<option value="__new"></option>';[...lg.options].forEach((o,i)=>{if(i>0&&i<=groups.length)o.textContent=groups[i-1].name});lg.options[lg.options.length-1].textContent='+ '+t('Nieuwe groep');lg.value=v;$('lampGroupSet').classList.toggle('hidden',!groups.some(g=>g.id===v))}
 }
-function showSettings(){const settings=tgt();for(const k of SL){$(k).value=settings[k];$('v_'+k).textContent=fmt[k](+settings[k])}$('after').value=settings.after;$('darkColor').value=settings.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=settings.fade!==false;$('cuts').checked=settings.cuts!==false;$('whiteLeds').checked=!!settings.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;$('reports').checked=S.settings.reports!==false;
+function showSettings(){const cur=tgt();for(const k of SL){$(k).value=cur[k];$('v_'+k).textContent=fmt[k](+cur[k])}$('after').value=settings.after;$('darkColor').value=cur.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=cur.fade!==false;$('cuts').checked=cur.cuts!==false;$('whiteLeds').checked=!!cur.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;$('reports').checked=S.settings.reports!==false;
   $('autoDark').checked=!!S.settings.autoDark;$('autoDarkBox').classList.toggle('hidden',!S.settings.autoDark);
   $('darkOffset').value=S.settings.darkOffset||0;$('v_darkOffset').textContent=offsetText(S.settings.darkOffset||0);
   $('lat').value=S.settings.lat;$('lon').value=S.settings.lon;$('fixBars').checked=settings.fixBars!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
@@ -664,33 +1040,48 @@ $('setTarget').onchange=e=>{setTarget=e.target.value;groupUI();showSettings()};
 /* Groepen beheren (tabblad Lampen) */
 function groupList(){
   const box=$('groupList'),key=groups.map(g=>g.id).join()+'|'+lamps.map(l=>l.id+l.name).join();
-  if(box.dataset.k!==key){box.dataset.k=key;box.innerHTML=groups.length?'':'<span class="hint">'+t('Nog geen groepen.')+'</span>';
+  if(box.dataset.k!==key){box.dataset.k=key;$('setHome').append($('setBody'));box.innerHTML=groups.length?'':'<span class="hint">'+t('Nog geen groepen.')+'</span>';
     for(const g of groups){const r=document.createElement('div');r.className='gcard';r.dataset.id=g.id;
-      r.innerHTML=`<input type="text" style="width:100%"><div class="gl"></div><div class="hint gfull hidden">${t('Alle lampen zitten al in een andere groep.')}</div><div class="row" style="margin-top:8px"><button class="btn" data-a="set">${t('Instellingen')}</button><span class="grow"></span><button class="btn red" data-a="del">${t('Verwijderen')}</button></div>`;
+      r.innerHTML=`<input type="text" style="width:100%"><div class="gl"></div><div class="hint gfull hidden">${t('Alle lampen zitten al in een andere groep.')}</div><div class="row" style="margin-top:8px"><button class="btn" data-a="set">${t('Instellingen')}</button><span class="grow"></span><button class="btn red" data-a="del">${t('Verwijderen')}</button></div><div class="gset"></div>`;
       const inp=r.querySelector('input');inp.placeholder=t('Naam van de groep');
       inp.oninput=()=>{g.name=inp.value;groupUI();chips();changed(true)};
       for(const l of lamps){const b=document.createElement('button');b.className='btn';b.dataset.lamp=l.id;b.textContent=l.name;
         b.onclick=()=>{l.group=l.group===g.id?'':g.id;changed(true);groupUI();showLamp();chips()};r.querySelector('.gl').append(b)}
       r.querySelector('[data-a=set]').onclick=()=>groupSettings(g.id);
       r.querySelector('[data-a=del]').onclick=()=>{if(!confirm(t('Groep "{n}" verwijderen? De lampen erin gaan terug naar de standaardinstellingen.',{n:g.name})))return;
-        groups=groups.filter(x=>x.id!==g.id);lamps.forEach(l=>{if(l.group===g.id)l.group=''});if(setTarget===g.id)setTarget='';groupUI();showSettings();showLamp();changed(true)};
+        groups=groups.filter(x=>x.id!==g.id);lamps.forEach(l=>{if(l.group===g.id)l.group=''});if(setTarget===g.id)setTarget='';if(grpOpen===g.id)grpOpen=null;groupUI();showSettings();showLamp();changed(true)};
       box.append(r)}}
   for(const r of box.children){const g=groups.find(x=>x.id===r.dataset.id);if(!g)continue;const inp=r.querySelector('input');if(document.activeElement!==inp)inp.value=g.name;
     let shown=0;
     r.querySelectorAll('.gl .btn').forEach(b=>{const l=lamps.find(x=>x.id===b.dataset.lamp);const mine=!!l&&l.group===g.id,other=!!l&&!!l.group&&!mine&&groups.some(x=>x.id===l.group);
       b.classList.toggle('on',mine);b.classList.toggle('hidden',other);if(!other)shown++});
     r.querySelector('.gfull').classList.toggle('hidden',shown>0)}
+  placeSettings();
+}
+/* Instellingen van een groep openen in de groepskaart zelf, zodat je snel door naar de volgende groep kunt.
+   Het blok met schuiven verhuist; op het tabblad Instellingen staat het weer op zijn eigen plek. */
+let grpOpen=null;
+function placeSettings(){
+  const card=grpOpen&&[...$('groupList').children].find(r=>r.dataset.id===grpOpen);
+  if(!card)grpOpen=null;
+  const slot=card?card.querySelector('.gset'):$('setHome');
+  if($('setBody').parentElement!==slot)slot.append($('setBody'));
+  for(const r of $('groupList').children){const b=r.querySelector('[data-a=set]');if(b)b.textContent=t(r.dataset.id===grpOpen?'Instellingen sluiten':'Instellingen')}
 }
 function newGroup(){const id='g'+Date.now().toString(36);groups.push({id,name:t('Groep {n}',{n:groups.length+1}),settings:JSON.parse(JSON.stringify(settings))});changed(true);groupUI();return id}
 function focusGroup(id){setTimeout(()=>{const r=[...$('groupList').children].find(r=>r.dataset.id===id);if(!r)return;const n=r.querySelector('input');n.scrollIntoView({block:'center'});n.focus();n.select()},60)}
-function groupSettings(id){setTarget=id;groupUI();showSettings();showTab('settings')}
+function groupSettings(id,scroll){
+  grpOpen=grpOpen===id&&!scroll?null:id;setTarget=grpOpen||'';groupUI();showSettings();
+  if(scroll){showTab('lamps');setTimeout(()=>{const r=[...$('groupList').children].find(r=>r.dataset.id===id);if(r)r.scrollIntoView({block:'start'})},50)}
+}
 $('grpNew').onclick=()=>focusGroup(newGroup());
 $('lampGroup').onchange=e=>{const l=lamps.find(l=>l.id===selLamp);if(!l)return;
   if(e.target.value==='__new'){const id=newGroup();l.group=id;changed(true);groupUI();showLamp();focusGroup(id);return}
   l.group=e.target.value;changed(true);showLamp()};
-$('lampGroupSet').onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l&&l.group)groupSettings(l.group)};
-function closeLamp(){if(lowOpen){api('/api/lowcal',{id:lowOpen,on:false});lowOpen=null}selLamp=null;chips();showLamp();lampList();draw()}
+$('lampGroupSet').onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l&&l.group)groupSettings(l.group,true)};
+function closeLamp(){if(lowOpen)lowStop();matchStop();selLamp=null;chips();showLamp();lampList();draw()}
 $('lampClose').onclick=()=>{closeLamp();$('lampList').scrollIntoView({behavior:'smooth',block:'center'})};
+$('lampClose2').onclick=()=>{const id=selLamp;closeLamp();const r=[...$('lampList').children].find(r=>r.dataset.id===id);(r||$('lampList')).scrollIntoView({behavior:'smooth',block:'center'})};
 $('after').onchange=e=>{settings.after=e.target.value;changed(true)};
 $('darkColor').onchange=e=>{setVal('darkColor',e.target.value);changed(true)};
 $('autostart').onchange=e=>{settings.autostart=e.target.checked;changed(true)};
@@ -710,7 +1101,7 @@ function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!n
 /* Laatst bekende stand van de tv; opslaan stuurt alleen wat hiervan afwijkt, zodat wijzigingen op de tv
    (of van de app zelf, zoals een nieuw ip-adres) niet worden overschreven door wat deze pagina eerder laadde. */
 let base=null;
-function lampFields(l){return {group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,heightY:l.heightY??null,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,satBoost:l.satBoost>0?l.satBoost:-1,lowHue:l.lowHue??190,lowStrength:l.lowStrength||0,maxBright:l.maxBright||1,look:l.look||'',enabled:l.enabled,ip:l.ip}}
+function lampFields(l){return {group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,heightY:l.heightY??null,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,satBoost:l.satBoost>0?l.satBoost:-1,lowHue:l.lowHue??190,lowStrength:l.lowStrength||0,maxBright:l.maxBright||1,balWarm:l.balWarm||0,balTint:l.balTint||0,look:l.look||'',enabled:l.enabled,ip:l.ip}}
 function stateSnapshot(){return JSON.parse(JSON.stringify({layout:L,settings,groups,lamps:lamps.map(lampFields)}))}
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function diffKeys(cur,old){const d={};for(const k in cur)if(!old||!same(cur[k],old[k]))d[k]=cur[k];return d}
@@ -766,7 +1157,24 @@ function sceneList(s){
       toast((await api('/api/scene',{id:sc.id})).message);poll()};
     g.append(b)}
   $('sceneStop').classList.toggle('hidden',!s.activeScene);
+  $('hueScenesBox').classList.toggle('hidden',!(s.hue&&s.hue.paired));
 }
+// Scènes uit de Hue-app: lijst ophalen van de Bridge, aanvinken en overnemen als eigen scène
+$('hueScenesLoad').onclick=async()=>{const b=$('hueScenesLoad');b.disabled=true;b.textContent=t('Bezig...');
+  try{const r=await fetch('/api/hue/scenes').then(x=>x.json());if(!r.ok){toast(r.message);return}
+    const box=$('hueScenesList');box.innerHTML='';
+    if(!r.scenes.length){const p=document.createElement('p');p.textContent=t('Geen scènes gevonden op de Bridge');box.append(p)}
+    for(const sc of r.scenes){const l=document.createElement('label');l.className='hsc';
+      l.innerHTML='<input type="checkbox"><span></span><span class="sw">'+sc.preview.map(c=>`<i style="background:${esc(c)}"></i>`).join('')+'</span>';
+      l.querySelector('input').value=sc.id;
+      l.querySelector('span').textContent=sc.name+(sc.room?' · '+sc.room:'')+(sc.imported?t(' (al overgenomen)'):'');
+      box.append(l)}
+    $('hueScenesGo').classList.toggle('hidden',!r.scenes.length);
+  }catch(e){toast(t('Scènes ophalen mislukt'))}finally{b.disabled=false;b.textContent=t('Scènes uit Hue ophalen')}};
+$('hueScenesImport').onclick=async()=>{const ids=[...$('hueScenesList').querySelectorAll('input:checked')].map(x=>x.value);
+  if(!ids.length){toast(t('Kies eerst een of meer scènes'));return}
+  const r=await api('/api/hue/scenes/import',{ids});toast(r.message);
+  if(r.ok){$('hueScenesList').innerHTML='';$('hueScenesGo').classList.add('hidden')}poll()};
 $('sceneStop').onclick=async()=>{toast((await api('/api/scene',{id:''})).message);poll()};
 $('sceneSave').onclick=async()=>{const n=$('sceneName').value.trim();if(!n){toast(t('Geef de scène eerst een naam'));return}
   toast((await api('/api/scene/save',{name:n})).message);$('sceneName').value='';poll()};
@@ -839,6 +1247,7 @@ async function load(){
 async function poll(){try{const s=await api('/api/state');S=s;liveFrom(s);chips();showLamp();lampList();draw()}catch(e){}}
 // Tabbladen
 function showTab(n){
+  if(n==='settings'&&grpOpen){grpOpen=null;placeSettings()}
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('hidden',p.id!=='page-'+n));
   document.querySelectorAll('.tabbar .btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===n));
   try{localStorage.setItem('tab',n)}catch(e){}

@@ -11,6 +11,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
+import kotlin.math.ln
 import kotlin.math.max
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -399,6 +400,67 @@ object Hue : Hub {
                 try { Thread.sleep(if (!ok || (HueStream.channels.isEmpty() && Store.hueKey != null)) 60_000L else 600_000L) } catch (_: InterruptedException) { return@Thread }
             }
         }, "hue-refresh").apply { isDaemon = true; start() }
+    }
+
+    // ---------- Scènes uit de Hue-app ----------
+
+    /** Scène uit de Hue-app. Kleuren als h (0..360), s en v (0..1000; 0 = uit); perLamp met app-lamp-ids ("hue-..."). */
+    class HueScene(val id: String, val name: String, val room: String, val perLamp: Map<String, IntArray>, val palette: List<IntArray>)
+
+    /** Haalt alle scènes van de Bridge op, met de naam van hun kamer of zone. */
+    fun scenes(): List<HueScene> {
+        val places = HashMap<String, String>()
+        for (type in listOf("room", "zone")) {
+            val a = resource(type)
+            for (i in 0 until a.length()) a.getJSONObject(i).let { places[it.getString("id")] = it.optJSONObject("metadata")?.optString("name").orEmpty() }
+        }
+        val a = resource("scene")
+        return (0 until a.length()).map { i ->
+            val sc = a.getJSONObject(i)
+            val per = LinkedHashMap<String, IntArray>()
+            sc.optJSONArray("actions")?.let { acts ->
+                for (j in 0 until acts.length()) {
+                    val act = acts.getJSONObject(j)
+                    val rid = act.optJSONObject("target")?.optString("rid")?.ifBlank { null } ?: continue
+                    val o = act.optJSONObject("action") ?: continue
+                    // Lamp staat uit in deze scène: helderheid 0 (de scène zet hem uit)
+                    if (o.optJSONObject("on")?.optBoolean("on", true) == false) { per["hue-$rid"] = intArrayOf(0, 0, 0); continue }
+                    sceneColour(o)?.let { per["hue-$rid"] = it }
+                }
+            }
+            // Palet (bewegende scènes); anders de kleuren van de lampen zelf, zonder dubbele
+            val pal = mutableListOf<IntArray>()
+            sc.optJSONObject("palette")?.let { p ->
+                for (key in listOf("color", "color_temperature")) p.optJSONArray(key)?.let { c -> for (j in 0 until c.length()) sceneColour(c.getJSONObject(j))?.let { pal += it } }
+            }
+            if (pal.isEmpty()) per.values.forEach { c -> if (c[2] > 0 && pal.none { it.contentEquals(c) }) pal += c }
+            HueScene(sc.getString("id"), sc.optJSONObject("metadata")?.optString("name").orEmpty().ifBlank { "Hue" },
+                places[sc.optJSONObject("group")?.optString("rid")].orEmpty(), per, pal)
+        }
+    }
+
+    /** Kleur uit een scène-actie of paletkleur (xy of kleurtemperatuur, met helderheid). */
+    private fun sceneColour(o: JSONObject): IntArray? {
+        val v = ((o.optJSONObject("dimming")?.optDouble("brightness", 100.0) ?: 100.0) * 10).roundToInt().coerceIn(10, 1000)
+        val xy = o.optJSONObject("color")?.optJSONObject("xy")
+        val mk = o.optJSONObject("color_temperature")?.takeIf { it.has("mirek") && !it.isNull("mirek") }?.optInt("mirek")
+        val rgb = when {
+            xy != null -> rgb(xy.optDouble("x"), xy.optDouble("y"))
+            mk != null -> kelvinRgb(1_000_000.0 / mk.coerceIn(153, 500))
+            else -> return null
+        }
+        val hsv = FloatArray(3); Color.colorToHSV(rgb, hsv)
+        return intArrayOf(hsv[0].roundToInt() % 360, (hsv[1] * 1000).roundToInt(), v)
+    }
+
+    /** Kleurtemperatuur (kelvin) naar sRGB, benadering van Tanner Helland; goed genoeg voor warm tot koel wit. */
+    private fun kelvinRgb(k: Double): Int {
+        val t = k / 100
+        val r = if (t <= 66) 255.0 else 329.698727446 * (t - 60).pow(-0.1332047592)
+        val g = if (t <= 66) 99.4708025861 * ln(t) - 161.1195681661 else 288.1221695283 * (t - 60).pow(-0.0755148492)
+        val b = if (t >= 66) 255.0 else if (t <= 19) 0.0 else 138.5177312231 * ln(t - 10) - 305.0447927307
+        fun c(v: Double) = v.roundToInt().coerceIn(0, 255)
+        return Color.rgb(c(r), c(g), c(b))
     }
 
     // ---------- Vertalen ----------
