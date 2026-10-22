@@ -11,8 +11,8 @@ android {
         applicationId = "nl.stacklines.tvambilight"
         minSdk = 26
         targetSdk = 34
-        versionCode = 50
-        versionName = "0.20.0"
+        versionCode = 51
+        versionName = "0.21.0"
     }
 
     buildTypes {
@@ -33,9 +33,6 @@ kotlin {
 }
 
 dependencies {
+    implementation(project(":core"))
     implementation("com.google.zxing:core:3.5.3")
-    // DTLS voor de Hue Entertainment-stream (Android heeft zelf geen DTLS met PSK)
-    implementation("org.bouncycastle:bctls-jdk18on:1.78.1")
-    testImplementation("junit:junit:4.13.2")
-    testImplementation("org.json:json:20240303")
 }

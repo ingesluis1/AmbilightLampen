@@ -1,6 +1,5 @@
 package nl.stacklines.tvambilight
 
-import android.os.SystemClock
 import kotlin.math.max
 import kotlin.math.roundToInt
 

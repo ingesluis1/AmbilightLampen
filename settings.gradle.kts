@@ -14,3 +14,4 @@ dependencyResolutionManagement {
 }
 rootProject.name = "TvAmbilight"
 include(":app")
+include(":core")

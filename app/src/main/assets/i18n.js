@@ -63,6 +63,8 @@ const I18N = (() => {
     'Zwarte balken opvangen': 'Handle black bars',
     'Film in breedbeeld met zwarte balken. Aan: lampen bij de bovenrand nemen de kleur van de zijkanten over.': 'Widescreen film with black bars. On: lamps at the top edge take the colour of the sides.',
     'Pauzeren op het startscherm': 'Pause on the home screen',
+    'Scène op het startscherm': 'Scene on the home screen', 'Geen: lampen terug': 'None: lamps back', 'Scène: {n}': 'Scene: {n}',
+    'Geen fel licht opeens: op het startscherm speelt deze scène, en zodra je een app opent neemt de sync het weer over.': 'No sudden bright light: this scene plays on the home screen, and as soon as you open an app the sync takes over again.',
     'Hiervoor heeft de app "Gebruikstoegang" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.': 'This needs "Usage access": TV settings, Apps, Special app access, Usage access, turn on Ambilight Lampen.',
     'Bewaren en terugzetten': 'Back up and restore', 'Bestand downloaden': 'Download file',
     'Bewaar je kamer, lampen, groepen, kalibraties, scènes en instellingen in een bestand, bijvoorbeeld voor het opnieuw installeren van de app.': 'Save your room, lamps, groups, calibrations, scenes and settings to a file, for example before reinstalling the app.',

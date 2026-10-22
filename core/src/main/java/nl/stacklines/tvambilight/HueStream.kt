@@ -1,6 +1,5 @@
 package nl.stacklines.tvambilight
 
-import android.os.SystemClock
 import org.bouncycastle.tls.BasicTlsPSKIdentity
 import org.bouncycastle.tls.CipherSuite
 import org.bouncycastle.tls.DTLSClientProtocol

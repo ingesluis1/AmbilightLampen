@@ -1,7 +1,5 @@
 package nl.stacklines.tvambilight
 
-import android.graphics.Color
-import android.os.SystemClock
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
@@ -195,7 +193,7 @@ object Hue : Hub {
     /** Privé-adres (10.x, 172.16-31.x, 192.168.x): de Bridge staat altijd in het eigen netwerk. */
     fun isLocal(host: String): Boolean = try {
         val h = host.substringBefore(':')
-        h.matches(WebServer.IPV4) && InetAddress.getByName(h).isSiteLocalAddress
+        h.matches(Net.IPV4) && InetAddress.getByName(h).isSiteLocalAddress
     } catch (_: Exception) { false }
 
     /** Id van de Bridge op dit adres (vraagt de openbare config op), of null als daar geen Bridge zit. */
@@ -206,7 +204,7 @@ object Hue : Hub {
 
     /** Alle adressen in het eigen netwerk (x.x.x.1 tot .254) proberen. */
     private fun scan(): Map<String, String> {
-        val prefix = WebServer.localIp()?.substringBeforeLast('.') ?: return emptyMap()
+        val prefix = Net.localIp()?.substringBeforeLast('.') ?: return emptyMap()
         val found = java.util.concurrent.ConcurrentHashMap<String, String>()
         val pool = Executors.newFixedThreadPool(32)
         for (i in 1..254) pool.execute { val host = "$prefix.$i"; bridgeId(host, 900)?.let { found[host] = it } }

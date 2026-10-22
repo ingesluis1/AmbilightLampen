@@ -16,13 +16,13 @@ import android.os.IBinder
 class App : Application() {
     override fun onCreate() {
         super.onCreate()
-        Store.load(this)
+        AndroidPlatform.install(this)
+        Store.load(filesDir)
         Reporter.init(this)
         Foreground.init(this)
         AutoDark.init(this)
-        Dirigera.init(this)
-        Discovery.start(this) { id, ip, version ->
-            if (!ip.matches(WebServer.IPV4)) return@start
+        Discovery.start { id, ip, version ->
+            if (!ip.matches(Net.IPV4)) return@start
             val l = Store.lampsSnapshot().firstOrNull { it.id == id } ?: return@start
             if (l.ip != ip || l.version != version) {
                 l.ip = ip; l.version = version

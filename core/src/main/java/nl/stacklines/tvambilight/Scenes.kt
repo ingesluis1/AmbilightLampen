@@ -1,7 +1,5 @@
 package nl.stacklines.tvambilight
 
-import android.graphics.Color
-import android.os.SystemClock
 import org.json.JSONArray
 import org.json.JSONObject
 import kotlin.math.abs
@@ -90,14 +88,38 @@ object SceneEngine {
 
     fun all(): List<Scene> = Scene.BUILTIN + Store.customScenes
 
+    /** Scène met dit id, of null (ook bij "" of een verwijderde scène). */
+    fun find(id: String): Scene? = if (id.isEmpty()) null else all().firstOrNull { it.id == id }
+
+    /**
+     * Scène starten. restoreTo: stand van de lampen van vóór de sync, als de scène direct na de sync begint
+     * ("Na stoppen"); bij het stoppen van de scène gaan die lampen daarheen terug in plaats van naar de sync-kleur.
+     */
     @Synchronized
-    fun start(scene: Scene) {
+    fun start(scene: Scene, restoreTo: Map<String, JSONObject?>? = null) {
         stop()
         Engine.lampsOff = false
-        if (Engine.running) { AutoDark.userStopped(); Store.syncWanted = false; Store.save(); Engine.stop() }
+        if (Engine.running) { Platform.userStopped(); Store.syncWanted = false; Store.save(); Engine.stop() }
         Engine.syncWorkers()
         active = scene
-        thread = Thread({ loop(scene) }, "scene").apply { isDaemon = true; start() }
+        thread = Thread({ loop(scene, restoreTo = restoreTo) }, "scene").apply { isDaemon = true; start() }
+    }
+
+    /** Scène op het startscherm terwijl de sync pauzeert: de sync blijft aan en neemt het daarna weer over. */
+    private val homeLock = Any()
+    private var homeThread: Thread? = null
+
+    fun startHome(scene: Scene, lampIds: Set<String>) = synchronized(homeLock) {
+        stopHome()
+        homeThread = Thread({ loop(scene, only = lampIds, restore = false) }, "home-scene").apply { isDaemon = true; start() }
+    }
+
+    fun stopHome() = synchronized(homeLock) {
+        val t = homeThread ?: return
+        homeThread = null
+        t.interrupt()
+        // Ook vanuit de sync-lus die zelf net onderbroken is: dan niet blijven hangen, wel de vlag laten staan
+        try { t.join(3000) } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
     }
 
     @Synchronized
@@ -192,10 +214,14 @@ object SceneEngine {
     /** Id van een geïmporteerde Hue-scène in de app (past in de veilige ids: letters, cijfers, streepjes). */
     fun hueId(hueSceneId: String) = "h-" + hueSceneId.filter { it.isLetterOrDigit() || it == '-' }.take(38)
 
-    private fun loop(scene: Scene) {
-        val lamps = Store.lampsSnapshot().filter { it.enabled && Engine.workers.containsKey(it.id) }
+    /** only: alleen deze lampen; restore = false: lampen na afloop niet terugzetten (de sync neemt het over). */
+    private fun loop(scene: Scene, only: Set<String>? = null, restore: Boolean = true, restoreTo: Map<String, JSONObject?>? = null) {
+        val lamps = Store.lampsSnapshot().filter { it.enabled && Engine.workers.containsKey(it.id) && (only == null || it.id in only) }
             .sortedBy { Mixer.project(Store.layout, it)?.get(0) ?: it.x }
-        val saved = try { Engine.queryAll(lamps.map { it.id }) } catch (_: InterruptedException) { return }
+        // Lampen die de sync niet aanraakte (niet geplaatst) zelf opvragen
+        val saved: Map<String, JSONObject?> = if (!restore) emptyMap() else try {
+            Engine.queryAll(lamps.map { it.id }.filter { restoreTo?.containsKey(it) != true }) + (restoreTo ?: emptyMap())
+        } catch (_: InterruptedException) { return }
         val last = HashMap<String, IntArray>()
         val t0 = SystemClock.elapsedRealtime()
         try {
@@ -238,7 +264,7 @@ object SceneEngine {
         } catch (e: Exception) {
             AppLog.add("Scène: " + (e.message ?: e.javaClass.simpleName))
         } finally {
-            for (l in lamps) Engine.workers[l.id]?.restore(saved[l.id])
+            if (restore) for (l in lamps) Engine.workers[l.id]?.restore(saved[l.id])
         }
     }
 

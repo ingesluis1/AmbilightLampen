@@ -1,6 +1,5 @@
 package nl.stacklines.tvambilight
 
-import android.os.SystemClock
 import org.json.JSONObject
 import java.io.DataInputStream
 import java.io.IOException
@@ -208,7 +207,7 @@ class TuyaLamp(val lamp: Lamp) {
                     14 -> Triple(c.substring(6, 10).toInt(16), c.substring(10, 12).toInt(16) / 255f, c.substring(12, 14).toInt(16) / 255f)
                     else -> return null
                 }
-                android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), s.coerceIn(0f, 1f), 0.45f + 0.55f * v.coerceIn(0f, 1f)))
+                Color.HSVToColor(floatArrayOf(h.toFloat(), s.coerceIn(0f, 1f), 0.45f + 0.55f * v.coerceIn(0f, 1f)))
             }
             "white" -> Engine.whiteRgb((st["23"] as? Number)?.toInt() ?: 500, 1000)
             else -> null
@@ -273,10 +272,10 @@ class TuyaLamp(val lamp: Lamp) {
         val gr = (1 - 0.5 * maxOf(0.0, -w)) * (1 - 0.5 * maxOf(0.0, -t))
         val gg = 1 - 0.5 * maxOf(0.0, t)
         val gb = (1 - 0.5 * maxOf(0.0, w)) * (1 - 0.5 * maxOf(0.0, -t))
-        val rgb = android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), s / 1000f, 1f))
+        val rgb = Color.HSVToColor(floatArrayOf(h.toFloat(), s / 1000f, 1f))
         val hsv = FloatArray(3)
-        android.graphics.Color.RGBToHSV((android.graphics.Color.red(rgb) * gr).roundToInt(), (android.graphics.Color.green(rgb) * gg).roundToInt(),
-            (android.graphics.Color.blue(rgb) * gb).roundToInt(), hsv)
+        Color.RGBToHSV((Color.red(rgb) * gr).roundToInt(), (Color.green(rgb) * gg).roundToInt(),
+            (Color.blue(rgb) * gb).roundToInt(), hsv)
         // De gedempte kleur is iets minder fel; die verhouding gaat mee in de helderheid
         return intArrayOf(hsv[0].roundToInt() % 360, (hsv[1] * 1000).roundToInt(), (v * hsv[2]).roundToInt().coerceIn(if (v > 0) 10 else 0, 1000))
     }
@@ -301,7 +300,7 @@ class TuyaLamp(val lamp: Lamp) {
         val c = dps["24"] as? String ?: return dps
         if (!colourV1 || c.length != 12) return dps
         val (h, s, v) = parseHsvHex(c)
-        val rgb = android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), s / 1000f, v / 1000f))
+        val rgb = Color.HSVToColor(floatArrayOf(h.toFloat(), s / 1000f, v / 1000f))
         val v1 = "%02x%02x%02x%04x%02x%02x".format((rgb shr 16) and 0xff, (rgb shr 8) and 0xff, rgb and 0xff,
             h, (s * 255 / 1000).coerceIn(0, 255), (v * 255 / 1000).coerceIn(0, 255))
         return LinkedHashMap(dps).apply { put("24", v1) }
@@ -336,7 +335,7 @@ class TuyaLamp(val lamp: Lamp) {
             val before = queryStatus()
             for (h in listOf(0, 120, 240)) {
                 send(mapOf("20" to true, "21" to "colour", "24" to hsvHex(h, 1000, 1000)))
-                shownColor = android.graphics.Color.HSVToColor(floatArrayOf(h.toFloat(), 1f, 1f))
+                shownColor = Color.HSVToColor(floatArrayOf(h.toFloat(), 1f, 1f))
                 Thread.sleep(900)
             }
             send(WARM_WHITE)
@@ -349,7 +348,7 @@ class TuyaLamp(val lamp: Lamp) {
     /** Zet een vaste kleur (#rrggbb). */
     fun setColor(rgb: Int) {
         val hsv = FloatArray(3)
-        android.graphics.Color.colorToHSV(rgb, hsv)
+        Color.colorToHSV(rgb, hsv)
         send(mapOf("20" to true, "21" to "colour",
             "24" to hsvHex(hsv[0].toInt() % 360, (hsv[1] * 1000).toInt(), maxOf(10, (hsv[2] * 1000).toInt()))))
         shownColor = rgb or 0xFF000000.toInt()
@@ -670,7 +669,7 @@ class TuyaLamp(val lamp: Lamp) {
             val b = java.nio.ByteBuffer.allocate(12 + segments.size)
             b.put(byteArrayOf(0, 2, 0, 0x14, 1)); b.putShort(c[0].toShort()); b.putShort(c[1].toShort()); b.putShort(c[2].toShort())
             b.put((0x80 or segments.size).toByte()); segments.forEach { b.put(it.toByte()) }
-            return android.util.Base64.encodeToString(b.array(), android.util.Base64.NO_WRAP)
+            return java.util.Base64.getEncoder().encodeToString(b.array())
         }
 
         /** Minimale tijd tussen twee opdrachten; sneller verslikken de lampen zich. */

@@ -1,7 +1,5 @@
 package nl.stacklines.tvambilight
 
-import android.content.Context
-import android.net.wifi.WifiManager
 import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -34,14 +32,11 @@ object Discovery {
         }, "discovery-burst").apply { isDaemon = true; start() }
     }
 
-    fun start(ctx: Context, onFound: (id: String, ip: String, version: String) -> Unit) {
+    fun start(onFound: (id: String, ip: String, version: String) -> Unit) {
         if (started) return
         started = true
         found = onFound
-        try {
-            val wifi = ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager?
-            wifi?.createMulticastLock("tuya")?.apply { setReferenceCounted(false); acquire() }
-        } catch (_: Exception) { }
+        Platform.multicastLock()
         for (port in intArrayOf(6666, 6667, 7000)) {
             Thread({ listen(port, onFound) }, "discovery-$port").apply { isDaemon = true; start() }
         }
@@ -58,7 +53,7 @@ object Discovery {
 
     /** Stuurt het zoekverzoek (commando 0x25) als 6699-frame met de vaste UDP-sleutel. */
     fun ask() {
-        val ip = WebServer.localIp() ?: return
+        val ip = Net.localIp() ?: return
         val body = JSONObject().put("from", "app").put("ip", ip).toString().toByteArray()
         val frame = TuyaCodec.frameGcm(udpKey, 0, 0x25, body)
         val bcast = ip.substringBeforeLast('.') + ".255"

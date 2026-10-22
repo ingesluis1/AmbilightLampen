@@ -221,13 +221,14 @@ const ROWS=[
   {k:'minLight',label:'Licht bij zwart beeld',min:0,max:0.3,step:0.01,fmt:v=>v<0.005?t('uit'):Math.round(v*100)+'%'},
   {k:'spread',label:'Blikveld van de lampen',min:0.4,max:2.5,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'darkColor',label:'Kleur bij donker beeld',options:[['half','Schermhelft'],['lamp','Dichtstbijzijnde lamp']]},
-  {k:'after',label:'Na stoppen',options:[['restore','Terug naar hoe ze stonden'],['white','Warm wit'],['off','Uit']]},
+  {k:'after',label:'Na stoppen',get options(){return [['restore','Terug naar hoe ze stonden'],['white','Warm wit'],['off','Uit'],...sceneOpts('scene:')]}},
   {k:'fade',label:'Vloeiende overgangen',bool:true},
   {k:'cuts',label:'Scènewissels direct',bool:true},
   {k:'whiteLeds',label:'Witte leds voor wit, geel en donker',bool:true},
   {k:'whiteLevel',label:'Helderheid witte leds',min:0.1,max:1,step:0.05,fmt:v=>Math.round(v*100)+'%'},
   {k:'followAmbi',label:'Lampen terug als de tv uit staat',bool:true},
   {k:'pauseHome',label:'Pauzeren op het startscherm',bool:true},
+  {k:'homeScene',label:'Scène op het startscherm',get options(){return [['','Geen: lampen terug'],...sceneOpts('')]}},
   {k:'fixBars',label:'Zwarte balken opvangen',bool:true},
   {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
   {k:'autoDark',label:'Alleen automatisch na zonsondergang',bool:true},
@@ -236,7 +237,9 @@ const ROWS=[
   {k:'lang',label:'Taal',options:[['nl','Nederlands'],['en','English']],reload:true,raw:true},
 ];
 let setOpen=false,setIdx=0,setVals=null,setTimer=null,setTgt='';
-const GLOBAL_ONLY=['_update','after','autostart','autoDark','darkOffset','followAmbi','pauseHome','fixBars','lang'];
+// Scènes als keuze (Na stoppen, startscherm); namen worden in renderSettings veilig weergegeven
+function sceneOpts(prefix){return ((S&&S.scenes)||[]).map(x=>[prefix+x.id,t('Scène: {n}',{n:t(x.name)})])}
+const GLOBAL_ONLY=['_update','after','homeScene','autostart','autoDark','darkOffset','followAmbi','pauseHome','fixBars','lang'];
 function rows(){return ROWS.filter(r=>!(setTgt&&GLOBAL_ONLY.includes(r.k)))}
 
 /* ---------- demo per instelling: testbeeld waarop je ziet wat de instelling met de lampen doet ---------- */
@@ -355,7 +358,7 @@ function renderSettings(){
     if(r.target){const g=tgtGroup();val=g?esc(g.name):t('Alle lampen (standaard)')}
     else if(r.action)val=updMsg||t('OK: nu zoeken');
     else if(r.bool)val=t(v?'aan':'uit');
-    else if(r.options){const o=(r.options.find(o=>o[0]===v)||r.options[0])[1];val=r.raw?o:t(o)}
+    else if(r.options){const o=(r.options.find(o=>o[0]===v)||r.options[0])[1];val=esc(r.raw?o:t(o))}
     else{val=r.fmt(+v);const n=20,f=Math.round((v-r.min)/(r.max-r.min)*n);bar='<div class="bar">'+Array.from({length:n},(_,j)=>`<i class="${j<f?'on':''}"></i>`).join('')+'</div>'}
     return `<div class="srow${i===setIdx?' focus':''}"><div class="top"><span>${t(r.label)}</span><span><span class="arrows">${r.bool?'OK ':r.action?'':'&lt; '}</span>${val}<span class="arrows">${r.bool||r.action?'':' &gt;'}</span></span></div>${bar}</div>`}).join('');
   const f=$('srows').querySelector('.srow.focus');if(f)f.scrollIntoView({block:'nearest'});

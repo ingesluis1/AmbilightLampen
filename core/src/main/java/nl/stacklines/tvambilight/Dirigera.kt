@@ -1,18 +1,11 @@
 package nl.stacklines.tvambilight
 
-import android.content.Context
-import android.net.nsd.NsdManager
-import android.net.nsd.NsdServiceInfo
-import android.os.SystemClock
-import android.util.Base64
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
 import java.security.MessageDigest
 import java.security.SecureRandom
-import java.util.concurrent.CountDownLatch
-import java.util.concurrent.TimeUnit
 import javax.net.ssl.HostnameVerifier
 import javax.net.ssl.HttpsURLConnection
 import kotlin.math.max
@@ -35,9 +28,6 @@ object Dirigera : Hub {
     /** Kleurtemperatuur van IKEA-lampen (Kelvin); de meeste witte lampen kunnen 2200..4000. */
     private const val K_WARM = 2200
     private const val K_COOL = 4000
-
-    private var ctx: Context? = null
-    fun init(c: Context) { ctx = c.applicationContext }
 
     @Volatile var status = ""
     @Volatile var pairing = false
@@ -89,33 +79,7 @@ object Dirigera : Hub {
     // ---------- Zoeken en koppelen ----------
 
     /** Zoekt de hub via mDNS (dienst _ihsp._tcp); geeft het adres of null. */
-    fun findHub(timeoutMs: Long = 5000): String? {
-        val nsd = ctx?.getSystemService(NsdManager::class.java) ?: return null
-        val found = CountDownLatch(1)
-        var result: String? = null
-        val listener = object : NsdManager.DiscoveryListener {
-            override fun onServiceFound(info: NsdServiceInfo) {
-                @Suppress("DEPRECATION")
-                nsd.resolveService(info, object : NsdManager.ResolveListener {
-                    override fun onServiceResolved(s: NsdServiceInfo) {
-                        @Suppress("DEPRECATION")
-                        s.host?.hostAddress?.takeIf { Hue.isLocal(it) }?.let { result = it; found.countDown() }
-                    }
-                    override fun onResolveFailed(s: NsdServiceInfo, err: Int) {}
-                })
-            }
-            override fun onDiscoveryStarted(t: String) {}
-            override fun onDiscoveryStopped(t: String) {}
-            override fun onServiceLost(info: NsdServiceInfo) {}
-            override fun onStartDiscoveryFailed(t: String, err: Int) { found.countDown() }
-            override fun onStopDiscoveryFailed(t: String, err: Int) {}
-        }
-        return try {
-            nsd.discoverServices("_ihsp._tcp", NsdManager.PROTOCOL_DNS_SD, listener)
-            found.await(timeoutMs, TimeUnit.MILLISECONDS)
-            result
-        } catch (_: Exception) { null } finally { try { nsd.stopServiceDiscovery(listener) } catch (_: Exception) { } }
-    }
+    fun findHub(timeoutMs: Long = 5000): String? = Platform.findService("_ihsp._tcp", timeoutMs) { Hue.isLocal(it) }
 
     fun startPair(ip: String?) {
         synchronized(this) { if (pairing) return; pairing = true }
@@ -126,7 +90,7 @@ object Dirigera : Hub {
         }, "ikea-pair").apply { isDaemon = true; start() }
     }
 
-    private fun b64(b: ByteArray) = Base64.encodeToString(b, Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
+    private fun b64(b: ByteArray) = java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(b)
 
     private fun pair(ip: String?): String {
         if (ip != null && !Hue.isLocal(ip)) return tr("Vul het ip-adres van de DIRIGERA in, bijvoorbeeld 192.168.1.30.", "Enter the DIRIGERA's IP address, for example 192.168.1.30.")

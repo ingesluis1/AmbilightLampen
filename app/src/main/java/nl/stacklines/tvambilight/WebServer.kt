@@ -6,8 +6,6 @@ import org.json.JSONObject
 import java.io.BufferedInputStream
 import java.io.ByteArrayOutputStream
 import java.io.InputStream
-import java.net.Inet4Address
-import java.net.NetworkInterface
 import java.net.ServerSocket
 import java.net.Socket
 import kotlin.math.roundToInt
@@ -173,7 +171,7 @@ class WebServer(private val ctx: Context) {
                         val on = JSONObject(req).optBoolean("on")
                         if (!on) AutoDark.userStopped()
                         Store.syncWanted = on; Store.save()
-                        if (on) Engine.start() else Engine.stop()
+                        if (on) Engine.start() else Engine.stopByUser()
                         msg(true, if (on) tr("Sync gestart", "Sync started") else tr("Sync gestopt", "Sync stopped"))
                     }
                     path == "/api/lowcal" && method == "POST" -> {
@@ -472,7 +470,7 @@ class WebServer(private val ctx: Context) {
                     if (j.has("balTint")) l.balTint = j.optDouble("balTint", l.balTint).coerceIn(-1.0, 1.0)
                     if (j.has("group")) l.group = j.optString("group")
                     l.enabled = j.optBoolean("enabled", l.enabled)
-                    j.optString("ip").trim().takeIf { it.matches(IPV4) }?.let { l.ip = it }
+                    j.optString("ip").trim().takeIf { it.matches(Net.IPV4) }?.let { l.ip = it }
                 }
             }
         }
@@ -503,11 +501,11 @@ class WebServer(private val ctx: Context) {
                 val ex = Store.lamps.firstOrNull { it.id == id }
                 if (ex != null) {
                     ex.key = key
-                    d.optString("ip").takeIf { it.matches(IPV4) }?.let { ex.ip = it }
+                    d.optString("ip").takeIf { it.matches(Net.IPV4) }?.let { ex.ip = it }
                     d.optString("version").ifBlank { null }?.let { ex.version = it }
                     updated++
                 } else {
-                    Store.lamps += Lamp(id, key, d.optString("name", id).take(60), d.optString("ip").takeIf { it.matches(IPV4) }.orEmpty(), d.optString("version", "3.3").ifBlank { "3.3" })
+                    Store.lamps += Lamp(id, key, d.optString("name", id).take(60), d.optString("ip").takeIf { it.matches(Net.IPV4) }.orEmpty(), d.optString("version", "3.3").ifBlank { "3.3" })
                     Store.hidden.remove(id); Store.forgotten.remove(id)
                     added++
                 }
@@ -527,17 +525,16 @@ class WebServer(private val ctx: Context) {
      */
     private fun allowed(method: String, host: String, origin: String?, contentType: String): Boolean {
         val name = host.substringBeforeLast(':').removePrefix("[").removeSuffix("]")
-        if (!(name == "localhost" || name.matches(IPV4))) return false
+        if (!(name == "localhost" || name.matches(Net.IPV4))) return false
         if (origin != null && origin != "http://$host") return false
         if (method == "GET") return true
         return method == "POST" && contentType.startsWith("application/json", ignoreCase = true)
     }
 
     /** Adres dat de telefoon opent (via de QR-code). */
-    fun phoneLink(): String? = localIp()?.let { "http://$it:$port/" }
+    fun phoneLink(): String? = Net.localIp()?.let { "http://$it:$port/" }
 
     companion object {
-        val IPV4 = Regex("""\d{1,3}(\.\d{1,3}){3}""")
         /** Groeps-id's komen in de pagina terecht: alleen letters, cijfers, - en _. */
         private val SAFE_ID = Regex("[A-Za-z0-9_-]{1,40}")
         private val LOOKS = setOf("", "spot", "pendant", "floor", "arc", "table", "globe", "rod", "wall", "flush", "lightbar", "strip", "desk", "head", "wallspot")
@@ -548,20 +545,5 @@ class WebServer(private val ctx: Context) {
             "/calib.html" to "text/html; charset=utf-8",
             "/ui.css" to "text/css; charset=utf-8", "/pixelify-sans.woff2" to "font/woff2"
         )
-
-        fun localIp(): String? {
-            try {
-                var fallback: String? = null
-                for (ni in NetworkInterface.getNetworkInterfaces() ?: return null) {
-                    if (!ni.isUp || ni.isLoopback) continue
-                    for (a in ni.inetAddresses) if (a is Inet4Address && !a.isLoopbackAddress) {
-                        val ip = a.hostAddress ?: continue
-                        if (a.isSiteLocalAddress) return ip
-                        if (fallback == null) fallback = ip
-                    }
-                }
-                return fallback
-            } catch (_: Exception) { return null }
-        }
     }
 }

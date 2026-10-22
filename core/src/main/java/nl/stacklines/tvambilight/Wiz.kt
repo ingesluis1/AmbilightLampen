@@ -1,7 +1,5 @@
 package nl.stacklines.tvambilight
 
-import android.graphics.Color
-import android.os.SystemClock
 import org.json.JSONObject
 import java.net.DatagramPacket
 import java.net.DatagramSocket
@@ -60,7 +58,7 @@ object Wiz {
      * Geeft het aantal nieuwe lampen terug.
      */
     fun scan(waitMs: Long = 2500): Int {
-        val ip = WebServer.localIp() ?: return 0
+        val ip = Net.localIp() ?: return 0
         val found = LinkedHashMap<String, Pair<String, String>>()   // mac -> ip, module
         DatagramSocket().use { s ->
             s.broadcast = true; s.soTimeout = 300

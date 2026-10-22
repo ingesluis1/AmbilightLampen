@@ -1,7 +1,5 @@
 package nl.stacklines.tvambilight
 
-import android.graphics.Color
-import android.os.SystemClock
 import org.json.JSONObject
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.math.abs
@@ -432,7 +430,7 @@ object Engine {
     fun allLamps(on: Boolean) {
         if (!on) {
             val busy = running || SceneEngine.active != null
-            AutoDark.userStopped()
+            Platform.userStopped()
             Store.syncWanted = false; Store.save(); stop(); SceneEngine.stop()
             // Eerst het terugzetten van de sync of scène laten versturen, anders mengt het met "uit"
             if (busy) Thread.sleep(600)
@@ -471,7 +469,23 @@ object Engine {
         if (t !== Thread.currentThread()) t.join(3000)
     }
 
-    /** Pauze (tv uit of standby, of startscherm in beeld); lampen staan dan in hun gewone stand. */
+    /** Scène voor "Na stoppen" (after = "scene:<id>"), of null. */
+    private fun afterScene(): Scene? = Store.settings.after.let { if (it.startsWith("scene:")) SceneEngine.find(it.removePrefix("scene:")) else null }
+
+    /** Zet de lus in finally de lampen niet terug, maar laat hij de bewaarde stand achter voor de scène van "Na stoppen". */
+    @Volatile private var handOff = false
+    @Volatile private var handedOver: Map<String, JSONObject?> = emptyMap()
+
+    /** Sync stoppen met de knop: daarna "Na stoppen" uitvoeren, ook als dat een scène is. */
+    fun stopByUser() {
+        val sc = afterScene()
+        if (sc == null || !running) { stop(); return }
+        handedOver = emptyMap(); handOff = true
+        stop()
+        SceneEngine.start(sc, handedOver)
+    }
+
+    /** Pauze (tv uit of standby, of startscherm in beeld); lampen staan dan in hun gewone stand (of in de startschermscène). */
     @Volatile var paused = false
         private set
 
@@ -639,11 +653,12 @@ object Engine {
         val startLamps = Store.lampsSnapshot().filter { it.enabled && it.placed && workers.containsKey(it.id) }
         val touched = LinkedHashSet<String>()
         var blackSince = 0L
+        var homeScene = ""    // id van de scène die nu op het startscherm speelt
         paused = false
 
         try {
             // Binnen try: wordt de sync tijdens het opvragen al gestopt, dan worden de lampen toch teruggezet
-            if (Store.settings.after == "restore") saved.putAll(queryAll(startLamps.map { it.id }))
+            if (Store.settings.after == "restore" || Store.settings.after.startsWith("scene:")) saved.putAll(queryAll(startLamps.map { it.id }))
             for (l in startLamps) {
                 val w = workers[l.id] ?: continue
                 touched += l.id
@@ -657,22 +672,30 @@ object Engine {
                 val hzEff = if (s.fade || Store.groups.any { it.settings.fade }) maxOf(s.hz, 25) else s.hz
                 // Startscherm, schermbeveiliging of tv-instellingen: niets te kijken, lampen in hun gewone stand.
                 // Demo en kalibratie draaien in deze app zelf en tellen dus als "kijken".
-                val home = s.pauseHome && Foreground.idle()
-                val sample = if (home) null else PhilipsTv.measured()?.let { Bars.fix(it, s.fixBars) }
+                val home = s.pauseHome && Platform.homeScreen()
+                val homeSc = if (home) SceneEngine.find(s.homeScene) else null
+                // Met een startschermscène toch meten: zo zien we nog of de tv uit gaat en stopt de scène dan
+                val sample = if (home && homeSc == null) null else PhilipsTv.measured()?.let { Bars.fix(it, s.fixBars) }
                 // Tv uit of standby: de API van sommige tv's meldt Ambilight altijd uit, dus we kijken naar het beeld zelf.
                 // Langer dan 20 seconden volledig zwart = tv uit: lampen terug naar hun gewone stand, tot er weer beeld is.
-                if (s.followAmbi && sample != null) {
-                    val maxC = (sample.left + sample.top + sample.right).maxOfOrNull { it.max() } ?: 0
+                // Op het startscherm telt geen meting ook als zwart (tv in standby geeft soms geen antwoord meer).
+                if (s.followAmbi && (sample != null || homeSc != null)) {
+                    val maxC = sample?.let { (it.left + it.top + it.right).maxOfOrNull { z -> z.max() } } ?: 0
                     if (maxC > 10) blackSince = 0L else if (blackSince == 0L) blackSince = t0
                 }
                 val tvOff = s.followAmbi && blackSince != 0L && t0 - blackSince > 20_000
                 if (home || tvOff) {
-                    if (!paused) {
-                        paused = true; restoreAll(touched, saved)
+                    val sc = if (tvOff) null else homeSc
+                    if (!paused || (sc?.id ?: "") != homeScene) {
+                        if (homeScene.isNotEmpty()) SceneEngine.stopHome()
+                        if (sc != null) SceneEngine.startHome(sc, touched.toSet()) else restoreAll(touched, saved)
+                        homeScene = sc?.id ?: ""
+                        paused = true
                         lampOn.clear(); last.clear(); smooth.clear(); whiteMode.clear(); lastWhite.clear()
                     }
-                    tvStatus = if (home) "Startscherm" else "Tv lijkt uit"; Thread.sleep(500); continue
+                    tvStatus = if (tvOff) "Tv lijkt uit" else "Startscherm"; Thread.sleep(500); continue
                 }
+                if (homeScene.isNotEmpty()) { SceneEngine.stopHome(); homeScene = "" }
                 paused = false
                 if (sample == null) {
                     tvStatus = if (Store.tvPaired) "Tv niet bereikbaar" else "Tv nog niet gekoppeld"
@@ -797,7 +820,8 @@ object Engine {
             running = false
         } finally {
             paused = false
-            restoreAll(touched, saved)
+            if (homeScene.isNotEmpty()) SceneEngine.stopHome()
+            if (handOff) { handOff = false; handedOver = HashMap(saved) } else restoreAll(touched, saved)
             tvStatus = "Gestopt"
         }
     }

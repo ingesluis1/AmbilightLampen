@@ -380,6 +380,11 @@ label.s span{float:right;opacity:.8}
   </div>
   <label class="s"><input type="checkbox" id="pauseHome"> Pauzeren op het startscherm</label>
   <div class="hint">Ook bij schermbeveiliging en tv-instellingen; verder zodra je een app opent.</div>
+  <div id="homeSceneBox">
+    <label class="s">Scène op het startscherm</label>
+    <select id="homeScene"><option value="">Geen: lampen terug</option></select>
+    <div class="hint">Geen fel licht opeens: op het startscherm speelt deze scène, en zodra je een app opent neemt de sync het weer over.</div>
+  </div>
   <div class="hint hidden" id="pauseHomeHint">Hiervoor heeft de app "Gebruikstoegang" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.</div>
   <label class="s"><input type="checkbox" id="followAmbi"> Lampen terug als de tv uit staat</label>
   <div class="hint">Na 20 seconden zwart beeld.</div>
@@ -1030,7 +1035,7 @@ function groupUI(){
   groupList();
   const lg=$('lampGroup');if(lg){const v=(lamps.find(l=>l.id===selLamp)||{}).group||'';lg.innerHTML='<option value="">'+t('Geen (standaard)')+'</option>'+groups.map(g=>`<option value="${esc(g.id)}"></option>`).join('')+'<option value="__new"></option>';[...lg.options].forEach((o,i)=>{if(i>0&&i<=groups.length)o.textContent=groups[i-1].name});lg.options[lg.options.length-1].textContent='+ '+t('Nieuwe groep');lg.value=v;$('lampGroupSet').classList.toggle('hidden',!groups.some(g=>g.id===v))}
 }
-function showSettings(){const cur=tgt();for(const k of SL){$(k).value=cur[k];$('v_'+k).textContent=fmt[k](+cur[k])}$('after').value=settings.after;$('darkColor').value=cur.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=cur.fade!==false;$('cuts').checked=cur.cuts!==false;$('whiteLeds').checked=!!cur.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;$('reports').checked=S.settings.reports!==false;
+function showSettings(){const cur=tgt();for(const k of SL){$(k).value=cur[k];$('v_'+k).textContent=fmt[k](+cur[k])}sceneOpts($('after'),'scene:');$('after').value=settings.after;if(!$('after').value)$('after').value='restore';sceneOpts($('homeScene'),'');$('homeScene').value=settings.homeScene||'';if($('homeScene').selectedIndex<0)$('homeScene').value='';$('homeSceneBox').classList.toggle('hidden',settings.pauseHome===false);$('darkColor').value=cur.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=cur.fade!==false;$('cuts').checked=cur.cuts!==false;$('whiteLeds').checked=!!cur.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;$('reports').checked=S.settings.reports!==false;
   $('autoDark').checked=!!S.settings.autoDark;$('autoDarkBox').classList.toggle('hidden',!S.settings.autoDark);
   $('darkOffset').value=S.settings.darkOffset||0;$('v_darkOffset').textContent=offsetText(S.settings.darkOffset||0);
   $('lat').value=S.settings.lat;$('lon').value=S.settings.lon;$('fixBars').checked=settings.fixBars!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
@@ -1093,7 +1098,12 @@ $('fade').onchange=e=>{setVal('fade',e.target.checked);changed(true)};
 $('cuts').onchange=e=>{setVal('cuts',e.target.checked);changed(true)};
 $('whiteLeds').onchange=e=>{setVal('whiteLeds',e.target.checked);changed(true)};
 $('followAmbi').onchange=e=>{settings.followAmbi=e.target.checked;changed(true)};
-$('pauseHome').onchange=e=>{settings.pauseHome=e.target.checked;changed(true)};
+$('pauseHome').onchange=e=>{settings.pauseHome=e.target.checked;$('homeSceneBox').classList.toggle('hidden',!e.target.checked);changed(true)};
+$('homeScene').onchange=e=>{settings.homeScene=e.target.value;changed(true)};
+// Scènes als keuze in een uitklapmenu (na de vaste keuzes), opnieuw opbouwen als de lijst met scènes verandert
+function sceneOpts(sel,prefix){const sc=(S&&S.scenes)||[],key=JSON.stringify(sc.map(x=>[x.id,x.name]));if(sel.dataset.k===key)return;sel.dataset.k=key;
+  sel.querySelectorAll('option[data-scene]').forEach(o=>o.remove());
+  for(const x of sc){const o=document.createElement('option');o.dataset.scene='1';o.value=prefix+x.id;o.textContent=t('Scène: {n}',{n:t(x.name)});sel.append(o)}}
 $('fixBars').onchange=e=>{demoPing('fixBars');settings.fixBars=e.target.checked;changed(true)};
 
 /* ---------- opslaan en live ---------- */

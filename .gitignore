@@ -6,3 +6,5 @@
 /app/build
 .kotlin
 /dist
+/core/build
+/server/build

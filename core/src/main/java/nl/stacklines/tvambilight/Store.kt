@@ -1,6 +1,5 @@
 package nl.stacklines.tvambilight
 
-import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -69,7 +68,7 @@ class Settings {
     var spread = 1.0         // hoe breed een lamp om zich heen kijkt
     var hz = 15
     var autostart = true
-    var after = "restore"    // restore | white | off
+    var after = "restore"    // restore | white | off | scene:<id> (die scène afspelen)
     var lang = "nl"          // nl | en
     var fade = true          // lampen laten overvloeien (Tuya functie 28) in plaats van springen
     var cuts = true          // scènewissels direct doorgeven (springen) in plaats van vloeien
@@ -82,6 +81,7 @@ class Settings {
     var reports = true       // crashes en probleemmeldingen naar de maker sturen (ntfy)
     var fixBars = true       // zwarte balken (breedbeeldfilm, 4:3) opvangen met de kleuren van de randen ernaast
     var pauseHome = true     // startscherm, schermbeveiliging of tv-instellingen in beeld = lampen terug en sync pauzeren
+    var homeScene = ""       // scène op het startscherm in plaats van lampen terug ("" = geen), tegen fel licht opeens
     var whiteLevel = 0.5     // witte leds geven meer licht dan de kleurleds: hun helderheid hiermee vermenigvuldigen
     var whiteLeds = false    // witte, gele en donkere tinten met de witte leds van de lamp (witmodus) in plaats van RGB
     var darkColor = "half"   // kleur bij donker beeld: half = gemiddelde van de schermhelft aan de kant van de lamp | lamp = dichtstbijzijnde lamp met kleur
@@ -89,7 +89,7 @@ class Settings {
     fun toJson() = JSONObject().apply {
         put("smooth", smooth); put("saturation", saturation); put("brightness", brightness)
         put("minLight", minLight); put("spread", spread); put("hz", hz)
-        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("pauseHome", pauseHome); put("fixBars", fixBars); put("reports", reports); put("autoDark", autoDark); put("darkOffset", darkOffset); put("lat", lat); put("lon", lon); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds); put("whiteLevel", whiteLevel)
+        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("pauseHome", pauseHome); put("homeScene", homeScene); put("fixBars", fixBars); put("reports", reports); put("autoDark", autoDark); put("darkOffset", darkOffset); put("lat", lat); put("lon", lon); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds); put("whiteLevel", whiteLevel)
     }
 
     fun apply(o: JSONObject) {
@@ -106,6 +106,7 @@ class Settings {
         cuts = o.optBoolean("cuts", cuts)
         followAmbi = o.optBoolean("followAmbi", followAmbi)
         pauseHome = o.optBoolean("pauseHome", pauseHome)
+        homeScene = o.optString("homeScene", homeScene)
         fixBars = o.optBoolean("fixBars", fixBars)
         reports = o.optBoolean("reports", reports)
         autoDark = o.optBoolean("autoDark", autoDark)
@@ -175,8 +176,8 @@ object Store {
     val cloudConfigured get() = cloudId != null && cloudSecret != null
 
     @Synchronized
-    fun load(ctx: Context) {
-        file = File(ctx.filesDir, "config.json")
+    fun load(dir: File) {
+        file = File(dir, "config.json")
         if (!file.exists()) return
         val o = try { JSONObject(file.readText()) } catch (_: Exception) {
             // Onleesbaar: bewaren voordat het eerstvolgende opslaan het overschrijft

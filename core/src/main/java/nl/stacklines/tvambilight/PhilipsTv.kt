@@ -16,8 +16,8 @@ class ZoneSample(val left: List<IntArray>, val top: List<IntArray>, val right: L
  * Op de tv zelf is dat 127.0.0.1; op de emulator het ip-adres van de tv.
  */
 object PhilipsTv {
-    private val sharedKey = android.util.Base64.decode(
-        "ZmVay1EQVFOaZhwQ4Kv81ypLAZNczV9sG4KkseXWn1NEk6cXmPKO/MCa9sryslvLCFMnNe4Z4CPXzToowvhHvA==", 0)
+    private val sharedKey = java.util.Base64.getDecoder().decode(
+        "ZmVay1EQVFOaZhwQ4Kv81ypLAZNczV9sG4KkseXWn1NEk6cXmPKO/MCa9sryslvLCFMnNe4Z4CPXzToowvhHvA==")
 
     private var challenge: Map<String, String>? = null
     private var nc = 0
@@ -100,7 +100,7 @@ object PhilipsTv {
         val st = pairState ?: return tr("Start eerst het koppelen.", "Start pairing first.")
         val id = st.getString("id"); val key = st.getString("key"); val ts = st.get("ts").toString()
         val mac = Mac.getInstance("HmacSHA1").apply { init(SecretKeySpec(sharedKey, "HmacSHA1")) }
-        val sig = android.util.Base64.encodeToString(mac.doFinal((ts + pin).toByteArray()), android.util.Base64.NO_WRAP)
+        val sig = java.util.Base64.getEncoder().encodeToString(mac.doFinal((ts + pin).toByteArray()))
         val body = JSONObject()
             .put("auth", JSONObject().put("auth_AppId", "1").put("pin", pin).put("auth_timestamp", st.get("ts")).put("auth_signature", sig))
             .put("device", device(id))
