@@ -4,6 +4,7 @@ import android.app.AppOpsManager
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
+import android.content.Intent
 import android.os.Process
 import android.os.SystemClock
 
@@ -48,6 +49,34 @@ object Foreground {
         val now = SystemClock.elapsedRealtime()
         if (now - lastCheck >= 1000) { lastCheck = now; refresh() }
         return current in IDLE
+    }
+
+    /** App die nu op de tv staat, of null bij het startscherm of als het onbekend is. */
+    fun app(): String? { idle(); return current?.takeIf { it !in IDLE } }
+
+    private var appsCache: List<Pair<String, String>> = emptyList()
+    private var appsAt = 0L
+
+    /** Apps op de tv die je kunt openen (pakketnaam, naam), op naam; hooguit eens per minuut opnieuw opgevraagd. */
+    @Synchronized
+    fun installed(): List<Pair<String, String>> {
+        val c = ctx ?: return emptyList()
+        val now = SystemClock.elapsedRealtime()
+        if (appsAt != 0L && now - appsAt < 60_000) return appsCache
+        appsAt = now
+        appsCache = try {
+            val pm = c.packageManager
+            val found = LinkedHashMap<String, String>()
+            for (cat in listOf(Intent.CATEGORY_LEANBACK_LAUNCHER, Intent.CATEGORY_LAUNCHER)) {
+                for (ri in pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(cat), 0)) {
+                    val pkg = ri.activityInfo.packageName
+                    if (pkg == c.packageName || pkg in IDLE || pkg in found) continue
+                    found[pkg] = ri.loadLabel(pm).toString()
+                }
+            }
+            found.toList().sortedBy { it.second.lowercase() }
+        } catch (_: Exception) { appsCache }
+        return appsCache
     }
 
     /** Leest de app-wissels sinds de vorige keer (de eerste keer de afgelopen 6 uur, voor de huidige stand). */

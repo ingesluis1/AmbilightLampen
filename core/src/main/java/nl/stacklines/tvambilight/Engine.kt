@@ -192,7 +192,8 @@ object Engine {
     @Volatile private var demoUntil = 0L
 
     fun demo(key: String) {
-        if (key.isBlank()) { endDemo(); return }
+        // "Demo tonen" uit: geen testbeeld (een lopende demo stopt)
+        if (key.isBlank() || !Store.settings.demos) { if (demoKey.isNotEmpty() || key.isBlank()) endDemo(); return }
         demoKey = key
         demoUntil = SystemClock.elapsedRealtime() + 30_000
         tempStart("demo")
@@ -429,11 +430,9 @@ object Engine {
     /** Sync en scène stoppen en alle lampen uit (of weer aan in warm wit). */
     fun allLamps(on: Boolean) {
         if (!on) {
-            val busy = running || SceneEngine.active != null
             Platform.userStopped()
-            Store.syncWanted = false; Store.save(); stop(); SceneEngine.stop()
-            // Eerst het terugzetten van de sync of scène laten versturen, anders mengt het met "uit"
-            if (busy) Thread.sleep(600)
+            // Niet eerst terugzetten: de lampen gaan meteen uit
+            Store.syncWanted = false; Store.save(); stop(handOver = true); SceneEngine.stop(handOver = true)
         }
         syncWorkers()
         for (l in Store.lampsSnapshot().filter { it.enabled }) {
@@ -445,8 +444,9 @@ object Engine {
     }
 
     fun start() {
-        // Buiten het slot van de Engine: SceneEngine.start houdt zijn eigen slot vast en roept Engine.stop aan
-        if (!running) SceneEngine.stop()
+        // Buiten het slot van de Engine: SceneEngine.start houdt zijn eigen slot vast en roept Engine.stop aan.
+        // De sync neemt het over, dus de scène hoeft de lampen niet eerst terug te zetten.
+        if (!running) SceneEngine.stop(handOver = true)
         synchronized(this) {
             if (running) return
             // Vorige lus eerst laten terugzetten, anders lopen twee lussen door elkaar
@@ -454,13 +454,16 @@ object Engine {
             lampsOff = false
             syncWorkers()
             running = true
+            startedAt = System.currentTimeMillis()
             thread = Thread(::loop, "sync").apply { isDaemon = true; start() }
         }
     }
 
-    fun stop() {
+    /** handOver: lampen niet terugzetten, er neemt meteen iets anders over; de bewaarde stand staat dan in handedOver. */
+    fun stop(handOver: Boolean = false) {
         val t = synchronized(this) {
             if (!running) return
+            if (handOver) { handedOver = emptyMap(); handOff = true }
             running = false
             synchronized(tempReasons) { tempReasons.clear() }
             thread
@@ -474,16 +477,32 @@ object Engine {
 
     /** Zet de lus in finally de lampen niet terug, maar laat hij de bewaarde stand achter voor de scène van "Na stoppen". */
     @Volatile private var handOff = false
-    @Volatile private var handedOver: Map<String, JSONObject?> = emptyMap()
+    @Volatile var handedOver: Map<String, JSONObject?> = emptyMap()
+        private set
 
     /** Sync stoppen met de knop: daarna "Na stoppen" uitvoeren, ook als dat een scène is. */
-    fun stopByUser() {
-        val sc = afterScene()
-        if (sc == null || !running) { stop(); return }
-        handedOver = emptyMap(); handOff = true
-        stop()
+    fun stopByUser() { stopThen(afterScene()) }
+
+    /**
+     * Sync stoppen en daarna deze scène starten (of gewoon stoppen bij null). De scène zet de lampen bij het stoppen
+     * terug naar hoe ze vóór de sync stonden. Geeft de gestarte scène terug.
+     */
+    fun stopThen(sc: Scene?): Scene? {
+        if (sc == null || !running) { stop(); return null }
+        stop(handOver = true)
         SceneEngine.start(sc, handedOver)
+        return sc
     }
+
+    /** Profiel van de app op de tv (zie [Profiles]) en de instellingen met dat profiel erover, per groep. */
+    private var profile = ""
+    private var profileVersion = -1
+    private val profiled = HashMap<Settings, Settings>()
+    private fun eff(base: Settings): Settings = if (profile.isEmpty()) base else profiled.getOrPut(base) { Profiles.apply(base, profile) }
+
+    /** Wanneer de sync voor het laatst gestart is (ms); "alleen na zonsondergang" stopt bij zonsopkomst een sync van de avond ervoor. */
+    @Volatile var startedAt = 0L
+        private set
 
     /** Pauze (tv uit of standby, of startscherm in beeld); lampen staan dan in hun gewone stand (of in de startschermscène). */
     @Volatile var paused = false
@@ -585,6 +604,13 @@ object Engine {
 
     /** Lampen terugzetten volgens "Na stoppen" (bij stoppen en bij pauze omdat Ambilight uit staat). */
     private fun restoreAll(touched: Set<String>, saved: Map<String, JSONObject?>) {
+        // Eerst zacht naar de nieuwe stand toe, dan precies die stand
+        val lamps = Store.lampsSnapshot().associateBy { it.id }
+        Fade.run(touched.mapNotNull { id ->
+            val w = workers[id] ?: return@mapNotNull null
+            val l = lamps[id] ?: return@mapNotNull null
+            Fade.Target(l, w, when (Store.settings.after) { "off" -> Fade.OFF; "white" -> Fade.target(null); else -> Fade.target(saved[id]) })
+        })
         for (id in touched) {
                 val w = workers[id] ?: continue
                 when (Store.settings.after) {
@@ -653,12 +679,13 @@ object Engine {
         val startLamps = Store.lampsSnapshot().filter { it.enabled && it.placed && workers.containsKey(it.id) }
         val touched = LinkedHashSet<String>()
         var blackSince = 0L
-        var homeScene = ""    // id van de scène die nu op het startscherm speelt
+        var pauseScene = ""   // id van de scène die nu speelt tijdens de pauze (startscherm of tv uit)
         paused = false
 
         try {
             // Binnen try: wordt de sync tijdens het opvragen al gestopt, dan worden de lampen toch teruggezet
-            if (Store.settings.after == "restore" || Store.settings.after.startsWith("scene:")) saved.putAll(queryAll(startLamps.map { it.id }))
+            // Ook voor scènes: die zetten de lampen na afloop terug naar deze stand
+            if (Store.settings.after == "restore" || Store.settings.after.startsWith("scene:") || Store.settings.offScene.isNotEmpty()) saved.putAll(queryAll(startLamps.map { it.id }))
             for (l in startLamps) {
                 val w = workers[l.id] ?: continue
                 touched += l.id
@@ -667,9 +694,12 @@ object Engine {
             }
             while (running) {
                 val t0 = SystemClock.elapsedRealtime()
-                val s = Store.settings
+                // Andere app of andere instellingen: profiel opnieuw toepassen
+                val p = Profiles.current()
+                if (p != profile || Store.version != profileVersion) { profile = p; profileVersion = Store.version; profiled.clear() }
+                val s = eff(Store.settings)
                 // Met vloeiende overgangen vaker meten; de gladheid per meting omrekenen zodat het even snel aanvoelt
-                val hzEff = if (s.fade || Store.groups.any { it.settings.fade }) maxOf(s.hz, 25) else s.hz
+                val hzEff = if (s.fade || Store.groups.any { eff(it.settings).fade }) maxOf(s.hz, 25) else s.hz
                 // Startscherm, schermbeveiliging of tv-instellingen: niets te kijken, lampen in hun gewone stand.
                 // Demo en kalibratie draaien in deze app zelf en tellen dus als "kijken".
                 val home = s.pauseHome && Platform.homeScreen()
@@ -685,17 +715,17 @@ object Engine {
                 }
                 val tvOff = s.followAmbi && blackSince != 0L && t0 - blackSince > 20_000
                 if (home || tvOff) {
-                    val sc = if (tvOff) null else homeSc
-                    if (!paused || (sc?.id ?: "") != homeScene) {
-                        if (homeScene.isNotEmpty()) SceneEngine.stopHome()
-                        if (sc != null) SceneEngine.startHome(sc, touched.toSet()) else restoreAll(touched, saved)
-                        homeScene = sc?.id ?: ""
+                    val sc = if (tvOff) SceneEngine.find(s.offScene) else homeSc
+                    if (!paused || (sc?.id ?: "") != pauseScene) {
+                        if (pauseScene.isNotEmpty()) SceneEngine.stopPause()
+                        if (sc != null) SceneEngine.startPause(sc, touched.toSet()) else restoreAll(touched, saved)
+                        pauseScene = sc?.id ?: ""
                         paused = true
                         lampOn.clear(); last.clear(); smooth.clear(); whiteMode.clear(); lastWhite.clear()
                     }
                     tvStatus = if (tvOff) "Tv lijkt uit" else "Startscherm"; Thread.sleep(500); continue
                 }
-                if (homeScene.isNotEmpty()) { SceneEngine.stopHome(); homeScene = "" }
+                if (pauseScene.isNotEmpty()) { SceneEngine.stopPause(); pauseScene = "" }
                 paused = false
                 if (sample == null) {
                     tvStatus = if (Store.tvPaired) "Tv niet bereikbaar" else "Tv nog niet gekoppeld"
@@ -720,7 +750,7 @@ object Engine {
                 lit.clear()
                 for (l in frameLamps) {
                     if (!l.enabled || !l.placed || l.layers > 0) continue
-                    val ls = Store.settingsFor(l)
+                    val ls = eff(Store.settingsFor(l))
                     val tgt = Mixer.mix(weights[l.id] ?: continue, sample)
                     val hv = FloatArray(3)
                     Color.RGBToHSV(tgt[0].roundToInt().coerceIn(0, 255), tgt[1].roundToInt().coerceIn(0, 255), tgt[2].roundToInt().coerceIn(0, 255), hv)
@@ -746,7 +776,7 @@ object Engine {
                         lampOn.remove(id); whiteMode.remove(id); lastWhite.remove(id)
                         continue
                     }
-                    val ls = Store.settingsFor(l)
+                    val ls = eff(Store.settingsFor(l))
                     val la = 1 - Math.pow(1 - ls.smooth.coerceIn(0.01, 1.0), 15.0 / hzEff)
                     if (touched.add(id)) syncWorkers()
                     if (l.layers > 0) { syncLayers(l, worker, sample, ls, la, smooth, last, lampOn, donorFor(l, la)); continue }
@@ -819,8 +849,10 @@ object Engine {
             AppLog.add("Sync: " + (e.message ?: e.javaClass.simpleName))
             running = false
         } finally {
+            // Gestopt via een onderbreking: die vlag weg, anders stopt het overvloeien meteen
+            Thread.interrupted()
             paused = false
-            if (homeScene.isNotEmpty()) SceneEngine.stopHome()
+            if (pauseScene.isNotEmpty()) SceneEngine.stopPause()
             if (handOff) { handOff = false; handedOver = HashMap(saved) } else restoreAll(touched, saved)
             tvStatus = "Gestopt"
         }

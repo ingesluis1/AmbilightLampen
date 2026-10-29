@@ -135,6 +135,11 @@ class WebServer(private val ctx: Context) {
                     }
                     path == "/api/save" && method == "POST" -> { save(JSONObject(req)); msg(true, tr("Opgeslagen", "Saved")) }
                     path == "/api/import" && method == "POST" -> msg(true, import(req))
+                    path == "/api/app/profile" && method == "POST" -> {
+                        val j = JSONObject(req)
+                        Store.setAppProfile(j.optString("pkg"), j.optString("profile"))
+                        msg(true, tr("Opgeslagen", "Saved"))
+                    }
                     path == "/api/identify" && method == "POST" -> {
                         if (Engine.running) msg(false, tr("Stop eerst de sync", "Stop the sync first")) else { Engine.blink(JSONObject(req).getString("id")); msg(true, tr("Lamp knippert", "Lamp is blinking")) }
                     }
@@ -408,6 +413,10 @@ class WebServer(private val ctx: Context) {
             put("lampsOff", Engine.lampsOff)
             put("sun", AutoDark.info())
             put("scenes", JSONArray().apply { SceneEngine.all().forEach { put(it.toJson()) } })
+            // Instellingen per app: alle apps op de tv met hun profiel
+            put("apps", JSONArray().apply { Foreground.installed().forEach { (pkg, label) ->
+                put(JSONObject().put("pkg", pkg).put("label", label).put("profile", Store.appProfiles[pkg] ?: "")) } })
+            put("profile", if (Engine.running) Profiles.current() else "")
             put("activeScene", SceneEngine.active?.id ?: "")
             put("activeName", SceneEngine.active?.name ?: "")
             SceneEngine.liveLamps()?.let { m ->

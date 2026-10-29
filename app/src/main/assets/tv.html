@@ -46,34 +46,58 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
 #rainbow .inner p{font-size:1.8vh;margin:0;opacity:.85}
 #rbStage{flex:1;width:100%;display:flex;align-items:center;justify-content:center;min-height:0}
 #rbMap{image-rendering:pixelated}
-#scenes{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:center;justify-content:center;z-index:8}
+#scenes{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:center;justify-content:center;z-index:9}
 #scenes .panel{width:70vw;margin:0}
 #scenes h2{font-size:3vh;margin:0 0 1.4vh}
-.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1vh 1vw}
+/* Venster met alle ingestelde apps (bij meer dan een paar apps blijft de kaart in de instellingen kort) */
+#apps{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:center;justify-content:center;z-index:9}
+#apps .panel{width:58vw;margin:0}
+#apps h2{font-size:3.4vh;margin:0 0 1vh}
+#aprows{max-height:62vh;overflow-y:auto;padding:2px 1vw;scroll-padding:1vh 0}
+/* Lange lijsten (veel apps of scènes): de lijst schuift, het venster blijft even groot */
+.sgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:1vh 1vw;max-height:62vh;overflow-y:auto;padding:4px}
 .scard{border:3px solid var(--ink);background:var(--parch-dk);padding:1vh .8vw;font-size:2vh;font-weight:600}
 .scard.focus{background:var(--gold);outline:3px solid var(--cream)}
 .scard.on{box-shadow:inset 0 0 0 3px var(--wood-dk)}
 .scard .sw{display:flex;gap:3px;margin-top:.8vh;height:1.6vh}
 .scard .sw i{flex:1;border:2px solid var(--ink)}
-#settings{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:flex-end;justify-content:center;padding-bottom:3vh;z-index:8;transition:background .3s}
-/* Altijd dezelfde maat en plek (smal, onderaan: daar zitten geen Ambilight-leds), zodat er niets verspringt bij een demo */
-#settings .panel{width:46vw;margin:0}
-#srows{max-height:56vh;overflow-y:auto;padding:0 .3vw}
-#setCap{min-height:5.4vh;font-size:1.9vh;margin:0 0 1vh;opacity:.85}
+#settings{position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:flex-end;justify-content:center;padding-bottom:2.5vh;z-index:8;transition:background .3s}
+/* Altijd dezelfde maat en plek (onderaan: daar zitten geen Ambilight-leds), zodat er niets verspringt bij een demo */
+#settings .setwrap{width:58vw;display:flex;flex-direction:column;gap:1.2vh}
+/* Titel links en verticaal in het midden; de uitleg van een demo ernaast */
+#settings .sethead{margin:0;padding:1.4vh 1.6vw;min-height:9vh;display:flex;align-items:center;gap:1.6vw}
+#settings .sethead h2{margin:0;flex:none}
+#setTop{flex:none;min-width:15vw}
+#setTop .srow{margin:0}
+.scard .sw:empty{display:none}
+/* Kijkvenster met een eigen rand: kaarten schuiven eronder door, net als bij de rand van een telefoonscherm */
+#srows{max-height:68vh;overflow-y:auto;padding:1.2vh .8vw;display:flex;flex-direction:column;gap:1.4vh;scroll-padding:1.6vh 0;background:var(--void);border:4px solid var(--ink);box-shadow:inset 0 0 0 2px var(--wood-dk)}
+#setCap{font-size:2.1vh;margin:0;opacity:.85;flex:1}
+/* Eén kaart per groep, net als de panelen op de telefoon */
+.sgroup.panel{margin:0;padding:1.6vh 1.6vw 1.4vh;flex:none}
+.sgroup h3{font-size:2.8vh;margin:0 0 .4vh}
+.sgroup .ghint{font-size:1.9vh;opacity:.8;margin-bottom:.6vh}
 /* Tijdens een demo: geen donkere waas, paneel smal en onderaan (daar zitten geen Ambilight-leds) */
 #settings.demo{background:transparent}
 #demo{position:fixed;inset:0;z-index:7}
 #demo canvas{width:100%;height:100%;display:block}
 #demoCap{position:fixed;left:50%;bottom:4vh;transform:translateX(-50%);background:#000;color:#eee;padding:1.2vh 1.6vw;font-size:2.2vh;max-width:44vw;text-align:center;z-index:9}
-#settings h2{font-size:3vh;margin:0 0 1.4vh}
-.srow{padding:1vh 1.2vw;margin-bottom:.8vh;border:3px solid transparent}
+#settings h2{font-size:3.4vh;margin:0 0 .6vh}
+.srow{padding:.8vh .9vw;margin:0 -.2vw;border:3px solid transparent}
 .srow.focus{background:var(--gold);border-color:var(--ink)}
-.srow .top{display:flex;justify-content:space-between;font-size:2.2vh;font-weight:600}
-.srow .bar{display:flex;gap:3px;margin-top:.7vh;height:1.3vh}
-.srow .bar i{flex:1;background:var(--parch-dk);border:2px solid var(--ink)}
-.srow .bar i.on{background:var(--wood-dk)}
-.srow .arrows{opacity:.6;font-size:1.8vh}
+.srow .top{display:flex;justify-content:space-between;align-items:baseline;gap:1vw;font-size:2.3vh;font-weight:600}
+/* Schuifje zoals op de telefoon: dunne balk met een blokje */
+.srow .track{position:relative;height:.9vh;margin:.9vh .5vw .5vh;background:var(--parch-dk);border:2px solid var(--ink)}
+.srow .track i{position:absolute;left:0;top:0;bottom:0;background:var(--wood-dk)}
+.srow .track b{position:absolute;top:50%;width:1.2vw;height:2vh;background:var(--wood);border:2px solid var(--ink);transform:translate(-50%,-50%)}
+.srow .arrows{opacity:.6;font-size:1.9vh}
+/* Regel die bij de regel erboven hoort: ingesprongen, met een hoekje ernaartoe */
+.srow.sub{margin-left:1.6vw}
+.shead{font-size:2.1vh;font-weight:700;margin:1.4vh 0 .4vh;padding-bottom:.3vh;border-bottom:2px dashed var(--parch-dk)}
+.srow.sub .top{font-size:2.1vh;font-weight:500}
+.srow .more{text-align:right;font-size:1.8vh;opacity:.7;margin-top:.3vh}
 .shint{font-size:1.7vh;opacity:.75;margin-top:1vh}
+#settings > .setwrap > .shint{color:var(--cream);margin:0;text-align:center}
 .qr small{display:block;margin-top:.6vh;font-size:1.6vh;opacity:.75;word-break:break-all}
 </style>
 </head>
@@ -111,17 +135,21 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
   <p id="rbHint"></p>
   <p id="rbSpeed"></p>
 </div></div>
-<div id="scenes" class="hidden"><section class="panel">
-  <h2>Scènes</h2>
-  <div class="sgrid" id="sgrid"></div>
-  <div class="shint">Pijltjes: kiezen. OK: aanzetten. Terug: sluiten. Sync starten stopt de scène.</div>
+<div id="apps" class="hidden"><section class="panel">
+  <h2>Per app</h2>
+  <div id="aprows"></div>
+  <div class="shint">Omhoog en omlaag: kiezen. Links en rechts: hoe de lampen reageren. Terug: sluiten.</div>
 </section></div>
-<div id="settings" class="hidden"><section class="panel">
-  <h2>Instellingen</h2>
-  <div id="setCap"></div>
+<div id="scenes" class="hidden"><section class="panel">
+  <h2 id="scTitle">Scènes</h2>
+  <div class="sgrid" id="sgrid"></div>
+  <div class="shint" id="scHint">Pijltjes: kiezen. OK: aanzetten. Terug: sluiten. Sync starten stopt de scène.</div>
+</section></div>
+<div id="settings" class="hidden"><div class="setwrap">
+  <section class="panel sethead"><h2>Instellingen</h2><div id="setCap"></div><div id="setTop"></div></section>
   <div id="srows"></div>
   <div class="shint">Omhoog en omlaag: kiezen. Links en rechts: aanpassen. OK: aan of uit. Terug: sluiten.</div>
-</section></div>
+</div></div>
 <div id="upd" class="hidden" style="position:fixed;inset:0;background:rgba(14,8,20,.72);display:flex;align-items:center;justify-content:center;z-index:10">
 <section class="panel" style="width:48vw;margin:0">
   <h2 id="updTitle" style="font-size:3vh;margin:0 0 1.2vh"></h2>
@@ -214,33 +242,63 @@ $('testBtn').onclick=async()=>toast((await api('/api/test',{})).message);
 
 // Instellingen met de afstandsbediening
 const ROWS=[
-  {k:'_target',label:'Instellingen voor',target:true},
+  // Bovenin de kopkaart: altijd te zien, ook als je een groep instelt
+  {k:'demos',label:'Demo tonen',bool:true,top:true},
+  {group:'Hoe de lampen het beeld volgen'},
+  {k:'_target',label:'Voor',target:true},
+  {head:'Kleur en licht'},
   {k:'smooth',label:'Reactiesnelheid',min:0.08,max:1,step:0.04,fmt:v=>Math.round(v*100)+'%'},
   {k:'saturation',label:'Kleurintensiteit',min:0.8,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'brightness',label:'Helderheid',min:0.5,max:2.6,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'minLight',label:'Licht bij zwart beeld',min:0,max:0.3,step:0.01,fmt:v=>v<0.005?t('uit'):Math.round(v*100)+'%'},
   {k:'spread',label:'Blikveld van de lampen',min:0.4,max:2.5,step:0.1,fmt:v=>v.toFixed(1)+'x'},
   {k:'darkColor',label:'Kleur bij donker beeld',options:[['half','Schermhelft'],['lamp','Dichtstbijzijnde lamp']]},
-  {k:'after',label:'Na stoppen',get options(){return [['restore','Terug naar hoe ze stonden'],['white','Warm wit'],['off','Uit'],...sceneOpts('scene:')]}},
+  {head:'Overgangen'},
   {k:'fade',label:'Vloeiende overgangen',bool:true},
   {k:'cuts',label:'Scènewissels direct',bool:true},
-  {k:'whiteLeds',label:'Witte leds voor wit, geel en donker',bool:true},
+  {head:'Witte leds'},
+  {k:'whiteLeds',label:'Witte leds gebruiken',bool:true},
   {k:'whiteLevel',label:'Helderheid witte leds',min:0.1,max:1,step:0.05,fmt:v=>Math.round(v*100)+'%'},
-  {k:'followAmbi',label:'Lampen terug als de tv uit staat',bool:true},
-  {k:'pauseHome',label:'Pauzeren op het startscherm',bool:true},
-  {k:'homeScene',label:'Scène op het startscherm',get options(){return [['','Geen: lampen terug'],...sceneOpts('')]}},
-  {k:'fixBars',label:'Zwarte balken opvangen',bool:true},
+  {group:'Starten en stoppen',hint:'Geldt altijd voor alle lampen.',global:true},
   {k:'autostart',label:'Automatisch starten als de tv aangaat',bool:true},
-  {k:'autoDark',label:'Alleen automatisch na zonsondergang',bool:true},
-  {k:'darkOffset',label:'Starten t.o.v. zonsondergang',min:-120,max:60,step:15,fmt:v=>v==0?t('bij zonsondergang'):(v<0?t('{n} min ervoor',{n:-v}):t('{n} min erna',{n:v}))},
+  {k:'autoDark',label:'Alleen na zonsondergang automatisch starten',bool:true},
+  {k:'darkOffset',label:'Starten t.o.v. zonsondergang',sub:true,show:v=>!!v.autoDark,min:-120,max:60,step:15,fmt:v=>v==0?t('bij zonsondergang'):(v<0?t('{n} min ervoor',{n:-v}):t('{n} min erna',{n:v}))},
+  {k:'pauseHome',label:'Pauzeren op het startscherm',bool:true},
+  {k:'homeScene',label:'Op het startscherm',sub:true,options:[['','Lampen terug'],['scene','Scène']],scene:'',show:v=>v.pauseHome!==false},
+  {k:'followAmbi',label:'Lampen terug als de tv uit staat',bool:true},
+  {k:'offScene',label:'Als de tv uit staat',sub:true,options:[['','Lampen terug'],['scene','Scène']],scene:'',show:v=>v.followAmbi!==false},
+  {k:'fixBars',label:'Zwarte balken opvangen',bool:true},
+  {k:'switchFade',label:'Zacht wisselen',options:[[0,'Uit: meteen'],[1,'Kort (1 seconde)'],[2,'Normaal (2 seconden)']]},
+  {k:'after',label:'Na stoppen',options:[['restore','Terug naar hoe ze stonden'],['white','Warm wit'],['off','Uit'],['scene','Scène']],scene:'scene:'},
+  {group:'App',global:true},
   {k:'_update',label:'Zoeken naar updates',action:true},
   {k:'lang',label:'Taal',options:[['nl','Nederlands'],['en','English']],reload:true,raw:true},
 ];
 let setOpen=false,setIdx=0,setVals=null,setTimer=null,setTgt='';
-// Scènes als keuze (Na stoppen, startscherm); namen worden in renderSettings veilig weergegeven
-function sceneOpts(prefix){return ((S&&S.scenes)||[]).map(x=>[prefix+x.id,t('Scène: {n}',{n:t(x.name)})])}
-const GLOBAL_ONLY=['_update','after','homeScene','autostart','autoDark','darkOffset','followAmbi','pauseHome','fixBars','lang'];
-function rows(){return ROWS.filter(r=>!(setTgt&&GLOBAL_ONLY.includes(r.k)))}
+// Regels met "Scène" als keuze (r.scene = voorvoegsel van de waarde): de naam staat in de regel, OK opent de scènelijst
+function firstScene(){const l=(S&&S.scenes)||[];return l.length?l[0].id:''}
+function sceneName(id){const sc=((S&&S.scenes)||[]).find(x=>x.id===id);return sc?t(sc.name):t('(verwijderd)')}
+const isScene=(r,v)=>r.scene!=null&&!!v&&v.startsWith(r.scene)&&v.length>r.scene.length;
+const lastScene={};   // laatst gekozen scène per regel, terug als je weer op "Scène" uitkomt
+const GLOBAL_ONLY=['_update','demos','after','switchFade','homeScene','offScene','autostart','autoDark','darkOffset','followAmbi','pauseHome','fixBars','lang'];
+function items(){const all=[...ROWS],at=all.findIndex(r=>r.group==='App');all.splice(at<0?all.length:at,0,...appRows());
+  return all.filter(r=>!(setTgt&&!r.top&&(GLOBAL_ONLY.includes(r.k)||r.global))&&(!r.show||!setVals||r.show(setVals)))}
+function rows(){return items().filter(r=>!r.head&&!r.group)}
+// Instellingen per app: een kaart met een regel per app op de tv (vóór de kaart App)
+const PROFILES=[['','Gewoon'],['film','Film: rustiger'],['game','Game: snel'],['calm','Sfeer: zacht en traag']];
+const addedApps=new Set();   // deze keer toegevoegd: blijven staan, ook op Gewoon, tot je de instellingen sluit
+function shownApps(){return ((S&&S.apps)||[]).filter(a=>a.profile||addedApps.has(a.pkg))}
+function appRows(){const apps=shownApps();
+  return [{group:'Per app',global:true,hint:S&&S.tv&&!S.tv.appAccess?'Hiervoor heeft de app \"Gebruikstoegang\" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.':'Gewoon: je instellingen. Film: rustiger. Game: snel. Sfeer: zacht en traag.'},
+    ...(apps.length>APPS_INLINE?[{k:'_apps',label:'Ingestelde apps',appsOpen:true,global:true}]
+      :apps.map(a=>({k:'_app',app:a.pkg,label:a.label,options:PROFILES,global:true}))),
+    {k:'_addApp',label:'App toevoegen',addApp:true,global:true}]}
+const APPS_INLINE=3;   // meer apps: één regel in de kaart, de lijst in een eigen venster
+/** Lijst met apps die er nog niet staan; de gekozen app komt erbij en krijgt de focus. */
+function addApp(){const have=new Set(shownApps().map(a=>a.pkg));
+  const items=((S&&S.apps)||[]).filter(a=>!have.has(a.pkg)).map(a=>({id:a.pkg,name:a.label,preview:[]}));
+  if(!items.length){toast(t('Alle apps staan er al'));return}
+  openScenes(id=>{addedApps.add(id);const i=rows().findIndex(r=>r.app===id);if(i>=0)setIdx=i;else openApps(id)},{items,title:'Kies een app',hint:'Pijltjes: kiezen. OK: deze app. Terug: niets toevoegen.'})}
 
 /* ---------- demo per instelling: testbeeld waarop je ziet wat de instelling met de lampen doet ---------- */
 const hsl=(h,s,l)=>`hsl(${h},${s}%,${l}%)`;
@@ -273,7 +331,7 @@ const DEMOS={
       DEMOS.whiteLeds.now=['Wit','Grijs','Warmgeel','Donkergrijs','Rood','Blauw'][i];g.fillStyle=c;g.fillRect(0,0,W,H)}},
 };
 let demoShown='',demoT0=0;
-function demoKey(){const r=setOpen&&rows()[setIdx];if(r&&DEMOS[r.k])return r.k;return S&&S.demo&&DEMOS[S.demo]?S.demo:''}
+function demoKey(){if(S&&S.settings&&S.settings.demos===false)return '';const r=setOpen&&rows()[setIdx];if(r&&DEMOS[r.k])return r.k;return S&&S.demo&&DEMOS[S.demo]?S.demo:''}
 function demoFrame(){
   const k=demoKey(),box=$('demo'),cap=$('demoCap');
   if(k!==demoShown){demoShown=k;demoT0=performance.now();box.classList.toggle('hidden',!k);$('settings').classList.toggle('demo',!!k&&setOpen)}
@@ -289,12 +347,12 @@ function demoFrame(){
 }
 const t2=(s,a)=>t(s,a);
 let demoAsked='';
-function demoAsk(){const r=setOpen&&rows()[setIdx];const k=r&&DEMOS[r.k]?r.k:'';if(k!==demoAsked){demoAsked=k;api('/api/demo',{k})}}
+function demoAsk(){const r=setOpen&&rows()[setIdx];const k=r&&DEMOS[r.k]&&S.settings.demos!==false?r.k:'';if(k!==demoAsked){demoAsked=k;api('/api/demo',{k})}}
 setInterval(()=>{if(demoAsked&&setOpen){api('/api/demo',{k:demoAsked})}},20000);
 requestAnimationFrame(demoFrame);
 function tgtGroup(){return (S.groups||[]).find(g=>g.id===setTgt)}
 function openSettings(){if(!S)return;setTgt='';setVals={...S.settings};setOpen=true;setIdx=0;$('settings').classList.remove('hidden');renderSettings()}
-function closeSettings(){setOpen=false;$('settings').classList.add('hidden');$('settings').classList.remove('demo');$('setBtn').focus();demoAsked='';api('/api/demo',{k:''})}
+function closeSettings(){setOpen=false;addedApps.clear();$('settings').classList.add('hidden');$('settings').classList.remove('demo');$('setBtn').focus();demoAsked='';api('/api/demo',{k:''})}
 let rbOpen=false,rbSpeed=8,rbSel=-1,rbSave=null,rbLamps=null;
 function rbHint(){
   const l=rbLamps&&rbLamps[rbSel];
@@ -353,29 +411,60 @@ document.addEventListener('keydown',e=>{
 window.onBack=()=>{if(S&&S.calib){closeCalib();return true}if(S&&S.lowRef){closeLowRef();return true}if(rbOpen){closeRainbow();return true}if(setOpen){closeSettings();return true}return false};
 function renderSettings(){
   demoAsk();
-  $('srows').innerHTML=rows().map((r,i)=>{
-    const v=setVals[r.k];let val,bar='';
+  let i=-1,open=false,top='';
+  $('srows').innerHTML=items().map(r=>{
+    if(r.group){const h=(open?'</section>':'')+`<section class="panel sgroup"><h3>${t(r.group)}</h3>`+(r.hint?`<div class="ghint">${t(r.hint)}</div>`:'');open=true;return h}
+    if(r.head)return `<div class="shead">${t(r.head)}</div>`;
+    i++;
+    const v=r.app?appProfile(r.app):r.top?S.settings[r.k]!==false:setVals[r.k];let val,bar='';
     if(r.target){const g=tgtGroup();val=g?esc(g.name):t('Alle lampen (standaard)')}
     else if(r.action)val=updMsg||t('OK: nu zoeken');
+    else if(r.addApp)val=t('OK: kiezen');
+    else if(r.appsOpen)val=t('{n} apps · OK: bekijken',{n:shownApps().length});
     else if(r.bool)val=t(v?'aan':'uit');
+    else if(isScene(r,v))val=esc(t('Scène: {n}',{n:sceneName(v.slice(r.scene.length))}));
     else if(r.options){const o=(r.options.find(o=>o[0]===v)||r.options[0])[1];val=esc(r.raw?o:t(o))}
-    else{val=r.fmt(+v);const n=20,f=Math.round((v-r.min)/(r.max-r.min)*n);bar='<div class="bar">'+Array.from({length:n},(_,j)=>`<i class="${j<f?'on':''}"></i>`).join('')+'</div>'}
-    return `<div class="srow${i===setIdx?' focus':''}"><div class="top"><span>${t(r.label)}</span><span><span class="arrows">${r.bool?'OK ':r.action?'':'&lt; '}</span>${val}<span class="arrows">${r.bool||r.action?'':' &gt;'}</span></span></div>${bar}</div>`}).join('');
-  const f=$('srows').querySelector('.srow.focus');if(f)f.scrollIntoView({block:'nearest'});
+    else{val=r.fmt(+v);const f=Math.max(0,Math.min(100,(v-r.min)/(r.max-r.min)*100)).toFixed(1);bar=`<div class="track"><i style="width:${f}%"></i><b style="left:${f}%"></b></div>`}
+    const more=i===setIdx&&isScene(r,v)?`<div class="more">${t('OK: andere scène')}</div>`:'';
+    const html=`<div class="srow${i===setIdx?' focus':''}${r.sub?' sub':''}"><div class="top"><span>${r.app?esc(r.label):t(r.label)}</span><span><span class="arrows">${r.bool?'OK ':r.action||r.addApp||r.appsOpen?'':'&lt; '}</span>${val}<span class="arrows">${r.bool||r.action||r.addApp||r.appsOpen?'':' &gt;'}</span></span></div>${bar}${more}</div>`;
+    if(r.top){top+=html;return ''}
+    return html}).join('')+(open?'</section>':'');
+  $('setTop').innerHTML=top;
+  const f=$('srows').querySelector('.srow.focus');
+  // Eerste regel van een kaart of kopje: de titel en het kopje erboven ook in beeld
+  if(f){let h=f;while(h.previousElementSibling&&!h.previousElementSibling.classList.contains('srow'))h=h.previousElementSibling;
+    if(h!==f)h.scrollIntoView({block:'nearest'});f.scrollIntoView({block:'nearest'})}
 }
 let updMsg='';
 /** Nu op GitHub kijken; is er een nieuwe versie, dan meteen het update-venster openen. */
 async function checkUpdates(){updMsg=t('Zoeken...');renderSettings();
   const r=await api('/api/update/check',{});updMsg=r.message;renderSettings();
   S=await api('/api/state');status();if(S.update&&S.update.available){closeSettings();openUpd()}}
+/** OK op een regel met een scène: scènelijst openen. */
+function pickScene(r){openScenes(id=>{setVals[r.k]=r.scene+id;lastScene[r.k]=id;saveSetting(r)})}
+/** Volgende of vorige profiel voor een app. Meteen opslaan: de volgende statusvraag zou de keuze anders even terugdraaien. */
+function stepProfile(pkg,dir){const a=((S&&S.apps)||[]).find(x=>x.pkg===pkg);if(!a)return;const i=PROFILES.findIndex(o=>o[0]===(a.profile||''));
+  a.profile=PROFILES[(i+dir+PROFILES.length)%PROFILES.length][0];api('/api/app/profile',{pkg:a.pkg,profile:a.profile})}
+function appProfile(pkg){const a=((S&&S.apps)||[]).find(x=>x.pkg===pkg);return a?a.profile||'':''}
 function changeSetting(dir){
   const r=rows()[setIdx];
   if(r.action)return;
+  if(r.addApp){addApp();return}
+  if(r.appsOpen){openApps();return}
+  // Bovenin (Demo tonen): altijd de algemene instelling, ook als je een groep instelt
+  if(r.top){S.settings[r.k]=S.settings[r.k]===false;setVals[r.k]=S.settings[r.k];renderSettings();api('/api/save',{settings:{[r.k]:S.settings[r.k]}});return}
+  if(r.app){stepProfile(r.app,dir);renderSettings();return}
   if(r.target){const ids=['',...(S.groups||[]).map(g=>g.id)];setTgt=ids[(ids.indexOf(setTgt)+dir+ids.length)%ids.length];
     const g=tgtGroup();setVals={...(g?g.settings:S.settings)};renderSettings();return}
   if(r.bool)setVals[r.k]=!setVals[r.k];
-  else if(r.options){const i=r.options.findIndex(o=>o[0]===setVals[r.k]);setVals[r.k]=r.options[(i+dir+r.options.length)%r.options.length][0]}
+  else if(r.options){const v=setVals[r.k],cur=isScene(r,v)?'scene':v,i=r.options.findIndex(o=>o[0]===cur),o=r.options[(i+dir+r.options.length)%r.options.length][0];
+    if(isScene(r,v))lastScene[r.k]=v.slice(r.scene.length);
+    // Op "Scène" uitkomen: de vorige keuze terug, anders de eerste scène
+    setVals[r.k]=o==='scene'?r.scene+(lastScene[r.k]||firstScene()):o}
   else setVals[r.k]=Math.round(Math.min(r.max,Math.max(r.min,+setVals[r.k]+dir*r.step))*100)/100;
+  saveSetting(r);
+}
+function saveSetting(r){
   renderSettings();clearTimeout(setTimer);
   setTimer=setTimeout(async()=>{
     const g=tgtGroup();
@@ -387,20 +476,28 @@ function changeSetting(dir){
 }
 $('setBtn').onclick=openSettings;
 // Scènes kiezen met de afstandsbediening
-let scOpen=false,scIdx=0;
-function scList(){const l=(S&&S.scenes)||[];return S&&S.activeScene?[{id:'',name:t('Scène stoppen'),preview:[]},...l]:l}
+let scOpen=false,scIdx=0,scPick=null,scItems=null;   // scPick: kiezen voor een instelling in plaats van aanzetten; scItems: iets anders dan scènes (apps)
+function scList(){if(scItems)return scItems;const l=(S&&S.scenes)||[];return S&&S.activeScene&&!scPick?[{id:'',name:t('Scène stoppen'),preview:[]},...l]:l}
 function renderScenes(){
   $('sgrid').innerHTML=scList().map((sc,i)=>`<div class="scard${i===scIdx?' focus':''}${S.activeScene===sc.id?' on':''}"><span></span><div class="sw">${(sc.preview||[]).map(c=>`<i style="background:${esc(c)}"></i>`).join('')}</div></div>`).join('');
   [...$('sgrid').children].forEach((d,i)=>d.querySelector('span').textContent=t(scList()[i].name));
+  const f=$('sgrid').querySelector('.scard.focus');if(f)f.scrollIntoView({block:'nearest'});
 }
-function openScenes(){if(!S)return;scOpen=true;scIdx=0;$('scenes').classList.remove('hidden');renderScenes()}
-function closeScenes(){scOpen=false;$('scenes').classList.add('hidden');$('sceneBtn').focus()}
+function openScenes(pick,o){if(!S)return;scPick=typeof pick==='function'?pick:null;scItems=o&&o.items||null;if(scPick&&!scList().length){scPick=null;toast(t('Nog geen scènes'));return}scOpen=true;
+  $('scTitle').textContent=t(o&&o.title||(scPick?'Kies een scène':'Scènes'));
+  $('scHint').textContent=t(o&&o.hint||(scPick?'Pijltjes: kiezen. OK: deze scène. Terug: niets veranderen.':'Pijltjes: kiezen. OK: aanzetten. Terug: sluiten. Sync starten stopt de scène.'));
+  // Bij kiezen: begin op de scène die nu gekozen is
+  const r=scPick&&!scItems&&rows()[setIdx];scIdx=r?Math.max(0,scList().findIndex(x=>r.scene+x.id===setVals[r.k])):0;
+  $('scenes').classList.remove('hidden');renderScenes()}
+function closeScenes(){scOpen=false;scItems=null;$('scenes').classList.add('hidden');if(scPick){scPick=null;renderSettings()}else $('sceneBtn').focus()}
 $('sceneBtn').onclick=openScenes;
 document.addEventListener('keydown',async e=>{
   if(!scOpen)return;
   const n=scList().length;
   if(e.key==='ArrowRight')scIdx=(scIdx+1)%n;else if(e.key==='ArrowLeft')scIdx=(scIdx-1+n)%n;
   else if(e.key==='ArrowDown')scIdx=Math.min(n-1,scIdx+4);else if(e.key==='ArrowUp')scIdx=Math.max(0,scIdx-4);
+  // OK hier niet laten doorgaan naar de instellingen eronder (die zouden de regel meteen weer veranderen)
+  else if(e.key==='Enter'&&scPick){e.preventDefault();e.stopImmediatePropagation();const f=scPick,sc=scList()[scIdx];if(sc)f(sc.id);closeScenes();return}
   else if(e.key==='Enter'){const sc=scList()[scIdx];toast((await api('/api/scene',{id:sc.id})).message);S=await api('/api/state');closeScenes();status();return}
   else if(e.key==='Escape'||e.key==='Backspace'){closeScenes()}
   else return;
@@ -422,14 +519,33 @@ document.addEventListener('keydown',e=>{
   if(e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown'){(document.activeElement===$('updGo')?$('updLater'):$('updGo')).focus();e.preventDefault();e.stopImmediatePropagation()}
   else if(e.key==='Escape'||e.key==='Backspace'){closeUpd();e.preventDefault();e.stopImmediatePropagation()}
 },true);
-const _ob=window.onBack;window.onBack=()=>{if(updOpen){closeUpd();return true}if(scOpen){closeScenes();return true}return _ob?_ob():false};
+let apOpen=false,apIdx=0,apList=[];
+/** Venster met de ingestelde apps; de lijst blijft gelijk zolang het open is (ook een app die je op Gewoon zet). */
+function openApps(focus){apList=shownApps().map(a=>a.pkg);if(!apList.length)return;apOpen=true;apIdx=Math.max(0,apList.indexOf(focus));$('apps').classList.remove('hidden');renderApps()}
+function closeApps(){apOpen=false;$('apps').classList.add('hidden');renderSettings()}
+function renderApps(){
+  $('aprows').innerHTML=apList.map((pkg,i)=>{const a=((S&&S.apps)||[]).find(x=>x.pkg===pkg)||{label:pkg,profile:''};
+    const o=(PROFILES.find(p=>p[0]===(a.profile||''))||PROFILES[0])[1];
+    return `<div class="srow${i===apIdx?' focus':''}"><div class="top"><span>${esc(a.label)}</span><span><span class="arrows">&lt; </span>${esc(t(o))}<span class="arrows"> &gt;</span></span></div></div>`}).join('');
+  const f=$('aprows').querySelector('.srow.focus');if(f)f.scrollIntoView({block:'nearest'});
+}
+document.addEventListener('keydown',e=>{
+  if(!apOpen)return;
+  const n=apList.length;
+  if(e.key==='ArrowDown')apIdx=(apIdx+1)%n;else if(e.key==='ArrowUp')apIdx=(apIdx-1+n)%n;
+  else if(e.key==='ArrowRight'||e.key==='Enter')stepProfile(apList[apIdx],1);else if(e.key==='ArrowLeft')stepProfile(apList[apIdx],-1);
+  else if(e.key==='Escape'||e.key==='Backspace'){e.preventDefault();e.stopImmediatePropagation();closeApps();return}
+  else return;
+  e.preventDefault();e.stopImmediatePropagation();renderApps();
+},true);
+const _ob=window.onBack;window.onBack=()=>{if(updOpen){closeUpd();return true}if(scOpen){closeScenes();return true}if(apOpen){closeApps();return true}return _ob?_ob():false};
 document.addEventListener('keydown',e=>{
   if(!setOpen)return;
   if(e.key==='ArrowDown'){setIdx=(setIdx+1)%rows().length;renderSettings()}
   else if(e.key==='ArrowUp'){setIdx=(setIdx-1+rows().length)%rows().length;renderSettings()}
   else if(e.key==='ArrowRight')changeSetting(1);
   else if(e.key==='ArrowLeft')changeSetting(-1);
-  else if(e.key==='Enter'){const r=rows()[setIdx];if(r.action)checkUpdates();else if(r.bool||r.options||r.target)changeSetting(1)}
+  else if(e.key==='Enter'){const r=rows()[setIdx];if(r.action)checkUpdates();else if(isScene(r,setVals[r.k]))pickScene(r);else if(r.bool||r.options||r.target||r.addApp||r.appsOpen)changeSetting(1)}
   else if(e.key==='Escape'||e.key==='Backspace')closeSettings();
   else return;
   e.preventDefault();e.stopImmediatePropagation();

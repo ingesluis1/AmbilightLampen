@@ -11,6 +11,8 @@ import java.time.format.DateTimeFormatter
  * "Alleen automatisch syncen na zonsondergang": overdag is het buiten te licht om iets van de lampen te merken.
  * Overdag start de sync dan nooit vanzelf (wel met de hand). Vanaf zonsondergang (met verschuiving) start hij
  * vanzelf als de tv aan staat, één keer per avond: zet je hem 's avonds zelf uit, dan blijft hij die avond uit.
+ * Na zonsopkomst stopt een sync van de avond ervoor zodra hij gepauzeerd is (tv uit of startscherm), zodat hij
+ * de volgende middag niet vanzelf verdergaat. Een sync die je overdag zelf start, blijft gewoon aan.
  */
 object AutoDark {
     private var ctx: Context? = null
@@ -43,7 +45,15 @@ object AutoDark {
     /** Elke minuut, en bij het aanzetten van de tv: donker geworden en de tv staat aan? Dan de sync starten. */
     fun check() {
         if (!Store.settings.autoDark) return
-        val e = evening() ?: return
+        val e = evening()
+        if (e == null) {
+            val sunrise = today()?.first ?: return
+            if (Engine.running && Engine.paused && Engine.startedAt < sunrise) {
+                AppLog.add("Licht geworden: sync van gisteravond gestopt")
+                Engine.stop()
+            }
+            return
+        }
         if (e == startedEvening || e == stoppedEvening) return
         if (Engine.running || SceneEngine.active != null) return
         val pm = ctx?.getSystemService(PowerManager::class.java) ?: return

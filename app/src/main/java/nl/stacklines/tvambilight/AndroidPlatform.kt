@@ -14,6 +14,7 @@ object AndroidPlatform {
         Platform.clock = { android.os.SystemClock.elapsedRealtime() }
         Platform.userStopped = { AutoDark.userStopped() }
         Platform.homeScreen = { Foreground.idle() }
+        Platform.currentApp = { Foreground.app() }
         Platform.multicastLock = {
             try {
                 val wifi = ctx.getSystemService(Context.WIFI_SERVICE) as WifiManager?

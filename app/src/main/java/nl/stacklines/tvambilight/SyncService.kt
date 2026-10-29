@@ -47,6 +47,10 @@ class App : Application() {
  */
 class SyncService : Service() {
     private var pausedByScreen = false
+    /** startForeground werd geweigerd: deze dienst stopt meteen weer (zie [RetryReceiver]). */
+    private var blocked = false
+    /** Scène die liep omdat de tv uit ging ("Scène als de tv uit staat"); stopt weer als de tv aangaat. */
+    private var offScene: Scene? = null
     /** Scherm uit/aan na elkaar afhandelen, in volgorde en niet op de hoofdthread (stoppen kan even duren). */
     private val screenQueue = java.util.concurrent.Executors.newSingleThreadExecutor()
 
@@ -55,8 +59,13 @@ class SyncService : Service() {
             val action = i.action
             screenQueue.execute {
                 when (action) {
-                    Intent.ACTION_SCREEN_OFF -> if (Engine.running) { pausedByScreen = true; Engine.stop() }
+                    Intent.ACTION_SCREEN_OFF -> if (Engine.running) {
+                        pausedByScreen = true
+                        offScene = Engine.stopThen(if (Store.settings.followAmbi) SceneEngine.find(Store.settings.offScene) else null)
+                    }
                     Intent.ACTION_SCREEN_ON -> {
+                        // Alleen als het nog onze scène is (niet als je intussen zelf een andere hebt gekozen)
+                        offScene?.let { if (SceneEngine.active === it) SceneEngine.stop() }; offScene = null
                         if (pausedByScreen) { pausedByScreen = false; if (Store.syncWanted && AutoDark.mayAutostart()) Engine.start() }
                         AutoDark.check()   // 's avonds aangezet: vanzelf syncen (als die instelling aan staat)
                     }
@@ -71,8 +80,20 @@ class SyncService : Service() {
         nm.createNotificationChannel(NotificationChannel("sync", "Ambilight Lampen", NotificationManager.IMPORTANCE_MIN))
         val n = Notification.Builder(this, "sync").setContentTitle("Ambilight Lampen").setContentText("Actief")
             .setSmallIcon(R.drawable.ic_app).build()
-        if (Build.VERSION.SDK_INT >= 34) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
-        else startForeground(1, n)
+        // Herstart Android de dienst zelf op de achtergrond (bijvoorbeeld nadat een WebView-update de app stopte),
+        // dan mag startForeground soms niet (Android 12+). Niet crashen, maar stoppen en het straks opnieuw proberen.
+        try {
+            if (Build.VERSION.SDK_INT >= 34) startForeground(1, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            else startForeground(1, n)
+        } catch (e: Exception) {
+            if (Build.VERSION.SDK_INT < 31 || e !is android.app.ForegroundServiceStartNotAllowedException) throw e
+            AppLog.add("Dienst mocht niet starten op de achtergrond, opnieuw over ${RetryReceiver.DELAY_S} s")
+            blocked = true
+            RetryReceiver.schedule(this)
+            stopSelf()
+            return
+        }
+        RetryReceiver.tries = 0
         if (App.server == null) App.server = WebServer(applicationContext).also { it.start() }
         // Elke paar uur kijken of er een nieuwe versie op GitHub staat
         Thread {
@@ -84,6 +105,7 @@ class SyncService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (blocked) return START_NOT_STICKY
         if (intent?.getBooleanExtra("boot", false) == true) {
             if (Store.settings.autoDark) AutoDark.check()
             else if (Store.syncWanted && Store.settings.autostart) Engine.start()
@@ -94,7 +116,7 @@ class SyncService : Service() {
     override fun onDestroy() {
         try { unregisterReceiver(screen) } catch (_: Exception) { }
         screenQueue.shutdown()
-        Engine.stop()
+        if (!blocked) Engine.stop()
         App.server?.stop(); App.server = null
         super.onDestroy()
     }
@@ -106,6 +128,31 @@ class SyncService : Service() {
             ctx.startForegroundService(Intent(ctx, SyncService::class.java).putExtra("boot", boot))
         }
         val serverPort get() = App.server?.port ?: 0
+    }
+}
+
+/**
+ * Opnieuw proberen nadat Android de dienst op de achtergrond niet in de voorgrond liet starten.
+ * Een exacte wekker geeft de app even toestemming om dat wel te doen; elke keer wat later, tot 8 keer.
+ */
+class RetryReceiver : BroadcastReceiver() {
+    override fun onReceive(c: Context, i: Intent) {
+        try { SyncService.start(c, boot = true) } catch (e: Exception) { AppLog.add("Opnieuw starten mislukt: ${e.javaClass.simpleName}"); schedule(c) }
+    }
+
+    companion object {
+        const val DELAY_S = 60
+        @Volatile var tries = 0
+
+        fun schedule(c: Context) {
+            if (++tries > 8) { AppLog.add("Dienst start niet op de achtergrond, wacht tot de app geopend wordt"); return }
+            val am = c.getSystemService(android.app.AlarmManager::class.java)
+            val pi = android.app.PendingIntent.getBroadcast(c, 0, Intent(c, RetryReceiver::class.java),
+                android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+            val at = System.currentTimeMillis() + DELAY_S * 1000L * tries
+            if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) am.setExactAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
+            else am.setAndAllowWhileIdle(android.app.AlarmManager.RTC_WAKEUP, at, pi)
+        }
     }
 }
 

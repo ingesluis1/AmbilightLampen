@@ -82,6 +82,9 @@ class Settings {
     var fixBars = true       // zwarte balken (breedbeeldfilm, 4:3) opvangen met de kleuren van de randen ernaast
     var pauseHome = true     // startscherm, schermbeveiliging of tv-instellingen in beeld = lampen terug en sync pauzeren
     var homeScene = ""       // scène op het startscherm in plaats van lampen terug ("" = geen), tegen fel licht opeens
+    var offScene = ""        // scène als de tv uit staat in plaats van lampen terug ("" = geen)
+    var demos = true         // testbeeld op de tv tonen als je een instelling aanpast (tv en telefoon)
+    var switchFade = 2.0     // zacht wisselen (sync stoppen, startscherm, scènes): seconden overvloeien, 0 = springen
     var whiteLevel = 0.5     // witte leds geven meer licht dan de kleurleds: hun helderheid hiermee vermenigvuldigen
     var whiteLeds = false    // witte, gele en donkere tinten met de witte leds van de lamp (witmodus) in plaats van RGB
     var darkColor = "half"   // kleur bij donker beeld: half = gemiddelde van de schermhelft aan de kant van de lamp | lamp = dichtstbijzijnde lamp met kleur
@@ -89,7 +92,7 @@ class Settings {
     fun toJson() = JSONObject().apply {
         put("smooth", smooth); put("saturation", saturation); put("brightness", brightness)
         put("minLight", minLight); put("spread", spread); put("hz", hz)
-        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("pauseHome", pauseHome); put("homeScene", homeScene); put("fixBars", fixBars); put("reports", reports); put("autoDark", autoDark); put("darkOffset", darkOffset); put("lat", lat); put("lon", lon); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds); put("whiteLevel", whiteLevel)
+        put("autostart", autostart); put("after", after); put("lang", lang); put("fade", fade); put("cuts", cuts); put("followAmbi", followAmbi); put("pauseHome", pauseHome); put("homeScene", homeScene); put("offScene", offScene); put("switchFade", switchFade); put("demos", demos); put("fixBars", fixBars); put("reports", reports); put("autoDark", autoDark); put("darkOffset", darkOffset); put("lat", lat); put("lon", lon); put("source", source); put("darkColor", darkColor); put("whiteLeds", whiteLeds); put("whiteLevel", whiteLevel)
     }
 
     fun apply(o: JSONObject) {
@@ -107,6 +110,9 @@ class Settings {
         followAmbi = o.optBoolean("followAmbi", followAmbi)
         pauseHome = o.optBoolean("pauseHome", pauseHome)
         homeScene = o.optString("homeScene", homeScene)
+        offScene = o.optString("offScene", offScene)
+        demos = o.optBoolean("demos", demos)
+        switchFade = o.optDouble("switchFade", switchFade).takeIf { !it.isNaN() }?.coerceIn(0.0, 2.0) ?: switchFade
         fixBars = o.optBoolean("fixBars", fixBars)
         reports = o.optBoolean("reports", reports)
         autoDark = o.optBoolean("autoDark", autoDark)
@@ -141,6 +147,13 @@ object Store {
     val settings = Settings()
     @Volatile var groups: List<Group> = emptyList()
     @Volatile var customScenes: List<Scene> = emptyList()
+    /** Profiel per app op de tv (pakketnaam → film | game | calm), zie [Profiles]. */
+    @Volatile var appProfiles: Map<String, String> = emptyMap()
+
+    fun setAppProfile(pkg: String, profile: String) {
+        appProfiles = if (profile.isEmpty() || profile !in Profiles.IDS) appProfiles - pkg else appProfiles + (pkg to profile)
+        save()
+    }
 
     /** Instellingen die voor deze lamp gelden: die van zijn groepje, anders de algemene. */
     fun settingsFor(l: Lamp): Settings = groups.firstOrNull { it.id == l.group }?.settings ?: settings
@@ -195,6 +208,7 @@ object Store {
         o.optJSONArray("lamps")?.let { a -> for (i in 0 until a.length()) part { lamps += Lamp.fromJson(a.getJSONObject(i)) } }
         part { o.optJSONObject("settings")?.let { settings.apply(it) } }
         part { customScenes = o.optJSONArray("scenes")?.let { a -> (0 until a.length()).mapNotNull { try { Scene.fromStore(a.getJSONObject(it)) } catch (_: Exception) { null } } } ?: emptyList() }
+        part { appProfiles = o.optJSONObject("appProfiles")?.let { a -> a.keys().asSequence().associateWith { a.optString(it) }.filterValues { it in Profiles.IDS && it.isNotEmpty() } } ?: emptyMap() }
         part { groups = o.optJSONArray("groups")?.let { a -> (0 until a.length()).mapNotNull { try { Group.fromJson(a.getJSONObject(it)) } catch (_: Exception) { null } } } ?: emptyList() }
         part {
             tvHost = o.optString("tvHost", tvHost)
@@ -276,6 +290,7 @@ object Store {
             put("settings", settings.toJson())
             put("groups", JSONArray().apply { groups.forEach { put(it.toJson()) } })
             put("scenes", JSONArray().apply { customScenes.forEach { put(it.toStore()) } })
+            put("appProfiles", JSONObject(appProfiles as Map<*, *>))
             put("tvHost", tvHost)
             put("tvUser", tvUser ?: ""); put("tvPass", tvPass ?: "")
             put("syncWanted", syncWanted)

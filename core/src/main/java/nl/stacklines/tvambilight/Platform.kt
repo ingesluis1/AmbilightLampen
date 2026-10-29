@@ -18,6 +18,8 @@ object Platform {
     @Volatile var userStopped: () -> Unit = {}
     /** Staat het startscherm, de schermbeveiliging of de tv-instellingen in beeld? */
     @Volatile var homeScreen: () -> Boolean = { false }
+    /** Pakketnaam van de app die nu op de tv staat (niet het startscherm), of null als onbekend. */
+    @Volatile var currentApp: () -> String? = { null }
     /** Multicast-ontvangst aanhouden (Android zet die anders uit om stroom te sparen). */
     @Volatile var multicastLock: () -> Unit = {}
     /** Zoekt een mDNS-dienst (bv. "_ihsp._tcp"); geeft het eerste adres dat [accept] goedkeurt, of null. */

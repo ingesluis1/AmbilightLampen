@@ -97,37 +97,48 @@ object SceneEngine {
      */
     @Synchronized
     fun start(scene: Scene, restoreTo: Map<String, JSONObject?>? = null) {
-        stop()
+        // Van scène naar scène: niet eerst terug naar de oude stand, de nieuwe scène vloeit vanaf de huidige kleuren
+        stop(handOver = true)
         Engine.lampsOff = false
-        if (Engine.running) { Platform.userStopped(); Store.syncWanted = false; Store.save(); Engine.stop() }
+        // Sync loopt: niet eerst terug naar de oude stand; de scène zet de lampen bij stoppen terug naar hoe ze vóór de sync stonden
+        var rt = restoreTo
+        if (Engine.running) { Platform.userStopped(); Store.syncWanted = false; Store.save(); Engine.stop(handOver = true); rt = Engine.handedOver }
         Engine.syncWorkers()
         active = scene
-        thread = Thread({ loop(scene, restoreTo = restoreTo) }, "scene").apply { isDaemon = true; start() }
+        thread = Thread({ loop(scene, restoreTo = rt) }, "scene").apply { isDaemon = true; start() }
     }
 
-    /** Scène op het startscherm terwijl de sync pauzeert: de sync blijft aan en neemt het daarna weer over. */
-    private val homeLock = Any()
-    private var homeThread: Thread? = null
+    /**
+     * Scène terwijl de sync pauzeert (startscherm, of zwart beeld omdat de tv uit staat): de sync blijft aan
+     * en neemt het daarna weer over.
+     */
+    private val pauseLock = Any()
+    private var pauseThread: Thread? = null
 
-    fun startHome(scene: Scene, lampIds: Set<String>) = synchronized(homeLock) {
-        stopHome()
-        homeThread = Thread({ loop(scene, only = lampIds, restore = false) }, "home-scene").apply { isDaemon = true; start() }
+    fun startPause(scene: Scene, lampIds: Set<String>) = synchronized(pauseLock) {
+        stopPause()
+        pauseThread = Thread({ loop(scene, only = lampIds, restore = false) }, "pause-scene").apply { isDaemon = true; start() }
     }
 
-    fun stopHome() = synchronized(homeLock) {
-        val t = homeThread ?: return
-        homeThread = null
+    fun stopPause() = synchronized(pauseLock) {
+        val t = pauseThread ?: return
+        pauseThread = null
         t.interrupt()
         // Ook vanuit de sync-lus die zelf net onderbroken is: dan niet blijven hangen, wel de vlag laten staan
         try { t.join(3000) } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
     }
 
+    /** Lampen na afloop niet terugzetten: er neemt meteen iets anders over (de sync of een andere scène). */
+    @Volatile private var skipRestore = false
+
     @Synchronized
-    fun stop() {
+    fun stop(handOver: Boolean = false) {
         val t = thread ?: return
         active = null
+        skipRestore = handOver
         t.interrupt(); t.join(3000)
         thread = null
+        skipRestore = false
     }
 
     /** Id van de indeling die je op de kaart van de telefoon maakt (tikken: aan/uit, vasthouden: kleur en effect). */
@@ -223,6 +234,12 @@ object SceneEngine {
             Engine.queryAll(lamps.map { it.id }.filter { restoreTo?.containsKey(it) != true }) + (restoreTo ?: emptyMap())
         } catch (_: InterruptedException) { return }
         val last = HashMap<String, IntArray>()
+        // Zacht naar de eerste kleuren van de scène
+        val first = if (scene.kind == "white") (scene.white ?: intArrayOf(700, 500)).let { w -> lamps.associate { it.id to Fade.white(w[1], (w[0] * it.maxBright).roundToInt()) } }
+            else lamps.withIndex().mapNotNull { (i, l) -> colourFor(scene, l, i, lamps.size, 0.0, emptyList())?.let { c ->
+                l.id to intArrayOf(c[0], c[1].coerceIn(0, 1000), if (c[2] <= 0) 0 else (c[2] * l.maxBright).roundToInt().coerceIn(10, 1000)) } }.toMap()
+        Fade.run(lamps.mapNotNull { l -> Engine.workers[l.id]?.let { w -> first[l.id]?.let { Fade.Target(l, w, it) } } })
+        if (Thread.currentThread().isInterrupted) { if (restore && !skipRestore) restoreScene(lamps, saved); return }
         val t0 = SystemClock.elapsedRealtime()
         try {
             // Wit: één keer instellen
@@ -264,8 +281,16 @@ object SceneEngine {
         } catch (e: Exception) {
             AppLog.add("Scène: " + (e.message ?: e.javaClass.simpleName))
         } finally {
-            if (restore) for (l in lamps) Engine.workers[l.id]?.restore(saved[l.id])
+            Thread.interrupted()
+            if (restore && !skipRestore) restoreScene(lamps, saved)
         }
+    }
+
+    /** Na de scène: zacht terug naar de bewaarde stand, dan precies die stand. */
+    private fun restoreScene(lamps: List<Lamp>, saved: Map<String, JSONObject?>) {
+        Fade.run(lamps.mapNotNull { l -> Engine.workers[l.id]?.let { Fade.Target(l, it, Fade.target(saved[l.id])) } })
+        Thread.interrupted()
+        for (l in lamps) Engine.workers[l.id]?.restore(saved[l.id])
     }
 
     private fun hueDist(a: Int, b: Int) = abs(a - b).let { min(it, 360 - it) }

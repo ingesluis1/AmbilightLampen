@@ -78,6 +78,9 @@ main{max-width:640px;margin:0 auto;padding:0 12px}
 label.s{display:block;margin:12px 0 2px;font-size:15px}
 label.s span{float:right;opacity:.8}
 .hint{font-size:13px;opacity:.8;margin-top:8px}
+/* Hoort bij de instelling erboven: ingesprongen met een lijn ervoor */
+.subset{margin:4px 0 4px 26px}
+.subset label.s{margin-top:4px}
 .sgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
 .scard{padding:7px 6px;font-size:13px;text-align:left;position:relative}
 .scard.on{background:var(--gold)}
@@ -345,6 +348,7 @@ label.s span{float:right;opacity:.8}
   <div class="row"><span>Voor</span><select id="setTarget" class="grow"></select></div>
   <div class="hint" id="grpHint"></div>
   <div id="setHome"><div id="setBody">
+  <label class="s"><input type="checkbox" id="demos"> Demo op de tv tonen</label>
   <div class="hint">Verander je iets, dan laat de tv een testbeeld zien waarop je ziet wat het met je lampen doet.</div>
   <div class="sect">Kleur en licht</div>
   <label class="s">Reactiesnelheid <span id="v_smooth"></span></label><input type="range" id="smooth" min="0.08" max="1" step="0.01">
@@ -380,18 +384,33 @@ label.s span{float:right;opacity:.8}
   </div>
   <label class="s"><input type="checkbox" id="pauseHome"> Pauzeren op het startscherm</label>
   <div class="hint">Ook bij schermbeveiliging en tv-instellingen; verder zodra je een app opent.</div>
-  <div id="homeSceneBox">
-    <label class="s">Scène op het startscherm</label>
-    <select id="homeScene"><option value="">Geen: lampen terug</option></select>
+  <div class="hint hidden" id="pauseHomeHint">Hiervoor heeft de app "Gebruikstoegang" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.</div>
+  <div id="homeSceneBox" class="subset">
+    <label class="s">Op het startscherm</label>
+    <select id="homeScene"><option value="">Lampen terug</option></select>
     <div class="hint">Geen fel licht opeens: op het startscherm speelt deze scène, en zodra je een app opent neemt de sync het weer over.</div>
   </div>
-  <div class="hint hidden" id="pauseHomeHint">Hiervoor heeft de app "Gebruikstoegang" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.</div>
   <label class="s"><input type="checkbox" id="followAmbi"> Lampen terug als de tv uit staat</label>
   <div class="hint">Na 20 seconden zwart beeld.</div>
+  <div id="offSceneBox" class="subset">
+    <label class="s">Als de tv uit staat</label>
+    <select id="offScene"><option value="">Lampen terug</option></select>
+  </div>
   <label class="s"><input type="checkbox" id="fixBars"> Zwarte balken opvangen</label>
   <div class="hint">Films in breedbeeld: lampen bij de lege rand nemen de kleur van de randen ernaast over.</div>
+  <label class="s">Zacht wisselen</label>
+  <select id="switchFade"><option value="0">Uit: meteen</option><option value="1">Kort (1 seconde)</option><option value="2">Normaal (2 seconden)</option></select>
+  <div class="hint">Bij stoppen, het startscherm en scènes vloeien de lampen over naar hun nieuwe kleur in plaats van te springen.</div>
   <label class="s">Na stoppen</label>
   <select id="after"><option value="restore">Terug naar hoe ze stonden</option><option value="white">Warm wit</option><option value="off">Uit</option></select>
+</section>
+
+<section class="panel" id="perApp">
+  <h2>Per app</h2>
+  <p style="margin:0 0 8px">Kies per app hoe de lampen reageren. Gewoon: je instellingen hierboven. Film: rustiger. Game: snel en direct. Sfeer: zacht en traag.</p>
+  <div class="hint hidden" id="perAppHint">Hiervoor heeft de app "Gebruikstoegang" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.</div>
+  <div id="appList"></div>
+  <div class="row" style="margin-top:10px"><select id="appAdd" class="grow"><option value="">App toevoegen...</option></select></div>
 </section>
 
 <section class="panel">
@@ -1025,7 +1044,7 @@ function tgt(){const g=groups.find(g=>g.id===setTarget);return g?g.settings:sett
 // Bij "Alle lampen" geldt een wijziging ook voor de lampen in groepen; bij een groep alleen voor die groep
 // Demo op de tv bij elke wijziging, zodat je ziet wat de instelling doet
 let demoLast='',demoAt=0;
-function demoPing(k){const now=Date.now();if(k!==demoLast||now-demoAt>15000){demoLast=k;demoAt=now;api('/api/demo',{k})}}
+function demoPing(k){if(settings&&settings.demos===false)return;const now=Date.now();if(k!==demoLast||now-demoAt>15000){demoLast=k;demoAt=now;api('/api/demo',{k})}}
 function setVal(k,v){demoPing(k);const g=groups.find(g=>g.id===setTarget);if(g)g.settings[k]=v;else{settings[k]=v;for(const x of groups)x.settings[k]=v}}
 function groupUI(){
   const sel=$('setTarget');sel.innerHTML='<option value="">'+t('Alle lampen (standaard)')+'</option>'+groups.map(g=>`<option value="${esc(g.id)}"></option>`).join('');
@@ -1038,7 +1057,7 @@ function groupUI(){
 function showSettings(){const cur=tgt();for(const k of SL){$(k).value=cur[k];$('v_'+k).textContent=fmt[k](+cur[k])}sceneOpts($('after'),'scene:');$('after').value=settings.after;if(!$('after').value)$('after').value='restore';sceneOpts($('homeScene'),'');$('homeScene').value=settings.homeScene||'';if($('homeScene').selectedIndex<0)$('homeScene').value='';$('homeSceneBox').classList.toggle('hidden',settings.pauseHome===false);$('darkColor').value=cur.darkColor||'half';$('autostart').checked=settings.autostart;$('fade').checked=cur.fade!==false;$('cuts').checked=cur.cuts!==false;$('whiteLeds').checked=!!cur.whiteLeds;$('pauseHome').checked=settings.pauseHome!==false;$('reports').checked=S.settings.reports!==false;
   $('autoDark').checked=!!S.settings.autoDark;$('autoDarkBox').classList.toggle('hidden',!S.settings.autoDark);
   $('darkOffset').value=S.settings.darkOffset||0;$('v_darkOffset').textContent=offsetText(S.settings.darkOffset||0);
-  $('lat').value=S.settings.lat;$('lon').value=S.settings.lon;$('fixBars').checked=settings.fixBars!==false;$('followAmbi').checked=settings.followAmbi!==false;$('lang').value=settings.lang||'nl'}
+  $('lat').value=S.settings.lat;$('lon').value=S.settings.lon;$('fixBars').checked=settings.fixBars!==false;$('followAmbi').checked=settings.followAmbi!==false;$('demos').checked=settings.demos!==false;$('switchFade').value=String(settings.switchFade??2);sceneOpts($('offScene'),'');$('offScene').value=settings.offScene||'';if($('offScene').selectedIndex<0)$('offScene').value='';$('offSceneBox').classList.toggle('hidden',settings.followAmbi===false);$('lang').value=settings.lang||'nl'}
 $('lang').onchange=async e=>{settings.lang=e.target.value;await api('/api/save',{settings});location.reload()};
 for(const k of SL)$(k).oninput=e=>{setVal(k,+e.target.value);$('v_'+k).textContent=fmt[k](tgt()[k]);changed(true)};
 $('setTarget').onchange=e=>{setTarget=e.target.value;groupUI();showSettings()};
@@ -1097,7 +1116,10 @@ for(const k of ['lat','lon'])$(k).onchange=e=>{const v=parseFloat(e.target.value
 $('fade').onchange=e=>{setVal('fade',e.target.checked);changed(true)};
 $('cuts').onchange=e=>{setVal('cuts',e.target.checked);changed(true)};
 $('whiteLeds').onchange=e=>{setVal('whiteLeds',e.target.checked);changed(true)};
-$('followAmbi').onchange=e=>{settings.followAmbi=e.target.checked;changed(true)};
+$('followAmbi').onchange=e=>{settings.followAmbi=e.target.checked;$('offSceneBox').classList.toggle('hidden',!e.target.checked);changed(true)};
+$('offScene').onchange=e=>{settings.offScene=e.target.value;changed(true)};
+$('switchFade').onchange=e=>{settings.switchFade=+e.target.value;changed(true)};
+$('demos').onchange=e=>{settings.demos=e.target.checked;changed(true)};
 $('pauseHome').onchange=e=>{settings.pauseHome=e.target.checked;$('homeSceneBox').classList.toggle('hidden',!e.target.checked);changed(true)};
 $('homeScene').onchange=e=>{settings.homeScene=e.target.value;changed(true)};
 // Scènes als keuze in een uitklapmenu (na de vaste keuzes), opnieuw opbouwen als de lijst met scènes verandert
@@ -1158,6 +1180,25 @@ $('bkFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
 $('importFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;const t=await f.text();
   const r=await fetch('/api/import',{method:'POST',headers:{'Content-Type':'application/json'},body:t}).then(x=>x.json());toast(r.message);e.target.value='';load()};
 
+// Instellingen per app: een uitklapmenu per app op de tv
+const PROFILES=[['','Gewoon'],['film','Film: rustiger'],['game','Game: snel'],['calm','Sfeer: zacht en traag']];
+const addedApps=new Set();   // net toegevoegd: blijft staan, ook op Gewoon, tot je de pagina opnieuw laadt
+function appList(s){
+  $('perAppHint').classList.toggle('hidden',!!(s.tv&&s.tv.appAccess));
+  const all=s.apps||[],apps=all.filter(a=>a.profile||addedApps.has(a.pkg)),key=JSON.stringify([all.map(a=>[a.pkg,a.label,a.profile]),[...addedApps]]);
+  const box=$('appList');if(box.dataset.k===key)return;box.dataset.k=key;box.innerHTML='';
+  // Uitklapmenu om een app toe te voegen: de apps die er nog niet staan
+  const add=$('appAdd');add.length=1;for(const a of all.filter(a=>!apps.includes(a))){const o=document.createElement('option');o.value=a.pkg;o.textContent=a.label;add.append(o)}
+  add.parentElement.classList.toggle('hidden',add.length<2);
+  if(!apps.length){const p=document.createElement('div');p.className='hint';p.textContent=t('Nog geen apps. Alle apps staan op Gewoon.');box.append(p)}
+  for(const a of apps){const row=document.createElement('div');row.className='row';row.style.marginTop='6px';
+    const name=document.createElement('span');name.className='grow';name.textContent=a.label;
+    const sel=document.createElement('select');sel.style.width='auto';
+    for(const [v,l] of PROFILES){const o=document.createElement('option');o.value=v;o.textContent=t(l);sel.append(o)}
+    sel.value=a.profile||'';sel.onchange=async()=>{a.profile=sel.value;toast((await api('/api/app/profile',{pkg:a.pkg,profile:sel.value})).message)};
+    row.append(name,sel);box.append(row)}
+}
+$('appAdd').onchange=e=>{if(!e.target.value)return;addedApps.add(e.target.value);e.target.value='';$('appList').dataset.k='';appList(S)};
 function sceneList(s){
   const g=$('sgrid'),key=JSON.stringify([(s.scenes||[]).map(x=>x.id),s.activeScene]);if(g.dataset.k===key)return;g.dataset.k=key;g.innerHTML='';
   for(const sc of (s.scenes||[])){const b=document.createElement('button');b.className='btn scard'+(s.activeScene===sc.id?' on':'');
@@ -1231,7 +1272,7 @@ $('ikeaRefresh').onclick=async()=>{const b=$('ikeaRefresh');b.disabled=true;b.te
 $('ikeaUnpair').onclick=async()=>{if(!confirm(t('DIRIGERA ontkoppelen? De IKEA-lampen verdwijnen uit de lijst; opnieuw koppelen haalt ze terug.')))return;
   const r=await api('/api/ikea/unpair',{});toast(r.message);load()};
 function liveFrom(s){
-  hiddenList(s);sceneList(s);hueUI(s);ikeaUI(s);
+  hiddenList(s);sceneList(s);appList(s);hueUI(s);ikeaUI(s);
   live={};for(const l of s.lamps)live[l.id]=l;
   $('syncBtn').textContent=t(s.sync?'Sync stoppen':'Sync starten');
   $('offBtn').textContent=t(s.lampsOff?'Lampen aan':'Lampen uit');
