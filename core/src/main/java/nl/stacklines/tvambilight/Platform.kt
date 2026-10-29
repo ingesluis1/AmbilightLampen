@@ -22,6 +22,8 @@ object Platform {
     @Volatile var currentApp: () -> String? = { null }
     /** Multicast-ontvangst aanhouden (Android zet die anders uit om stroom te sparen). */
     @Volatile var multicastLock: () -> Unit = {}
+    /** Tuya: verbinding loslaten na zoveel ms zonder opdrachten (0 = altijd verbonden, zoals op de tv). Server: de tv moet de lampen ook kunnen bereiken. */
+    @Volatile var idleCloseMs: Long = 0
     /** Zoekt een mDNS-dienst (bv. "_ihsp._tcp"); geeft het eerste adres dat [accept] goedkeurt, of null. */
     @Volatile var findService: (type: String, timeoutMs: Long, accept: (String) -> Boolean) -> String? = { _, _, _ -> null }
 }

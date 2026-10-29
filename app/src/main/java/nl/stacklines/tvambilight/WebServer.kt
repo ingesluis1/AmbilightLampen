@@ -552,7 +552,10 @@ class WebServer(private val ctx: Context) {
             "/tv.html" to "text/html; charset=utf-8", "/room.js" to "application/javascript; charset=utf-8",
             "/i18n.js" to "application/javascript; charset=utf-8",
             "/calib.html" to "text/html; charset=utf-8",
-            "/ui.css" to "text/css; charset=utf-8", "/pixelify-sans.woff2" to "font/woff2"
+            "/ui.css" to "text/css; charset=utf-8", "/pixelify-sans.woff2" to "font/woff2",
+            // Zet op beginscherm (telefoon): manifest en iconen
+            "/manifest.json" to "application/manifest+json", "/icon-180.png" to "image/png",
+            "/icon-192.png" to "image/png", "/icon-512.png" to "image/png"
         )
     }
 }

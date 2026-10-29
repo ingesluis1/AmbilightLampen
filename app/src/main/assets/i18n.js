@@ -167,6 +167,20 @@ const I18N = (() => {
     'Volgt {e}, {s}': 'Follows {e}, {s}', 'de bovenrand': 'the top edge', 'de zijkanten': 'the sides', 'de onderkant': 'the bottom',
     'linkerdeel': 'left part', 'rechterdeel': 'right part', 'midden': 'middle',
     'opslaan...': 'saving...', 'opgeslagen': 'saved', 'niet opgeslagen': 'not saved',
+    // Lampen-hub op de server
+    'Lampen-hub': 'Lamp hub',
+    'Bewaar je kamer, lampen, groepen, scènes en instellingen in een bestand, bijvoorbeeld als reserve of om over te zetten.': 'Save your room, lamps, groups, scenes and settings to a file, for example as a spare copy or to move them.',
+    'Vaste of langzaam bewegende kleuren op je lampen.': 'Fixed or slowly moving colours on your lamps.',
+    'Zet lampen die bij elkaar horen in een groep, bijvoorbeeld alle spotjes. Tik de lampen aan die in de groep horen. Een lamp die al in een groep zit, zie je bij de andere groepen niet.':
+      'Put lamps that belong together in a group, for example all spotlights. Tap the lamps that belong in the group. A lamp that is already in a group is not shown in the other groups.',
+    'Eenmalig: vul de Access ID en het Access Secret in van je project op iot.tuya.com (Cloud, je project, Overview). Ze blijven op de server.':
+      'One time: enter the Access ID and Access Secret of your project on iot.tuya.com (Cloud, your project, Overview). They stay on the server.',
+    'Koppel ze eerst in de WiZ-app en zet daar bij Instellingen, Beveiliging "Lokale communicatie" aan. De server vindt ze dan vanzelf.':
+      'Pair them in the WiZ app first and turn on "Local communication" under Settings, Security. The server then finds them by itself.',
+    'Werkt met een Hue Bridge. Lampen van andere merken die aan de Bridge gekoppeld zijn (zoals IKEA) doen ook mee. Laat het ip-adres leeg, dan zoekt de server de Bridge zelf.':
+      'Works with a Hue Bridge. Lamps of other brands paired to the Bridge (such as IKEA) join in too. Leave the IP address empty and the server finds the Bridge itself.',
+    'Werkt met de IKEA DIRIGERA-hub. Laat het ip-adres leeg, dan zoekt de server de hub zelf.': 'Works with the IKEA DIRIGERA hub. Leave the IP address empty and the server finds the hub itself.',
+    'Sleutels van je lampen en koppelingen. Bewaar het bestand dan goed: wie het heeft, kan je lampen bedienen.': 'Keys of your lamps and connections. Keep the file safe: whoever has it can control your lamps.',
     // meubels en vloeren
     'Bank': 'Sofa', 'Hoekbank': 'Corner sofa', 'Fauteuil': 'Armchair', 'Salontafel': 'Coffee table', 'Eettafel': 'Dining table',
     'Plant': 'Plant', 'Kleed': 'Rug', 'Kast': 'Cabinet', 'Bed': 'Bed', 'Boekenkast': 'Bookcase', 'Bijzettafel': 'Side table', 'Ronde eettafel': 'Round dining table', 'Bureau': 'Desk', 'Stoel': 'Chair', 'Kledingkast': 'Wardrobe', 'Keukenblok': 'Kitchen unit', 'Haard': 'Fireplace', 'Piano': 'Piano', 'Zitzak': 'Beanbag', 'Poef': 'Pouf', 'Deur': 'Door', 'Raam': 'Window', 'Vensterbank': 'Window with sill',

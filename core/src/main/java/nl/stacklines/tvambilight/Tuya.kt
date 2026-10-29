@@ -370,6 +370,8 @@ class TuyaLamp(val lamp: Lamp) {
         if (pending.isNotEmpty()) LinkedHashMap(pending).also { pending.clear() } else null
     }
 
+    private fun hasWork() = synchronized(lock) { pending.isNotEmpty() || layerPending.isNotEmpty() || queryWanted }
+
     /** Wachten tot er iets te doen is (send, queryStatus en stop maken wakker), hooguit maxMs. */
     private fun idleWait(maxMs: Long) = synchronized(lock) {
         if (running && pending.isEmpty() && layerPending.isEmpty() && !queryWanted) lock.wait(maxMs.coerceAtLeast(1))
@@ -512,12 +514,25 @@ class TuyaLamp(val lamp: Lamp) {
         if (ikea) { hubLoop(Dirigera); return }
         var lastSend = 0L
         var lastBeat = 0L
+        var connectedOnce = false
+        var failSince = 0L
         while (running) {
             try {
                 if (sock == null) {
                     if (ip.isBlank() || !lamp.supported) { online = false; sleepQuiet(2000); continue }
-                    connect()
-                    lastBeat = SystemClock.elapsedRealtime()
+                    // Server: pas verbinden als er iets te sturen is (de tv moet de lamp ook kunnen bereiken)
+                    if (Platform.idleCloseMs > 0 && connectedOnce && !hasWork()) { idleWait(5000); continue }
+                    if (Platform.idleCloseMs > 0 && lastError != null) {
+                        // Houdt iemand anders de lamp vast (tv of server), dan rustig opnieuw proberen en opdrachten
+                        // na 15 s laten vallen, in plaats van de lamp elke 0,3 s lastig te vallen
+                        connectedOnce = true
+                        val now = SystemClock.elapsedRealtime()
+                        if (failSince == 0L) failSince = now
+                        else if (now - failSince > 15_000) { synchronized(lock) { pending.clear(); layerPending.clear(); queryWanted = false }; failSince = now }
+                        sleepQuiet(1500)
+                    }
+                    connect(); connectedOnce = true; failSince = 0L
+                    lastBeat = SystemClock.elapsedRealtime(); lastSend = lastBeat
                 }
                 drain()
                 // Eén keer de stand opvragen om het kleurformaat te herkennen
@@ -560,6 +575,8 @@ class TuyaLamp(val lamp: Lamp) {
                     if (wait > 0) Thread.sleep(wait)
                     sendControl(adapt(batch)); inflight++
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
+                } else if (Platform.idleCloseMs > 0 && now - lastSend > Platform.idleCloseMs) {
+                    close()   // even niets te doen: verbinding vrijgeven (online blijft de laatst bekende stand)
                 } else if (now - lastBeat > 8000) {
                     write(TuyaCodec.HEART_BEAT, "{}", header = false)
                     lastBeat = now
