@@ -109,6 +109,42 @@ label.s span{float:right;opacity:.8}
 .ok{color:#2f7a3a}.bad{color:#a8322a}
 /* Lampen-hub op de server (state.host = "server"): alles wat bij de tv en de sync hoort verdwijnt, .srvonly komt erbij */
 body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
+/* Kamers: rij met Huis + kamers bovenaan Bediening, kaarten per kamer bij Huis, kamerlijst onder Kamers */
+.roombar{display:flex;gap:6px;overflow-x:auto;padding:12px 0 2px;scrollbar-width:none}
+.roombar::-webkit-scrollbar{display:none}
+.roombar .btn{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 10px;font-size:15px;white-space:nowrap}
+.rdot{display:inline-block;flex-shrink:0;width:12px;height:12px;border:2px solid var(--ink);vertical-align:-1px}
+.house{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
+.rcard{border:3px solid var(--ink);background:var(--cream);padding:8px;display:flex;flex-direction:column;gap:6px;cursor:pointer;min-width:0;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12)}
+.rcard .nm{display:flex;align-items:center;gap:5px;font-weight:700;min-width:0;font-size:15px}
+.rcard .nm .grow{min-width:0;overflow-wrap:break-word;hyphens:auto;line-height:1.15}
+/* Meubelkiezer: tabjes per groep (keuken, slaapkamer...) */
+.cats{display:flex;gap:6px;overflow-x:auto;padding:2px 0 8px;scrollbar-width:none}
+.cats .btn{flex:0 0 auto;padding:4px 9px;font-size:14px}
+.rcard .mrow{display:flex;align-items:center;gap:6px;justify-content:space-between}
+.rcard .mrow .meta{min-width:0}
+.rcard .meta{font-size:13px;opacity:.8}
+.rcard .sw,.rrow .sw{display:flex;gap:2px;height:10px}
+.rcard .sw i{flex:1;border:2px solid var(--ink)}
+.rcard.add{font:inherit;font-weight:600;color:var(--text);align-items:center;justify-content:center;text-align:center;border-style:dashed;background:transparent;min-height:92px;font-weight:600;box-shadow:none}
+.bulb{flex:0 0 auto;display:grid;place-items:center;width:34px;height:34px;padding:0!important;color:#7a6a5c}
+.bulb.on{background:var(--gold);color:#fff3a0}
+.badge{font-size:11px;font-weight:700;border:2px solid var(--ink);padding:0 5px;background:#9cc4e4;vertical-align:2px}
+.banner{background:#cfe2f0;border:3px solid var(--ink);padding:8px 10px;font-size:14px;margin-top:8px}
+.rrow{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:2px dashed var(--parch-dk)}
+.rrow:last-child{border-bottom:0}
+.rrow .name{flex:1;min-width:0;overflow-wrap:anywhere}
+.rrow .sub{font-size:13px;opacity:.8}
+.rrow .btn{padding:6px 9px;font-size:14px}
+.rcolors{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.rcolors button{width:34px;height:34px;border:3px solid var(--ink);padding:0;cursor:pointer}
+.rcolors button.on{box-shadow:0 0 0 3px var(--gold)}
+.confirm{background:#f3c3b3;border:3px solid var(--ink);padding:8px 10px;margin-top:8px;font-size:15px}
+.lhead{display:flex;align-items:center;gap:6px;margin-top:14px;padding-bottom:3px;border-bottom:3px solid var(--ink);font-weight:700}
+.lhead:first-child{margin-top:4px}
+.lrow select.lroom{width:auto;flex:1 1 0!important;min-width:0;max-width:150px;padding:5px 4px;font-size:14px}
+/* Met keuzemenu Kamer: naam op een eigen regel, knoppen eronder */
+.lrow.rm .name{flex:1 1 100%!important}
 #hostTag{vertical-align:middle;text-shadow:none;font-size:12px;font-weight:700;color:var(--text);background:var(--gold);border:3px solid var(--ink);padding:1px 7px;box-shadow:inset 0 -2px 0 var(--gold-dk)}
 </style>
 </head>
@@ -123,6 +159,7 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 
 <!-- Tabblad: Bediening -->
 <div class="page" id="page-home">
+<div class="roombar hidden" id="roomBar" role="group" aria-label="Kamer"></div>
 <section class="panel hidden tvonly" id="pairCard">
   <h2>Tv koppelen</h2>
   <p>De app heeft eenmalig toestemming nodig om de kleuren van het beeld te lezen. Druk op de knop, dan verschijnt er een pincode op de tv.</p>
@@ -131,12 +168,24 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
   <div class="hint">Op de tv zelf laat je 127.0.0.1 staan.</div>
 </section>
 
+<!-- Huis: een kaart per kamer (alleen met meer dan één kamer) -->
+<section class="panel hidden" id="housePanel">
+  <h2>Huis</h2>
+  <p id="houseSum"></p>
+  <div class="house" id="houseCards"></div>
+  <div class="row" style="margin-top:12px"><button class="btn gold grow" id="houseOff">Hele huis uit</button><button class="btn grow" id="houseOn">Alles aan</button></div>
+  <div class="hint" id="houseHint"></div>
+</section>
+
 <section class="panel" id="homeMapPanel">
+  <h2 class="hidden" id="homeRoomTitle"></h2>
+  <div class="banner hidden" id="tvBanner"></div>
   <div id="homeMapSlot"></div>
+  <div class="hint hidden" id="homeUnplaced"></div>
   <button class="btn" id="fullOpen" style="margin-top:8px;width:100%">Lampen bedienen op de kaart</button>
 </section>
 
-<section class="panel">
+<section class="panel" id="ctrlPanel">
   <h2>Bediening</h2>
   <button id="syncBtn" class="btn gold big tvonly">Sync starten</button>
   <button id="offBtn" class="btn big" style="margin-top:8px">Lampen uit</button>
@@ -147,9 +196,10 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
   <h2>Scènes</h2>
   <p class="tvonly">Vaste of langzaam bewegende kleuren, in plaats van de sync. Sync starten stopt de scène.</p>
   <p class="srvonly">Vaste of langzaam bewegende kleuren op je lampen.</p>
+  <p class="hint hidden" id="sceneScope" style="margin:-4px 0 8px"></p>
   <div class="sgrid" id="sgrid"></div>
   <div class="row" style="margin-top:10px"><button class="btn" id="sceneStop">Scène stoppen</button></div>
-  <div class="row" style="margin-top:8px"><input type="text" id="sceneName" class="grow" placeholder="Naam voor je eigen scène"><button class="btn" id="sceneSave">Huidige kleuren opslaan</button></div>
+  <div class="row" style="margin-top:8px" id="sceneSaveRow"><input type="text" id="sceneName" class="grow" placeholder="Naam voor je eigen scène"><button class="btn" id="sceneSave">Huidige kleuren opslaan</button></div>
   <div id="hueScenesBox" class="hidden" style="margin-top:12px">
     <div class="row"><button class="btn" id="hueScenesLoad">Scènes uit Hue ophalen</button></div>
     <div id="hueScenesList"></div>
@@ -158,10 +208,28 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 </section>
 </div>
 
-<!-- Tabblad: Kamer -->
+<!-- Tabblad: Kamers -->
 <div class="page hidden" id="page-room">
-<section class="panel">
-  <h2>Je kamer</h2>
+<section class="panel hidden" id="roomListPanel">
+  <h2>Kamers</h2>
+  <p>Elke kamer heeft een eigen plattegrond en eigen lampen. De volgorde hier is ook de volgorde bij Bediening.</p>
+  <p class="tvonly">De tv synct alleen de kamer waar hij staat.</p>
+  <div id="roomList"></div>
+  <button class="btn gold" id="roomAddBtn" style="margin-top:10px;width:100%">+ Kamer toevoegen</button>
+</section>
+
+<section class="panel hidden" id="roomAddPanel">
+  <h2>Nieuwe kamer</h2>
+  <label class="s">Naam</label><input type="text" id="nrName" maxlength="30" placeholder="Bijvoorbeeld Slaapkamer">
+  <label class="s">Kleur</label><div class="rcolors" id="nrColors"></div>
+  <div class="row" style="margin-top:4px;align-items:flex-end"><label class="grow" style="font-size:15px">Breedte (m)<input type="number" id="nrW" value="4" min="2" max="20" step="1" inputmode="numeric"></label><label class="grow" style="font-size:15px">Diepte (m)<input type="number" id="nrH" value="3" min="2" max="20" step="1" inputmode="numeric"></label></div>
+  <div class="hint">De maat pas je later nog aan onder Kamermaat.</div>
+  <div class="row" style="margin-top:12px"><button class="btn gold grow" id="nrSave">Kamer maken</button><button class="btn grow" id="nrCancel">Annuleren</button></div>
+</section>
+
+<section class="panel" id="editorPanel">
+  <div class="row hidden" id="roomBackRow" style="margin-bottom:8px"><button class="btn" id="roomBack">&lsaquo; Kamers</button></div>
+  <h2 id="editorTitle">Je kamer</h2>
   <p id="toolHelp"></p>
   <div class="tools" id="tools"></div>
   <div id="roomMapSlot"><div class="mapwrap" id="mapwrap"><canvas id="map"></canvas></div></div>
@@ -184,6 +252,7 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
     <div class="hint">Tik waar de tv staat. "Draai" wisselt de kant waar het scherm naartoe kijkt.</div>
   </div>
   <div id="panelItem" class="hidden" style="margin-top:12px">
+    <div class="cats" id="paletteCats" role="group"></div>
     <div class="palette" id="palette"></div>
     <div class="hidden" id="itemActions">
       <div class="row"><b class="grow" id="itemName"></b><button class="btn hidden" id="itemFlip">Spiegel</button><button class="btn" id="itemRot">Draai</button><button class="btn red" id="itemDel">Weg</button></div>
@@ -218,6 +287,25 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
       </div>
       <div class="hint">Tik op de kaart op een lamp om hem in het armatuur te zetten, of op een lege plek om het armatuur daarheen te verplaatsen. Sleep om te verschuiven. Draai draait telkens 45 graden.</div>
     </div>
+  </div>
+</section>
+
+<!-- Naam, kleur en tv van de kamer die je bewerkt; met één kamer ook "Kamer toevoegen" -->
+<section class="panel" id="roomMetaPanel">
+  <h2 id="roomMetaTitle">Deze kamer</h2>
+  <label class="s">Naam</label><div class="row"><input type="text" id="erName" class="grow" maxlength="30" style="flex-basis:0"><button class="btn" id="erNameSave">Opslaan</button></div>
+  <label class="s">Kleur</label><div class="rcolors" id="erColors"></div>
+  <div id="erTvBox"><label class="s"><input type="checkbox" id="erTv"> De tv staat in deze kamer</label>
+    <div class="hint" id="erTvHint"></div></div>
+  <div id="erDelBox" style="margin-top:14px">
+    <div class="row"><button class="btn red" id="erDel">Kamer verwijderen</button></div>
+    <div class="hint" id="erDelHint"></div>
+    <div class="confirm hidden" id="erDelAsk"><span id="erDelText"></span>
+      <div class="row" style="margin-top:8px"><button class="btn red" id="erDelYes">Ja, verwijderen</button><button class="btn" id="erDelNo">Nee</button></div></div>
+  </div>
+  <div id="erAddBox" class="hidden" style="margin-top:14px">
+    <p style="margin:0 0 8px">Lampen in meer kamers? Maak een kamer erbij, met een eigen plattegrond.</p>
+    <button class="btn gold" id="erAdd">+ Kamer toevoegen</button>
   </div>
 </section>
 </div>
@@ -489,7 +577,7 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 
 <nav class="tabbar">
   <button class="btn" data-tab="home"><span class="ic">▶</span>Bediening</button>
-  <button class="btn" data-tab="room"><span class="ic">▦</span>Kamer</button>
+  <button class="btn" data-tab="room"><span class="ic">▦</span>Kamers</button>
   <button class="btn" data-tab="lamps"><span class="ic">✺</span>Lampen</button>
   <button class="btn" data-tab="settings"><span class="ic">⚙</span>Instellingen</button>
 </nav>
@@ -522,6 +610,54 @@ async function api(path, body){
   return r.json();
 }
 
+/* ---------- kamers ----------
+   S.rooms: [{id,name,color,tv,layout,scene,sceneName}] in de volgorde van de gebruiker; lamp.room = kamer-id of ''.
+   De editor en de kaart werken altijd op één kamer: L is de indeling van curRoom (een object uit layouts).
+   Een oudere app zonder kamers: één kamer uit S.layout, en opdrachten gaan zonder 'room' (zoals vroeger). */
+const ROOM_COLORS=['#d9b26f','#b5743a','#a8452e','#6b4430','#7d8a4a','#6f7f8a'];
+let layouts={}, curRoom='', homeView='', editRoom=null, roomAdding=false, nrColor=ROOM_COLORS[1];
+const hasRooms=()=>!!(S&&Array.isArray(S.rooms)&&S.rooms.length);
+function roomsList(){if(hasRooms())return S.rooms;
+  return [{id:'woonkamer',name:t('Woonkamer'),color:'#b5743a',tv:true,layout:S&&S.layout,scene:(S&&S.activeScene)||'',sceneName:(S&&S.activeName)||''}]}
+const multi=()=>roomsList().length>1;
+const roomById=id=>roomsList().find(r=>r.id===id);
+const tvRoom=()=>roomsList().find(r=>r.tv)||roomsList()[0];
+// Kamer van een lamp; met één kamer hoort elke lamp daarbij (zo doet de server het ook)
+function lampRoom(l){const rs=roomsList();if(rs.length===1)return rs[0].id;return rs.some(r=>r.id===l.room)?l.room:''}
+const lampsIn=id=>lamps.filter(l=>lampRoom(l)===id);
+const roomLamps=()=>lampsIn(curRoom);
+// 'room' alleen meesturen als de app kamers kent
+const withRoom=(b,id)=>hasRooms()&&id?{...b,room:id}:b;
+/* Lamp aan: zoals op de kaart (eigen indeling) of zoals de lamp zelf meldt */
+function lampIsOn(id){const ll=S&&S.liveLamps&&S.liveLamps[id];if(ll)return ll.bright>0;const lv=live[id];return !!lv&&lv.online!==false&&lv.on!==false}
+const roomAnyOn=id=>lampsIn(id).some(l=>lampIsOn(l.id));
+/* Indeling compleet maken: een nieuwe kamer kan zonder vloer, meubels of (als tv-kamer) zonder tv binnenkomen */
+function fixLayout(L0,r){const L=Room.migrate(L0||{});L.w=Math.max(2,Math.round(L.w||4));L.h=Math.max(2,Math.round(L.h||3));
+  if(!Array.isArray(L.floor)||!L.floor.length)L.floor=Array.from({length:L.h},()=>'1'.repeat(L.w));
+  L.items=L.items||[];L.fixtures=L.fixtures||[];
+  if(r&&r.tv&&!L.tv)L.tv={w:1.44,x:Math.round(L.w/2*4)/4,y:-0.25,dir:90};
+  return L}
+/* Indelingen bijwerken na het laden: nieuwe kamers erbij, verwijderde eruit. reset = alles opnieuw van de server */
+function syncLayouts(reset){const rs=roomsList();if(reset)layouts={};
+  for(const r of rs)if(!layouts[r.id]){layouts[r.id]=fixLayout(JSON.parse(JSON.stringify(r.layout||{})),r);
+    if(!reset&&base&&base.layouts)base.layouts[r.id]=JSON.parse(JSON.stringify(layouts[r.id]))}
+  for(const id of Object.keys(layouts))if(!rs.some(r=>r.id===id))delete layouts[id];
+  if(!multi())homeView=rs[0].id;else if(homeView!=='house'&&!roomById(homeView))homeView=SRV?'house':tvRoom().id;
+  if(editRoom&&!roomById(editRoom))editRoom=null}
+/* Welke kamer de kaart en de editor nu tonen */
+function wantRoom(){const rs=roomsList();
+  if(curTab==='room')return !multi()?rs[0].id:(editRoom||curRoom||rs[0].id);
+  if(curTab==='home')return homeView==='house'||!roomById(homeView)?tvRoom().id:homeView;
+  return roomById(curRoom)?curRoom:tvRoom().id}
+function useRoom(id){id=layouts[id]?id:Object.keys(layouts)[0];if(!id)return;
+  if(id!==curRoom||L!==layouts[id]){curRoom=id;L=layouts[id];selItem=null;newItemType=null;selFx=null;fxNew=false;baseKey='';
+    // Een gekozen lamp uit een andere kamer hoort niet bij deze kaart (een lamp zonder kamer mag: die zet je hier neer)
+    if(selLamp&&(curTab==='room'||curTab==='home')){const l=lamps.find(x=>x.id===selLamp);if(l&&lampRoom(l)&&lampRoom(l)!==id)selLamp=null}
+    if(L.tv)$('tvSize').value=String(INCH.reduce((a,b)=>Math.abs(b-tvInch())<Math.abs(a-tvInch())?b:a))}
+  const isTv=!!(roomById(id)||{}).tv;
+  document.querySelectorAll('#tools .btn').forEach(b=>{if(b.dataset.tool==='tv')b.classList.toggle('hidden',!isTv)});
+  if(tool==='tv'&&!isTv)setTool('floor')}
+
 /* ---------- gereedschap ---------- */
 function preview(draw, size){
   const c=document.createElement('canvas');c.width=size;c.height=size;const g=c.getContext('2d');draw(g);
@@ -551,17 +687,32 @@ function buildTools(){
     b.append(preview(g=>{for(let y=0;y<16;y++)for(let x=0;x<16;x++){const c=Room.floorPixel(f.code,x,y);g.fillStyle=`rgb(${c[0]},${c[1]},${c[2]})`;g.fillRect(x,y,1,1)}},16),document.createTextNode(t(f.name)));
     b.onclick=()=>{floorMat=f.code;floorState();if(tool!=='floor')setTool('floor')};fl.append(b);
   }
+  const pc=$('paletteCats');pc.innerHTML='';
+  for(const c of Room.CATS){
+    const b=document.createElement('button');b.className='btn';b.dataset.cat=c.id;b.textContent=t(c.name);
+    b.onclick=()=>{palCat=c.id;catState()};pc.append(b);
+  }
   const p=$('palette');p.innerHTML='';
   for(const type of Object.keys(Room.ITEMS)){
-    const b=document.createElement('button');b.className='btn';b.dataset.type=type;
+    const b=document.createElement('button');b.className='btn';b.dataset.type=type;b.dataset.cat=Room.ITEMS[type].cat||'other';
     b.append(spriteThumb(type),document.createTextNode(t(Room.ITEMS[type].name)));
     b.onclick=()=>{newItemType=newItemType===type?null:type;selItem=null;paletteState();draw()};p.append(b);
   }
 }
+/* Welke groep meubels de kiezer toont: eerst die bij de naam van de kamer, daarna wat je zelf kiest (per kamer) */
+let palCat=null,palCatRoom=null;
+function catState(){
+  if(palCatRoom!==curRoom){palCatRoom=curRoom;const r=typeof roomById==='function'&&curRoom?roomById(curRoom):null;palCat=Room.catForRoom(r?r.name:'')}
+  document.querySelectorAll('#paletteCats .btn').forEach(b=>b.classList.toggle('on',b.dataset.cat===palCat));
+  document.querySelectorAll('#palette .btn').forEach(b=>b.classList.toggle('hidden',b.dataset.cat!==palCat));
+}
 function floorState(){document.querySelectorAll('#floors .btn').forEach(b=>b.classList.toggle('on',b.dataset.mat===floorMat))}
 function paletteState(){
   document.querySelectorAll('#palette .btn').forEach(b=>b.classList.toggle('on',b.dataset.type===newItemType));
-  const it=L&&L.items[selItem];$('itemActions').classList.toggle('hidden',!it);
+  const it=L&&L.items[selItem];
+  // Gekozen meubel: zijn groep laten zien, zodat de knop zichtbaar aan staat
+  if(it&&Room.ITEMS[it.type]){catState();palCat=Room.ITEMS[it.type].cat||'other'}
+  catState();$('itemActions').classList.toggle('hidden',!it);
   if(it){const def=Room.ITEMS[it.type];$('itemName').textContent=t(def.name);
     $('iw').textContent=(it.w||def.w).toFixed(1);$('id_').textContent=(it.d||def.d).toFixed(1);
     $('itemFlip').classList.toggle('hidden',it.type!=='corner');$('itemRot').classList.toggle('hidden',!!def.wall)}
@@ -581,9 +732,12 @@ function setTool(k){
 /* ---------- tekenen ---------- */
 function draw(){
   if(!L)return;
-  const key=JSON.stringify(L);
-  if(key!==baseKey){baseImg=Room.base(L,lamps);baseKey=key}
-  const img=Room.frame(baseImg,L,lamps,live,S&&(S.sync||!!S.activeScene||S.lampsOff),S&&S.sync&&S.top);
+  // Alleen de lampen van deze kamer; de tv alleen in de tv-kamer
+  const rm=roomById(curRoom)||{},isTv=!!rm.tv,LD=isTv?L:{...L,tv:null},lamps=roomLamps();
+  const key=JSON.stringify(L)+isTv+lamps.map(l=>l.id).join();
+  if(key!==baseKey){baseImg=Room.base(LD,lamps);baseKey=key}
+  const dim=S&&((isTv&&S.sync)||(hasRooms()?!!rm.scene||!roomAnyOn(curRoom):(!!S.activeScene||S.lampsOff)));
+  const img=Room.frame(baseImg,LD,lamps,live,dim,isTv&&S&&S.sync&&S.top);
   const ro=curTab==='home'||fullOpen;
   // Kamer ingezoomd: maat van het vak (niet van de kaart zelf, die groeit mee) maal de zoomstand
   const rz=curTab==='room'&&!fullOpen?ZOOMS[roomZoom]:1;
@@ -605,7 +759,7 @@ function draw(){
   if(ro)return;
   if(tool==='item'&&L.items[selItem]){const it=L.items[selItem],def=Room.ITEMS[it.type],rot=((it.dir||90)/90)%2===0;
     const w=(rot?(it.d||def.d):(it.w||def.w))*k,d=(rot?(it.w||def.w):(it.d||def.d))*k,[x,y]=sc(it.x,it.y);g.strokeRect(x-w/2-3,y-d/2-3,w+6,d+6)}
-  if(tool==='tv'&&L.tv){const t=L.tv,rot=(t.dir/90)%2===0,w=(rot?.45:t.w+.4)*k,d=(rot?t.w+.4:.45)*k,[x,y]=sc(t.x,t.y);g.strokeRect(x-w/2-3,y-d/2-3,w+6,d+6)}
+  if(tool==='tv'&&LD.tv){const t=L.tv,rot=(t.dir/90)%2===0,w=(rot?.45:t.w+.4)*k,d=(rot?t.w+.4:.45)*k,[x,y]=sc(t.x,t.y);g.strokeRect(x-w/2-3,y-d/2-3,w+6,d+6)}
   if(tool==='lamp'&&lampMode==='fx'){const f=fxSel();if(f){const pts=Room.fixtureSpots(f).map(q=>sc(q[1],q[2]));pts.push(sc(f.x,f.y));
     const xs=pts.map(q=>q[0]),ys=pts.map(q=>q[1]),up=f.type==='pole'?1.6:f.type==='bar'?1.1:.45;
     g.strokeRect(Math.min(...xs)-k*.45,Math.min(...ys)-k*up,Math.max(...xs)-Math.min(...xs)+k*.9,Math.max(...ys)-Math.min(...ys)+k*(up+.45))}}
@@ -639,7 +793,7 @@ function itemAt(mx,my){for(let i=L.items.length-1;i>=0;i--){const it=L.items[i],
 const cv=$('map');
 cv.addEventListener('pointerdown',e=>{if(!L||!view||curTab!=='room')return;cv.setPointerCapture(e.pointerId);const [mx,my]=pos(e);
   if(tool==='floor'||tool==='erase'){painting=true;paint(mx,my)}
-  else if(tool==='tv'){L.tv.x=snap(mx);L.tv.y=snap(my);drag='tv';changed()}
+  else if(tool==='tv'){if(!L.tv)return;L.tv.x=snap(mx);L.tv.y=snap(my);drag='tv';changed()}
   else if(tool==='item'){
     const hit=itemAt(mx,my);
     if(newItemType&&hit<0){L.items.push({type:newItemType,x:snap(mx),y:snap(my),dir:['sofa','armchair','corner'].includes(newItemType)?270:90});selItem=L.items.length-1;wallFix(L.items[selItem]);newItemType=null;drag='item';changed()}
@@ -662,7 +816,10 @@ cv.addEventListener('pointerdown',e=>{if(!L||!view||curTab!=='room')return;cv.se
     else if(hit){selectLamp(hit.id);drag='lamp'}
     else if(selLamp){const sf=fxOf(selLamp);
       if(sf){selFx=sf.id;sf.x=snap(mx);sf.y=snap(my);fxPlace(sf);drag='fx';fxOff=[0,0];changed();showLamp();chips()}
-      else{const l=lamps.find(l=>l.id===selLamp);l.x=snap(mx);l.y=snap(my);drag='lamp';changed();showLamp();chips()}}
+      else{const l=lamps.find(l=>l.id===selLamp);if(!l)return;
+        // Lamp zonder kamer: neerzetten = in deze kamer zetten
+        if(hasRooms()&&lampRoom(l)!==curRoom){l.room=curRoom;lampList()}
+        l.x=snap(mx);l.y=snap(my);drag='lamp';changed();showLamp();chips()}}
     else toast(t('Kies eerst een lamp hieronder'));
   }
 });
@@ -711,13 +868,13 @@ const SHEET_COLS=['#ff2a1a','#ff7a00','#ffc400','#b4ff00','#00e05a','#00e0c8','#
 function openFull(){fullOpen=true;fullZoom=0;$('roomFull').classList.remove('hidden');$('fullMapSlot').append($('mapwrap'));document.body.style.overflow='hidden';setTimeout(()=>setZoom(0),0)}
 function closeFull(){closeSheet();fullOpen=false;$('roomFull').classList.add('hidden');$(curTab==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));document.body.style.overflow='';setTimeout(draw,0)}
 $('fullOpen').onclick=openFull;$('fullClose').onclick=closeFull;
-$('fullSave').onclick=async()=>{const n=(prompt(t('Naam voor de scène'))||'').trim();if(!n)return;toast((await api('/api/scene/save',{name:n})).message);poll()};
+$('fullSave').onclick=async()=>{const n=(prompt(t('Naam voor de scène'))||'').trim();if(!n)return;toast((await api('/api/scene/save',withRoom({name:n},curRoom))).message);poll()};
 function lampOnNow(id){const ll=S&&S.liveLamps&&S.liveLamps[id];if(ll)return ll.bright>0;const lv=live[id];return !!lv&&lv.on!==false}
 async function liveSend(b){const r=await api('/api/live',b);if(!r.ok)toast(r.message);poll()}
 /* Lamp onder je vinger: de hele getekende lamp telt (ook de kap van een staande lamp of booglamp).
    Liggen er twee over elkaar, dan wint de lamp waarvan het midden het dichtstbij is. */
 function lampHit(mx,my){let best=null,bd=1e9;
-  for(const l of lamps){if(l.x<0)continue;const b=Room.lampBox(l,L),x0=l.x+b[0],y0=l.y+b[1],x1=l.x+b[2],y1=l.y+b[3];
+  for(const l of roomLamps()){if(l.x<0)continue;const b=Room.lampBox(l,L),x0=l.x+b[0],y0=l.y+b[1],x1=l.x+b[2],y1=l.y+b[3];
     if(mx<x0||mx>x1||my<y0||my>y1)continue;const d=Math.hypot((x0+x1)/2-mx,(y0+y1)/2-my);if(d<bd){bd=d;best=l}}
   return best}
 cv.addEventListener('pointerdown',e=>{if(!fullOpen||!view)return;const [mx,my]=pos(e);const l=lampHit(mx,my);if(!l)return;
@@ -751,7 +908,7 @@ function roomShift(dx,dy){
   // Bij weghalen: wat buiten de kamer zou vallen naar de rand; iets dat al tegen de muur stond (tv op -0,25) blijft daar
   const sh=(v,d,lo)=>d<0?Math.max(v+d,Math.min(v,lo)):v+d,mv=(o,lo=0)=>{if(dx)o.x=sh(o.x,dx,lo);if(dy)o.y=sh(o.y,dy,lo)};
   for(const it of L.items||[])mv(it);if(L.tv)mv(L.tv,-0.25);for(const f of L.fixtures||[])mv(f);
-  for(const l of lamps)if(l.x>=0&&l.y>=0)mv(l)}
+  for(const l of roomLamps())if(l.x>=0&&l.y>=0)mv(l)}
 document.querySelectorAll('[data-size]').forEach(b=>b.onclick=()=>{
   const [k,dd,side]=b.dataset.size.split(',');const v=Math.max(2,Math.min(20,L[k]+(+dd)));if(v===L[k])return;const n=v-L[k];
   if(side==='start'){
@@ -774,29 +931,44 @@ $('itemFlip').onclick=()=>{const it=L.items[selItem];if(it){it.flip=!it.flip;cha
 $('itemDel').onclick=()=>{if(L.items[selItem]){L.items.splice(selItem,1);selItem=null;paletteState();changed()}};
 
 /* ---------- tv ---------- */
-const tvInch=()=>Math.round(L.tv.w/0.0254/0.8716);
+const tvInch=()=>L&&L.tv?Math.round(L.tv.w/0.0254/0.8716):65;
 function tvSizes(){$('tvSize').innerHTML=INCH.map(i=>`<option value="${i}">${t('{i} inch ({m} m breed)',{i,m:(i*0.0254*0.8716).toFixed(2)})}</option>`).join('')}
 tvSizes();
-$('tvSize').onchange=e=>{L.tv.w=+(e.target.value*0.0254*0.8716).toFixed(3);changed()};
-$('tvRot').onclick=()=>{L.tv.dir=(L.tv.dir+90)%360;changed()};
+$('tvSize').onchange=e=>{if(!L.tv)return;L.tv.w=+(e.target.value*0.0254*0.8716).toFixed(3);changed()};
+$('tvRot').onclick=()=>{if(!L.tv)return;L.tv.dir=(L.tv.dir+90)%360;changed()};
 
 /* ---------- lampen ---------- */
 function chips(){
   const c=$('chips');c.innerHTML='';
+  // Lampen van deze kamer, en (met meer kamers) lampen zonder kamer: die zet je hier neer
+  const mine=roomLamps(),free=multi()?lamps.filter(l=>!lampRoom(l)):[];
   if(!lamps.length){c.innerHTML='<span>'+t('Nog geen lampen. Voeg ze onderaan toe.')+'</span>';return}
-  for(const l of lamps){const b=document.createElement('button');b.className='btn chip'+(l.id===selLamp?' sel':'');
+  if(!mine.length&&!free.length){c.innerHTML='<span>'+t('Nog geen lampen in deze kamer. Kies bij Lampen welke lampen hier horen.')+'</span>';return}
+  for(const l of [...mine,...free]){const b=document.createElement('button');b.className='btn chip'+(l.id===selLamp?' sel':'');
     const d=document.createElement('span');d.className='dot';const lv=live[l.id];d.style.background=lv&&lv.online?(S&&S.sync?lv.color:'#ffd696'):'#6a6070';
     const gn=(groups.find(g=>g.id===l.group)||{}).name;
-    b.append(d,document.createTextNode(l.name+(gn?' · '+gn:'')+(l.x<0?t(' (nog ophangen)'):'')));b.onclick=()=>selectLamp(l.id);c.append(b)}
+    b.append(d,document.createTextNode(l.name+(gn?' · '+gn:'')+(!lampRoom(l)?t(' (zonder kamer)'):l.x<0?t(' (nog ophangen)'):'')));b.onclick=()=>selectLamp(l.id);c.append(b)}
 }
 function lampList(){
   const box=$('lampList');
   if(!lamps.length){box.innerHTML='<span>'+t('Nog geen lampen.')+'</span>';return}
-  if(box.dataset.ids!==lamps.map(l=>l.id+l.name).join()){
-    box.dataset.ids=lamps.map(l=>l.id+l.name).join();$('lampDetailHold').append($('lampDetailPanel'));box.innerHTML='';
-    for(const l of lamps){
+  // Met meer kamers: per kamer een kopje, en per lamp een keuzemenu Kamer (lampen zonder kamer onderaan)
+  const key=lamps.map(l=>l.id+l.name+'@'+lampRoom(l)).join()+'|'+roomsList().map(r=>r.id+r.name+r.color).join();
+  if(box.dataset.ids!==key){
+    box.dataset.ids=key;$('lampDetailHold').append($('lampDetailPanel'));box.innerHTML='';
+    const parts=multi()?[...roomsList().map(r=>[r.id,r.name,r.color]),['',t('Zonder kamer'),'#6d5a4c']]:[[roomsList()[0].id]];
+    for(const [rid,rname,rcol] of parts){const ls=lampsIn(rid);
+     if(multi()){if(!ls.length&&!rid)continue;
+      const h=document.createElement('div');h.className='lhead';h.innerHTML=`<span class="rdot" style="background:${esc(rcol)}"></span><span class="grow"></span>`;
+      h.querySelector('.grow').textContent=rname+(ls.length?' ('+ls.length+')':'');box.append(h);
+      if(!ls.length){const p=document.createElement('div');p.className='hint';p.style.margin='4px 0 6px';p.textContent=t('Nog geen lampen.');box.append(p)}
+      if(!rid){const p=document.createElement('div');p.className='hint';p.style.margin='4px 0 0';p.textContent=t('Nieuwe lampen komen hier tot je ze in een kamer zet.');box.append(p)}}
+    for(const l of ls){
       const r=document.createElement('div');r.className='lrow';r.dataset.id=l.id;
       r.innerHTML=`<span class="name"><span class="chev"></span><span class="nm"></span></span><button class="btn" data-a="blink">${t('Knipper')}</button><button class="btn" data-a="power"></button><input type="color" value="#ffb050"><button class="btn red x" data-a="del" title="${t('Verwijderen')}" aria-label="${t('Verwijderen')}">\u2715</button>`;
+      if(multi()){const sel=document.createElement('select');sel.className='lroom';sel.setAttribute('aria-label',t('Kamer van {n}',{n:l.name}));
+        for(const [id,nm] of [...roomsList().map(x=>[x.id,x.name]),['',t('Zonder kamer')]]){const o=document.createElement('option');o.value=id;o.textContent=nm;sel.append(o)}
+        sel.value=lampRoom(l);sel.onchange=()=>moveLamp(l,sel.value);r.querySelector('[data-a=blink]').before(sel);r.classList.add('rm')}
       r.querySelector('.nm').textContent=l.name;r.querySelector('.name').onclick=()=>{if(selLamp===l.id){closeLamp();return}selectLamp(l.id);setTimeout(()=>r.scrollIntoView({block:'start'}),50)};
       r.querySelector('[data-a=blink]').onclick=async()=>toast((await api('/api/identify',{id:l.id})).message);
       r.querySelector('[data-a=power]').onclick=async()=>{const lv=live[l.id],on=!!lv&&lv.on!==false;
@@ -805,7 +977,7 @@ function lampList(){
         const res=await api('/api/lamp/delete',{id:l.id});toast(res.message);if(selLamp===l.id)selLamp=null;load()};
       r.querySelector('input').onchange=async e=>toast((await api('/api/color',{id:l.id,color:e.target.value})).message);
       box.append(r);
-    }
+    }}
   }
   for(const r of box.children){const lv=live[r.dataset.id];if(!lv)continue;
     const off=lv.online&&lv.on===false;
@@ -816,14 +988,25 @@ function lampList(){
     r.querySelector('.name').title=lv.online?t('bereikbaar'):t('niet bereikbaar')}
   for(const r of box.children){r.classList.toggle('sel',r.dataset.id===selLamp);const c=r.querySelector('.chev');if(c)c.textContent=r.dataset.id===selLamp?'\u25BE':'\u25B8'}
 }
+/* Lamp naar een andere kamer: hij komt daar "nog ophangen" (net als een nieuwe lamp) en je zet hem neer onder Kamers.
+   In de oude kamer gaat hij uit zijn armatuur, en zijn richting en ledstrip-maat daar vervallen. */
+function moveLamp(l,to){const from=lampRoom(l);if(from===to)return;
+  const Lo=layouts[from];
+  if(Lo){for(const f of Lo.fixtures||[])if(f.lamps.includes(l.id)){f.lamps=f.lamps.filter(x=>x!==l.id);if(f.prev)delete f.prev[l.id];fxPlace(f)}
+    for(const k of ['aims','tilts','strips'])if(Lo[k]&&Lo[k][l.id]!=null)delete Lo[k][l.id]}
+  l.room=to;l.x=-1;l.y=-1;changed();lampList();chips();
+  toast(to?t('{n} staat nu in {r}. Zet hem op de kaart onder Kamers.',{n:l.name,r:roomById(to).name}):t('{n} staat nu zonder kamer.',{n:l.name}))}
 $('testAll').onclick=async()=>toast((await api('/api/test',{})).message);
 function selectLamp(id){selLamp=id;chips();showLamp();draw()}
 function follows(l){
-  if(l.x<0||!L.tv)return t('Nog niet opgehangen: doet niet mee met de sync');
+  // De sync gaat over de tv-kamer: plek ten opzichte van de tv in die kamer
+  const tr=tvRoom(),L=layouts[tr.id];
+  if(lampRoom(l)!==tr.id)return t('Staat niet in de kamer met de tv: doet niet mee met de sync');
+  if(l.x<0||!L||!L.tv)return t('Nog niet opgehangen: doet niet mee met de sync');
   const a=L.tv.dir*Math.PI/180,fx=Math.cos(a),fy=Math.sin(a),xs=((l.x-L.tv.x)*fy+(l.y-L.tv.y)*-fx)/(L.tv.w/2);
   if((l.layers||0)>0)return t(xs<0?'Elke laag volgt zijn hoogte aan de linkerkant van het beeld':'Elke laag volgt zijn hoogte aan de rechterkant van het beeld');
   if(l.follow==='all')return t('Volgt het hele beeld');
-  if(l.follow==='top'){const tl=lamps.filter(x=>x.follow==='top'&&x.x>=0).map(x=>({id:x.id,xs:((x.x-L.tv.x)*fy+(x.y-L.tv.y)*-fx)})).sort((p,q)=>p.xs-q.xs);
+  if(l.follow==='top'){const tl=lamps.filter(x=>x.follow==='top'&&x.x>=0&&lampRoom(x)===tr.id).map(x=>({id:x.id,xs:((x.x-L.tv.x)*fy+(x.y-L.tv.y)*-fx)})).sort((p,q)=>p.xs-q.xs);
     const k=tl.findIndex(x=>x.id===l.id),n=tl.length,pos=n<2?0:(-1+(2*k+1)/n);
     return t('Volgt de bovenrand, {s}',{s:t(pos<-0.34?'linkerdeel':pos>0.34?'rechterdeel':'midden')})}
   if(l.follow==='side')return t(xs<0?'Volgt de hele linkerkant van het beeld':'Volgt de hele rechterkant van het beeld');
@@ -861,7 +1044,7 @@ const fxOf=id=>((L&&L.fixtures)||[]).find(f=>f.lamps.includes(id));
 function fxName(f){const same=(L.fixtures||[]).filter(x=>x.type===f.type),n=same.indexOf(f)+1;return t(Room.FIXTURES[f.type].label)+(same.length>1?' '+n:'')}
 /* Lampen op hun plek in het armatuur zetten, met het bijpassende uiterlijk en (zonder kalibratie) de gebruikelijke hoogte */
 function fxPlace(f){const m=Room.FIXTURES[f.type];
-  for(const [id,x,y] of Room.fixtureSpots(f)){const l=lamps.find(q=>q.id===id);if(!l)continue;
+  for(const [id,x,y] of Room.fixtureSpots(f)){const l=lamps.find(q=>q.id===id);if(!l||(hasRooms()&&lampRoom(l)!==curRoom))continue;
     l.x=Math.max(0,x);l.y=Math.max(0,y);l.look=m.look;l.shape='bulb';if(l.heightY==null)l.height=m.height}}
 /* Terugdraaien: zoals alles was toen je dit armatuur openklikte (bij een nieuw armatuur: zonder dat armatuur) */
 let fxSnap=null,fxSnapFor=null;
@@ -901,7 +1084,7 @@ function fxUI(){
   $('fxAim').classList.toggle('hidden',f.type!=='rail');$('fxAimHint').classList.toggle('hidden',f.type!=='rail');$('fxAim').textContent=t('Spots wijzen')+': '+aimText(f.aim);
   $('fxName').textContent=fxName(f);$('fxRot').textContent=t('Draai')+' ('+(f.rot||0)+'°)';$('fxGap').textContent=f.gap.toFixed(1);
   const box=$('fxLamps');box.innerHTML='';
-  for(const l of lamps){const k=f.lamps.indexOf(l.id),other=k<0&&fxOf(l.id);
+  for(const l of roomLamps()){const k=f.lamps.indexOf(l.id),other=k<0&&fxOf(l.id);
     const b=document.createElement('button');b.className='btn'+(k>=0?' on':'');b.style.cssText='padding:6px 9px;font-size:14px'+(other?';opacity:.6':'');
     b.textContent=(k>=0?(k+1)+'. ':'')+l.name+(other?' · '+fxName(other):'');b.onclick=()=>fxToggle(f,l.id);box.append(b)}
 }
@@ -1163,20 +1346,24 @@ function changed(noDraw){dirty=true;$('saved').textContent=t('opslaan...');if(!n
 /* Laatst bekende stand van de tv; opslaan stuurt alleen wat hiervan afwijkt, zodat wijzigingen op de tv
    (of van de app zelf, zoals een nieuw ip-adres) niet worden overschreven door wat deze pagina eerder laadde. */
 let base=null;
-function lampFields(l){return {group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,heightY:l.heightY??null,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,satBoost:l.satBoost>0?l.satBoost:-1,lowHue:l.lowHue??190,lowStrength:l.lowStrength||0,maxBright:l.maxBright||1,balWarm:l.balWarm||0,balTint:l.balTint||0,look:l.look||'',enabled:l.enabled,ip:l.ip}}
-function stateSnapshot(){return JSON.parse(JSON.stringify({layout:L,settings,groups,lamps:lamps.map(lampFields)}))}
+function lampFields(l){return {...(hasRooms()?{room:lampRoom(l)}:{}),group:l.group||'',id:l.id,name:l.name,x:l.x,y:l.y,height:l.height,heightY:l.heightY??null,shape:l.shape||'bulb',follow:l.follow||'auto',layers:l.layers||0,satBoost:l.satBoost>0?l.satBoost:-1,lowHue:l.lowHue??190,lowStrength:l.lowStrength||0,maxBright:l.maxBright||1,balWarm:l.balWarm||0,balTint:l.balTint||0,look:l.look||'',enabled:l.enabled,ip:l.ip}}
+function stateSnapshot(){return JSON.parse(JSON.stringify({layouts,settings,groups,lamps:lamps.map(lampFields)}))}
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 function diffKeys(cur,old){const d={};for(const k in cur)if(!old||!same(cur[k],old[k]))d[k]=cur[k];return d}
+/* Opslaan: per gewijzigde kamer één /api/save {room, layout}; lampen, groepen en instellingen gaan mee met de eerste */
 async function save(){
-  const cur=stateSnapshot(),b=base||{},body={};
-  if(!same(cur.layout,b.layout))body.layout=cur.layout;
+  const cur=stateSnapshot(),b=base||{},body={},more=[];
+  const rooms=Object.keys(cur.layouts).filter(id=>!same(cur.layouts[id],(b.layouts||{})[id]));
+  if(rooms.length){body.layout=cur.layouts[rooms[0]];if(hasRooms())body.room=rooms[0];
+    for(const id of rooms.slice(1))more.push({room:id,layout:cur.layouts[id]})}
   const sd=diffKeys(cur.settings,b.settings);if(Object.keys(sd).length)body.settings=sd;
   // Groepen: altijd de hele lijst (nieuw, hernoemd, verwijderd), maar van bestaande groepen alleen gewijzigde instellingen
   if(!same(cur.groups,b.groups))body.groups=cur.groups.map(g=>{const og=(b.groups||[]).find(x=>x.id===g.id);if(!og)return g;
     const gs=diffKeys(g.settings,og.settings);return Object.keys(gs).length?{id:g.id,name:g.name,settings:gs}:{id:g.id,name:g.name}});
   const ld=[];for(const l of cur.lamps){const d=diffKeys(l,(b.lamps||[]).find(x=>x.id===l.id));delete d.id;if(Object.keys(d).length)ld.push({id:l.id,...d})}
   if(ld.length)body.lamps=ld;
-  const r=await api('/api/save',body);
+  let r=await api('/api/save',body);
+  for(const m of more)if(r.ok)r=await api('/api/save',m);
   if(r.ok)base=cur;
   dirty=false;$('saved').textContent=r.ok?t('opgeslagen'):t('niet opgeslagen');
 }
@@ -1192,7 +1379,10 @@ $('updCheck').onclick=async()=>{const b=$('updCheck');b.disabled=true;b.textCont
   const r=await api('/api/update/check',{});b.disabled=false;b.textContent=t('Zoeken naar updates');toast(r.message);poll()};
 $('updBtn').onclick=async()=>{const u=S.update,n=I18N.notes(u.notes);if(!confirm(t('Wat is er nieuw in {v}',{v:u.latest})+':\n\n'+(n.length?'- '+n.join('\n- '):t('Geen beschrijving.'))+'\n\n'+t('Nu updaten?')))return;toast((await api('/api/update',{})).message+t('. Kijk op de tv.'))};
 $('syncBtn').onclick=async()=>{const on=!(S&&S.sync);$('syncBtn').disabled=true;const r=await api('/api/sync',{on});toast(r.message);setTimeout(()=>{$('syncBtn').disabled=false;poll()},on?2500:3500)};
-$('offBtn').onclick=async()=>{const on=!!(S&&S.lampsOff);$('offBtn').disabled=true;toast((await api('/api/lamps/power',{on})).message);setTimeout(()=>{$('offBtn').disabled=false;poll()},on?500:3500)};
+// Lampen uit/aan: met kamers alleen de gekozen kamer (de tv-kamer stopt dan ook de sync), zonder kamers alle lampen zoals vroeger
+let offBusy=false;
+$('offBtn').onclick=async()=>{const rid=homeRoomId(),on=hasRooms()?!roomAnyOn(rid):!!(S&&S.lampsOff);offBusy=true;$('offBtn').disabled=true;
+  toast((await api('/api/lamps/power',withRoom({on},rid))).message);setTimeout(()=>{offBusy=false;$('offBtn').disabled=false;poll()},on?500:3500)};
 $('pairBtn').onclick=async()=>{const r=await api('/api/pair/request',{host:$('tvHost').value.trim()});toast(r.message);if(r.ok){$('pinRow').classList.remove('hidden');$('pin').focus()}};
 $('grantBtn').onclick=async()=>{const r=await api('/api/pair/grant',{pin:$('pin').value});toast(r.message);if(r.ok)poll()};
 $('cloudSave').onclick=async()=>{const b=$('cloudSave');b.disabled=true;b.textContent=t('Zoeken...');
@@ -1229,15 +1419,23 @@ function appList(s){
     row.append(name,sel);box.append(row)}
 }
 $('appAdd').onchange=e=>{if(!e.target.value)return;addedApps.add(e.target.value);e.target.value='';$('appList').dataset.k='';appList(S)};
+/* Scènes gelden voor wat bovenaan gekozen is: Huis = alle kamers (room "*"), een kamer = alleen die kamer */
+function sceneTarget(){const rs=roomsList();if(!hasRooms())return {room:null,active:s0=>s0.activeScene||'',any:!!(S&&S.activeScene)};
+  if(isHouse()){const same=rs.every(r=>r.scene&&r.scene===rs[0].scene);return {room:'*',active:()=>same?rs[0].scene:'',any:rs.some(r=>r.scene)}}
+  const r=roomById(homeRoomId())||rs[0];return {room:r.id,active:()=>r.scene||'',any:!!r.scene}}
 function sceneList(s){
-  const g=$('sgrid'),key=JSON.stringify([(s.scenes||[]).map(x=>x.id),s.activeScene]);if(g.dataset.k===key)return;g.dataset.k=key;g.innerHTML='';
-  for(const sc of (s.scenes||[])){const b=document.createElement('button');b.className='btn scard'+(s.activeScene===sc.id?' on':'');
+  const st=sceneTarget(),act=st.active(s),house=isHouse(),rm=roomById(homeRoomId());
+  $('sceneStop').classList.toggle('hidden',!st.any);
+  $('sceneSaveRow').classList.toggle('hidden',house);
+  $('sceneScope').classList.toggle('hidden',!multi());
+  if(multi())$('sceneScope').textContent=house?t('Bij Huis geldt een scène voor alle kamers.'):t('Alleen voor {r}. Kies Huis bovenaan voor het hele huis.',{r:rm?rm.name:''});
+  const g=$('sgrid'),key=JSON.stringify([(s.scenes||[]).map(x=>x.id),act,st.room]);if(g.dataset.k===key)return;g.dataset.k=key;g.innerHTML='';
+  for(const sc of (s.scenes||[])){const b=document.createElement('button');b.className='btn scard'+(act===sc.id?' on':'');
     b.innerHTML='<span></span><div class="sw">'+(sc.preview||[]).map(c=>`<i style="background:${esc(c)}"></i>`).join('')+'</div>'+(sc.builtin?'':'<span class="x">✕</span>');
     b.querySelector('span').textContent=t(sc.name);
     b.onclick=async ev=>{if(ev.target.classList.contains('x')){if(!confirm(t('Scène "{n}" verwijderen?',{n:sc.name})))return;toast((await api('/api/scene/delete',{id:sc.id})).message);poll();return}
-      toast((await api('/api/scene',{id:sc.id})).message);poll()};
+      const st=sceneTarget();toast((await api('/api/scene',st.room?{id:sc.id,room:st.room}:{id:sc.id})).message);poll()};
     g.append(b)}
-  $('sceneStop').classList.toggle('hidden',!s.activeScene);
   $('hueScenesBox').classList.toggle('hidden',!(s.hue&&s.hue.paired));
 }
 // Scènes uit de Hue-app: lijst ophalen van de Bridge, aanvinken en overnemen als eigen scène
@@ -1256,9 +1454,128 @@ $('hueScenesImport').onclick=async()=>{const ids=[...$('hueScenesList').querySel
   if(!ids.length){toast(t('Kies eerst een of meer scènes'));return}
   const r=await api('/api/hue/scenes/import',{ids});toast(r.message);
   if(r.ok){$('hueScenesList').innerHTML='';$('hueScenesGo').classList.add('hidden')}poll()};
-$('sceneStop').onclick=async()=>{toast((await api('/api/scene',{id:''})).message);poll()};
+$('sceneStop').onclick=async()=>{const st=sceneTarget();toast((await api('/api/scene',st.room?{id:'',room:st.room}:{id:''})).message);poll()};
 $('sceneSave').onclick=async()=>{const n=$('sceneName').value.trim();if(!n){toast(t('Geef de scène eerst een naam'));return}
-  toast((await api('/api/scene/save',{name:n})).message);$('sceneName').value='';poll()};
+  toast((await api('/api/scene/save',withRoom({name:n},homeRoomId()))).message);$('sceneName').value='';poll()};
+/* ---------- Bediening: Huis of één kamer ----------
+   Met één kamer is er geen kamerrij en geen Huis: de pagina ziet eruit als vroeger. */
+function homeRoomId(){const rs=roomsList();if(!multi())return rs[0].id;return homeView==='house'||!roomById(homeView)?null:homeView}
+const isHouse=()=>multi()&&homeRoomId()===null;
+// Pixel-lampje voor de aan/uit-knop op een kamerkaart
+const BULB='<svg viewBox="0 0 8 10" width="16" height="20" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M2 0h4v1h1v1h1v3H7v1H6v1H2V6H1V5H0V2h1V1h1z"/><path fill="#3a1c0e" d="M2 7h4v1H2zM2 9h4v1H2zM3 8h2v1H3z"/></svg>';
+function roomBar(){const bar=$('roomBar');bar.classList.toggle('hidden',!multi());if(!multi())return;
+  const key=JSON.stringify([roomsList().map(r=>[r.id,r.name,r.color]),homeView,I18N.lang]);if(bar.dataset.k===key)return;bar.dataset.k=key;bar.innerHTML='';
+  for(const [id,name,color] of [['house',t('Huis'),''],...roomsList().map(r=>[r.id,r.name,r.color])]){
+    const b=document.createElement('button');b.className='btn'+(homeView===id?' on':'');b.setAttribute('aria-pressed',String(homeView===id));
+    if(color){const d=document.createElement('span');d.className='rdot';d.style.background=color;b.append(d)}
+    b.append(document.createTextNode(name));b.onclick=()=>setHomeView(id);bar.append(b);
+    if(homeView===id)setTimeout(()=>{bar.scrollLeft=Math.max(0,b.offsetLeft-bar.clientWidth/2+b.offsetWidth/2)},0)}}
+function setHomeView(id){homeView=id;try{localStorage.setItem('homeRoom',id)}catch(e){}if(fullOpen)closeFull();
+  useRoom(wantRoom());homeUI();if(S)sceneList(S);chips();window.scrollTo(0,0);setTimeout(draw,0)}
+// Kleur van een lamp op een kaartje: zoals hij nu brandt, grijs als hij uit staat
+function lampCol(l){if(!lampIsOn(l.id))return '#6d5a4c';const ll=S&&S.liveLamps&&S.liveLamps[l.id];if(ll&&ll.colour)return ll.colour;
+  const lv=live[l.id];return lv&&/^#[0-9a-f]{6}$/i.test(lv.color||'')&&lv.color!=='#555555'?lv.color:'#ffd696'}
+function roomStatus(r){const ls=lampsIn(r.id),n=ls.filter(l=>lampIsOn(l.id)).length;
+  if(r.tv&&S&&S.sync)return t('tv synct');if(r.scene)return t(r.sceneName||'Scène');
+  if(!ls.length)return t('nog geen lampen');return n?t('{a} van {b} aan',{a:n,b:ls.length}):t('alles uit')}
+function homeUI(){if(!S)return;roomBar();const house=isHouse();
+  $('housePanel').classList.toggle('hidden',!house);$('homeMapPanel').classList.toggle('hidden',house);$('ctrlPanel').classList.toggle('hidden',house);
+  if(house){houseCards();return}
+  const rid=homeRoomId(),rm=roomById(rid)||{},ls=lampsIn(rid),isTv=!!rm.tv;
+  $('homeRoomTitle').classList.toggle('hidden',!multi());
+  if(multi())$('homeRoomTitle').innerHTML=esc(rm.name)+(isTv?' <span class="badge">'+esc(t('tv'))+'</span>':'');
+  $('tvBanner').classList.toggle('hidden',!(multi()&&isTv&&S.sync));
+  $('tvBanner').textContent=t('De tv synct hier. Kies je een scène of zet je de lampen uit, dan stopt de sync.');
+  // Sync en tv-status horen bij de kamer met de tv
+  $('syncBtn').classList.toggle('hidden',!isTv);
+  const unplaced=ls.filter(l=>l.x<0).length;$('homeUnplaced').classList.toggle('hidden',!multi()||(!!ls.length&&!unplaced));
+  $('homeUnplaced').textContent=!ls.length?t('Nog geen lampen in deze kamer. Kies bij Lampen welke lampen hier horen.'):t('{n} lamp(en) staan nog niet op de kaart. Zet ze neer onder Kamers.',{n:unplaced});
+  $('fullOpen').classList.toggle('hidden',!ls.length&&multi());
+  if(hasRooms()){$('offBtn').textContent=t(roomAnyOn(rid)?'Lampen uit':'Lampen aan');$('offBtn').disabled=offBusy||!ls.length}
+  else $('offBtn').textContent=t(S.lampsOff?'Lampen aan':'Lampen uit');
+  $('homeStatus').classList.toggle('hidden',multi()&&!isTv)}
+function houseCards(){const rs=roomsList(),all=lamps.filter(l=>lampRoom(l)),nOn=all.filter(l=>lampIsOn(l.id)).length;
+  $('houseSum').textContent=t('{a} van {b} lampen aan',{a:nOn,b:all.length});
+  $('houseHint').textContent=t('Hele huis uit laat {r} aan als de tv synct of daar een scène loopt.',{r:tvRoom().name});
+  $('houseHint').classList.toggle('hidden',document.body.classList.contains('srv'));
+  const data=rs.map(r=>{const ls=lampsIn(r.id);return [r.id,r.name,r.color,!!r.tv,roomStatus(r),ls.length,roomAnyOn(r.id),(ls.length?ls.map(lampCol):['#6d5a4c']).slice(0,10)]});
+  const box=$('houseCards'),key=JSON.stringify(data)+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;box.innerHTML='';
+  for(const [id,name,color,tv,status,n,on,sw] of data){const c=document.createElement('div');c.className='rcard';c.tabIndex=0;c.setAttribute('role','button');
+    c.innerHTML=`<span class="nm"><span class="rdot" style="background:${esc(color)}"></span><span class="grow"></span></span><span class="mrow"><span class="meta"></span><button class="btn bulb${on?' on':''}"${n?'':' disabled'}>${BULB}</button></span><span class="sw">${sw.map(x=>`<i style="background:${esc(x)}"></i>`).join('')}</span>`;
+    c.querySelector('.grow').innerHTML=esc(name)+(tv?' <span class="badge">'+esc(t('tv'))+'</span>':'');c.querySelector('.meta').textContent=status;
+    c.setAttribute('aria-label',t('{r} openen',{r:name}));
+    const bb=c.querySelector('.bulb');bb.title=t(on?'Kamer uit':'Kamer aan');bb.setAttribute('aria-label',name+': '+t(on?'Kamer uit':'Kamer aan'));
+    // Lampje: de hele kamer aan of uit, zonder hem te openen
+    bb.onclick=async e=>{e.stopPropagation();bb.disabled=true;const r=await api('/api/lamps/power',withRoom({on:!on},id));toast(r.message);setTimeout(poll,on?1500:500)};
+    c.onclick=()=>setHomeView(id);c.onkeydown=e=>{if(e.target===c&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setHomeView(id)}};
+    box.append(c)}
+  const a=document.createElement('button');a.className='rcard add';a.textContent='+ '+t('Kamer toevoegen');a.onclick=()=>{showTab('room');openAdd()};box.append(a)}
+$('houseOff').onclick=async()=>{const r=await api('/api/lamps/power',{on:false,room:'*'});toast(r.message);setTimeout(poll,1500)};
+$('houseOn').onclick=async()=>{const r=await api('/api/lamps/power',{on:true,room:'*'});toast(r.message);setTimeout(poll,500)};
+
+/* ---------- tabblad Kamers ----------
+   Meer kamers: eerst de lijst (volgorde, Bewerken, Kamer toevoegen); Bewerken opent de bekende editor voor die kamer.
+   Eén kamer: meteen de editor, met daaronder naam, kleur en "Kamer toevoegen". */
+async function flush(){if(dirty){clearTimeout(saveTimer);await save()}}
+/* Kameropdracht: eerst openstaande wijzigingen opslaan, daarna alles opnieuw laden */
+async function roomOp(path,body){await flush();let r;try{r=await api(path,body)}catch(e){r={ok:false,message:t('Geen verbinding')}}
+  if(r.message)toast(r.message);await load();return r}
+function editRoomId(){return multi()?editRoom:roomsList()[0].id}
+function roomsTabUI(){if(!S)return;const m=multi(),rid=editRoomId(),editing=!!rid&&!roomAdding;
+  $('roomListPanel').classList.toggle('hidden',!m||!!rid||roomAdding);
+  $('roomAddPanel').classList.toggle('hidden',!roomAdding);
+  $('editorPanel').classList.toggle('hidden',!editing);$('roomMetaPanel').classList.toggle('hidden',!editing);
+  if(m&&!rid&&!roomAdding)roomListUI();
+  if(editing)metaUI(rid)}
+function roomListUI(){const rs=roomsList(),box=$('roomList');
+  const data=rs.map(r=>{const Lr=layouts[r.id]||{};return [r.id,r.name,r.color,!!r.tv,Lr.w,Lr.h,lampsIn(r.id).length]});
+  const key=JSON.stringify(data)+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;box.innerHTML='';
+  data.forEach(([id,name,color,tv,w,h,n],i)=>{const r=document.createElement('div');r.className='rrow';
+    r.innerHTML=`<span class="rdot" style="background:${esc(color)}"></span><span class="name"><b></b><br><span class="sub"></span></span><button class="btn" data-a="up" aria-label="${esc(t('Omhoog'))}">▲</button><button class="btn" data-a="down" aria-label="${esc(t('Omlaag'))}">▼</button><button class="btn" data-a="edit">${esc(t('Bewerken'))}</button>`;
+    r.querySelector('b').innerHTML=esc(name)+(tv?' <span class="badge">'+esc(t('tv'))+'</span>':'');
+    r.querySelector('.sub').textContent=t('{w} × {h} m · {n} lamp(en)',{w,h,n});
+    const up=r.querySelector('[data-a=up]'),dn=r.querySelector('[data-a=down]');up.disabled=i===0;dn.disabled=i===data.length-1;
+    const move=d=>{const ids=data.map(x=>x[0]);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];roomOp('/api/room/order',{ids})};
+    up.onclick=()=>move(-1);dn.onclick=()=>move(1);
+    r.querySelector('[data-a=edit]').onclick=()=>openRoom(id);box.append(r)})}
+function openRoom(id){editRoom=id;roomAdding=false;$('erDelAsk').classList.add('hidden');useRoom(wantRoom());roomsTabUI();chips();window.scrollTo(0,0);setTimeout(draw,0)}
+function colorPicker(box,cur,pick){const key=cur+'|'+ROOM_COLORS.join();if(box.dataset.k===key)return;box.dataset.k=key;box.innerHTML='';
+  // Een eigen kleur van de server die niet in de rij staat, blijft zichtbaar als gekozen
+  for(const c of ROOM_COLORS.includes(cur)||!cur?ROOM_COLORS:[...ROOM_COLORS,cur]){const b=document.createElement('button');b.type='button';b.style.background=c;b.className=c===cur?'on':'';
+    b.setAttribute('aria-label',t('Kleur'));b.setAttribute('aria-pressed',String(c===cur));b.onclick=()=>pick(c);box.append(b)}}
+function metaUI(rid){const r=roomById(rid);if(!r)return;const m=multi();
+  $('roomBackRow').classList.toggle('hidden',!m);
+  $('editorTitle').innerHTML=m?esc(r.name)+(r.tv?' <span class="badge">'+esc(t('tv'))+'</span>':''):esc(t('Je kamer'));
+  $('roomMetaTitle').textContent=t(m?'Deze kamer':'Kamers');
+  if(document.activeElement!==$('erName')&&$('erName').dataset.id!==r.id+r.name){$('erName').value=r.name;$('erName').dataset.id=r.id+r.name}
+  colorPicker($('erColors'),r.color,c=>roomOp('/api/room/save',{id:r.id,color:c}));
+  $('erTvBox').classList.toggle('hidden',!m);$('erTv').checked=!!r.tv;$('erTv').disabled=!!r.tv;
+  $('erTvHint').textContent=r.tv?t('Staat de tv in een andere kamer? Vink het daar aan.'):t('De tv kan maar in één kamer staan.');
+  const why=!m?t('De laatste kamer kan niet weg.'):r.tv?t('De kamer met de tv kan niet weg. Zet de tv eerst in een andere kamer.'):'';
+  $('erDelBox').classList.toggle('hidden',!m);$('erDel').disabled=!!why;$('erDelHint').textContent=why;if(why)$('erDelAsk').classList.add('hidden');
+  const n=lampsIn(r.id).length;
+  $('erDelText').textContent=n?t('"{r}" verwijderen? De plattegrond is dan weg en {n} lamp(en) gaan naar Zonder kamer.',{r:r.name,n}):t('"{r}" verwijderen? De plattegrond is dan weg.',{r:r.name});
+  $('erAddBox').classList.toggle('hidden',m)}
+async function saveName(){const rid=editRoomId(),r=roomById(rid),n=$('erName').value.trim();if(!r)return;
+  if(!n){toast(t('Geef de kamer eerst een naam'));$('erName').value=r.name;return}if(n===r.name)return;
+  $('erName').blur();await roomOp('/api/room/save',{id:rid,name:n})}
+$('erNameSave').onclick=saveName;$('erName').onkeydown=e=>{if(e.key==='Enter')saveName()};
+$('erTv').onchange=e=>{const rid=editRoomId();if(e.target.checked)roomOp('/api/room/save',{id:rid,tv:true})};
+$('erDel').onclick=()=>{$('erDelAsk').classList.remove('hidden');$('erDelAsk').scrollIntoView({block:'nearest',behavior:'smooth'})};
+$('erDelNo').onclick=()=>$('erDelAsk').classList.add('hidden');
+$('erDelYes').onclick=async()=>{const rid=editRoomId();$('erDelAsk').classList.add('hidden');const r=await roomOp('/api/room/delete',{id:rid});
+  if(r.ok){editRoom=null;if(homeView===rid){homeView='house';try{localStorage.setItem('homeRoom','house')}catch(e){}}roomsTabUI();homeUI();window.scrollTo(0,0)}};
+$('roomBack').onclick=()=>{editRoom=null;roomsTabUI();window.scrollTo(0,0)};
+function openAdd(){roomAdding=true;const used=roomsList().map(r=>r.color);nrColor=ROOM_COLORS.find(c=>!used.includes(c))||ROOM_COLORS[0];
+  $('nrName').value='';$('nrW').value=4;$('nrH').value=3;nrColors();roomsTabUI();window.scrollTo(0,0);setTimeout(()=>$('nrName').focus(),50)}
+function nrColors(){colorPicker($('nrColors'),nrColor,c=>{nrColor=c;nrColors()})}
+$('roomAddBtn').onclick=openAdd;$('erAdd').onclick=openAdd;
+$('nrCancel').onclick=()=>{roomAdding=false;roomsTabUI();window.scrollTo(0,0)};
+$('nrSave').onclick=async()=>{const name=$('nrName').value.trim();if(!name){toast(t('Geef de kamer eerst een naam'));$('nrName').focus();return}
+  const sz=v=>Math.max(2,Math.min(20,Math.round(+String(v).replace(',','.'))||3));
+  const b=$('nrSave');b.disabled=true;const r=await roomOp('/api/room/save',{name,color:nrColor,w:sz($('nrW').value),h:sz($('nrH').value)});b.disabled=false;
+  if(r.ok){roomAdding=false;if(r.id&&roomById(r.id))openRoom(r.id);else roomsTabUI()}};
+
 function hiddenList(s){
   const h=s.hidden||[];$('hiddenBox').classList.toggle('hidden',!h.length);
   const key=h.map(x=>x.id).join();if($('hiddenList').dataset.k===key)return;$('hiddenList').dataset.k=key;$('hiddenList').innerHTML='';
@@ -1305,7 +1622,7 @@ function liveFrom(s){
   hostMode(s);hiddenList(s);sceneList(s);appList(s);hueUI(s);ikeaUI(s);
   live={};for(const l of s.lamps)live[l.id]=l;
   $('syncBtn').textContent=t(s.sync?'Sync stoppen':'Sync starten');
-  $('offBtn').textContent=t(s.lampsOff?'Lampen aan':'Lampen uit');
+
   if(s.update){$('appVersion').textContent=t('Versie {v}',{v:s.update.current});$('updBtn').classList.toggle('hidden',!s.update.available);$('updBtn').textContent=t('Update {v}',{v:s.update.latest})}
   const tv=s.tv||{};   // ontbreekt op de server
   $('pairCard').classList.toggle('hidden',SRV||!!tv.paired);
@@ -1317,17 +1634,19 @@ function liveFrom(s){
   const lt=t('Lampen: {a} van {b} bereikbaar',{a:on,b:s.lamps.length});
   $('tvStatus').innerHTML=SRV?lt:`${t('Tv')}: ${tv.paired?'<span class="ok">'+t('gekoppeld')+'</span>':'<span class="bad">'+t('niet gekoppeld')+'</span>'} | ${lt}`;
   $('homeStatus').innerHTML=$('tvStatus').innerHTML;
+  homeUI();if(curTab==='room')roomsTabUI();
 }
 async function load(){
   S=await api('/api/state');
-  if(!dirty){L=Room.migrate(S.layout);lamps=S.lamps.map(l=>({...l}));settings=S.settings;groups=(S.groups||[]).map(g=>JSON.parse(JSON.stringify(g)));base=stateSnapshot();if(!groups.find(g=>g.id===setTarget))setTarget='';groupUI();showSettings()}
-  else for(const nl of S.lamps)if(!lamps.find(l=>l.id===nl.id)){lamps.push({...nl});if(base)base.lamps.push(lampFields(nl))}
+  hostMode(S);
+  if(!dirty){syncLayouts(true);curRoom='';lamps=S.lamps.map(l=>({...l}));settings=S.settings;groups=(S.groups||[]).map(g=>JSON.parse(JSON.stringify(g)));base=stateSnapshot();if(!groups.find(g=>g.id===setTarget))setTarget='';groupUI();showSettings()}
+  else{syncLayouts(false);for(const nl of S.lamps)if(!lamps.find(l=>l.id===nl.id)){lamps.push({...nl});if(base)base.lamps.push(lampFields(nl))}}
   lamps=lamps.filter(l=>S.lamps.find(n=>n.id===l.id));
+  useRoom(wantRoom());
   liveFrom(S);
-  $('tvSize').value=String(INCH.reduce((a,b)=>Math.abs(b-tvInch())<Math.abs(a-tvInch())?b:a));
   chips();showLamp();lampList();draw();
 }
-async function poll(){try{const s=await api('/api/state');S=s;liveFrom(s);chips();showLamp();lampList();draw()}catch(e){}}
+async function poll(){try{const s=await api('/api/state');S=s;syncLayouts(false);useRoom(wantRoom());liveFrom(s);chips();showLamp();lampList();draw()}catch(e){}}
 // Tabbladen
 function showTab(n){
   if(n==='settings'&&grpOpen){grpOpen=null;placeSettings()}
@@ -1335,12 +1654,14 @@ function showTab(n){
   document.querySelectorAll('.tabbar .btn').forEach(b=>b.classList.toggle('on',b.dataset.tab===n));
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
+  if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
   window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);
 }
-document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+// Nog eens op Kamers tikken: terug naar de lijst met kamers
+document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
 $('roomLampSettings').onclick=()=>{showTab('lamps');showLamp();setTimeout(()=>{const r=[...$('lampList').children].find(r=>r.dataset.id===selLamp);(r||$('lampDetailPanel')).scrollIntoView({block:'start'})},50)};
-(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang);hostMode(s)}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';showTab(tb);load()})();
-const fast=()=>S&&(S.sync||S.activeScene);
+(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang);hostMode(s)}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';try{homeView=localStorage.getItem('homeRoom')||''}catch(e){}showTab(tb);load()})();
+const fast=()=>S&&(S.sync||S.activeScene||(S.rooms||[]).some(r=>r.scene));
 setInterval(()=>{if(fast())poll()},500);
 setInterval(()=>{if(!fast())poll()},1500);
 window.addEventListener('resize',draw);

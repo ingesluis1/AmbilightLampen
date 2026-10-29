@@ -5,6 +5,13 @@
 const I18N = (() => {
   let lang = 'nl';
   const EN = {
+    // meubels (keuken, slaapkamer, werkplek, gang, badkamer) en hun groepen in de kiezer
+    'Koelkast': 'Fridge', 'Fornuis': 'Cooker', 'Kookplaat': 'Hob', 'Oven': 'Oven', 'Spoelbak': 'Sink', 'Vaatwasser': 'Dishwasher', 'Kookeiland': 'Kitchen island',
+    'Eenpersoonsbed': 'Single bed', 'Nachtkastje': 'Nightstand', 'Kaptafel': 'Dressing table',
+    'Computer': 'Computer', 'Bureau met twee schermen': 'Desk with two screens', 'Laptop': 'Laptop', 'Pc-kast': 'PC tower', 'Bureaustoel': 'Office chair', 'Gamestoel': 'Gaming chair',
+    'Kapstok': 'Coat rack', 'Schoenenkast': 'Shoe cabinet', 'Trap': 'Stairs',
+    'Wc': 'Toilet', 'Wastafel': 'Washbasin', 'Douche': 'Shower', 'Bad': 'Bath', 'Wasmachine': 'Washing machine', 'Droger': 'Dryer', 'Handdoekrek': 'Towel rail',
+    'Werkplek': 'Workspace', 'Badkamer': 'Bathroom', 'Gang': 'Hallway', 'Overig': 'Other', 'Deuren en ramen': 'Doors and windows',
     // algemeen
     'Ambilight Lampen': 'Ambilight Lamps', 'Instellingen': 'Settings', 'Instellingen sluiten': 'Close settings', 'Sync starten': 'Start sync', 'Sync stoppen': 'Stop sync',
     'aan': 'on', 'uit': 'off', 'Uit': 'Off', 'Tv': 'TV', 'Lampen': 'Lamps', 'Taal': 'Language',
@@ -181,6 +188,31 @@ const I18N = (() => {
       'Works with a Hue Bridge. Lamps of other brands paired to the Bridge (such as IKEA) join in too. Leave the IP address empty and the server finds the Bridge itself.',
     'Werkt met de IKEA DIRIGERA-hub. Laat het ip-adres leeg, dan zoekt de server de hub zelf.': 'Works with the IKEA DIRIGERA hub. Leave the IP address empty and the server finds the hub itself.',
     'Sleutels van je lampen en koppelingen. Bewaar het bestand dan goed: wie het heeft, kan je lampen bedienen.': 'Keys of your lamps and connections. Keep the file safe: whoever has it can control your lamps.',
+    // kamers
+    'Kamers': 'Rooms', 'Huis': 'Home', 'Woonkamer': 'Living room', 'tv': 'TV', 'Hele huis uit': 'Whole home off', 'Alles aan': 'All on',
+    'Kamer uit': 'Room off', 'Kamer aan': 'Room on', '{r} openen': 'Open {r}', 'tv synct': 'TV syncing', 'nog geen lampen': 'no lamps yet',
+    '{a} van {b} aan': '{a} of {b} on', 'alles uit': 'all off', '{a} van {b} lampen aan': '{a} of {b} lamps on',
+    'Hele huis uit laat {r} aan als de tv synct of daar een scène loopt.': 'Whole home off leaves {r} on while the TV syncs or a scene runs there.',
+    'De tv synct hier. Kies je een scène of zet je de lampen uit, dan stopt de sync.': 'The TV is syncing here. Pick a scene or turn the lamps off and the sync stops.',
+    '{n} lamp(en) staan nog niet op de kaart. Zet ze neer onder Kamers.': '{n} lamp(s) are not on the map yet. Place them under Rooms.',
+    'Nog geen lampen in deze kamer. Kies bij Lampen welke lampen hier horen.': 'No lamps in this room yet. Choose under Lamps which lamps belong here.',
+    'Bij Huis geldt een scène voor alle kamers.': 'With Home selected, a scene applies to all rooms.',
+    'Alleen voor {r}. Kies Huis bovenaan voor het hele huis.': 'Only for {r}. Choose Home at the top for the whole home.',
+    'Elke kamer heeft een eigen plattegrond en eigen lampen. De volgorde hier is ook de volgorde bij Bediening.': 'Each room has its own floor plan and its own lamps. The order here is also the order under Control.',
+    'De tv synct alleen de kamer waar hij staat.': 'The TV only syncs the room it is in.',
+    '+ Kamer toevoegen': '+ Add room', 'Kamer toevoegen': 'Add room', 'Nieuwe kamer': 'New room', 'Bijvoorbeeld Slaapkamer': 'For example Bedroom',
+    'Breedte (m)': 'Width (m)', 'Diepte (m)': 'Depth (m)', 'De maat pas je later nog aan onder Kamermaat.': 'You can change the size later under Room size.',
+    'Kamer maken': 'Create room', 'Annuleren': 'Cancel', '‹ Kamers': '‹ Rooms', 'Deze kamer': 'This room', 'Opslaan': 'Save',
+    'De tv staat in deze kamer': 'The TV is in this room', 'Kamer verwijderen': 'Delete room', 'Ja, verwijderen': 'Yes, delete', 'Nee': 'No',
+    'Lampen in meer kamers? Maak een kamer erbij, met een eigen plattegrond.': 'Lamps in more rooms? Add a room, with its own floor plan.',
+    'Omhoog': 'Up', 'Omlaag': 'Down', 'Bewerken': 'Edit', '{w} × {h} m · {n} lamp(en)': '{w} × {h} m · {n} lamp(s)',
+    'Staat de tv in een andere kamer? Vink het daar aan.': 'Is the TV in another room? Tick it there.', 'De tv kan maar in één kamer staan.': 'The TV can only be in one room.',
+    'De laatste kamer kan niet weg.': 'The last room cannot be deleted.', 'De kamer met de tv kan niet weg. Zet de tv eerst in een andere kamer.': 'The room with the TV cannot be deleted. Put the TV in another room first.',
+    '"{r}" verwijderen? De plattegrond is dan weg en {n} lamp(en) gaan naar Zonder kamer.': 'Delete "{r}"? The floor plan is lost and {n} lamp(s) move to No room.',
+    '"{r}" verwijderen? De plattegrond is dan weg.': 'Delete "{r}"? The floor plan is lost.', 'Geef de kamer eerst een naam': 'Give the room a name first',
+    'Zonder kamer': 'No room', ' (zonder kamer)': ' (no room)', 'Kamer van {n}': 'Room of {n}', 'Nieuwe lampen komen hier tot je ze in een kamer zet.': 'New lamps show up here until you put them in a room.',
+    '{n} staat nu in {r}. Zet hem op de kaart onder Kamers.': '{n} is now in {r}. Place it on the map under Rooms.', '{n} staat nu zonder kamer.': '{n} now has no room.',
+    'Staat niet in de kamer met de tv: doet niet mee met de sync': 'Not in the room with the TV: not part of the sync', 'Geen verbinding': 'No connection',
     // meubels en vloeren
     'Bank': 'Sofa', 'Hoekbank': 'Corner sofa', 'Fauteuil': 'Armchair', 'Salontafel': 'Coffee table', 'Eettafel': 'Dining table',
     'Plant': 'Plant', 'Kleed': 'Rug', 'Kast': 'Cabinet', 'Bed': 'Bed', 'Boekenkast': 'Bookcase', 'Bijzettafel': 'Side table', 'Ronde eettafel': 'Round dining table', 'Bureau': 'Desk', 'Stoel': 'Chair', 'Kledingkast': 'Wardrobe', 'Keukenblok': 'Kitchen unit', 'Haard': 'Fireplace', 'Piano': 'Piano', 'Zitzak': 'Beanbag', 'Poef': 'Pouf', 'Deur': 'Door', 'Raam': 'Window', 'Vensterbank': 'Window with sill',

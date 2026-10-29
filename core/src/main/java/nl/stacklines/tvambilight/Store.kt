@@ -27,11 +27,16 @@ class Lamp(
     var maxBright: Double = 1.0,      // maximale helderheid van deze lamp bij sync en scènes (0.1..1), bv. een felle lamp dichtbij
     var look: String = "",            // uiterlijk op de kaart: spot, pendant, floor, arc, table, globe, rod ("" = oude weergave)
     var balWarm: Double = 0.0,        // kleurbalans, om lampen onderling gelijk te krijgen: -1 koeler .. 1 warmer
-    var balTint: Double = 0.0         // en -1 groener .. 1 rozer
+    var balTint: Double = 0.0,        // en -1 groener .. 1 rozer
+    var room: String = ""             // id van de kamer ("" = zonder kamer); x en y gelden in die kamer
 ) {
     /** Ledstrips tonen kleuren witter dan lampen; die standaard iets voller. */
     val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
     val placed get() = x >= 0 && y >= 0
+    /** Staat in de kamer met de tv: alleen die lampen doen mee met de sync. */
+    val inTvRoom get() = room == Store.tvRoom.id
+    /** Doet mee met de sync: geplaatst en in de tv-kamer. */
+    val synced get() = placed && inTvRoom
     val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5", Wiz.VERSION, Hue.VERSION, Dirigera.VERSION)
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
@@ -39,7 +44,7 @@ class Lamp(
         put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers); put("category", category); put("satBoost", satBoost); put("satFactor", satFactor); put("group", group)
         heightY?.let { put("heightY", it) }
         put("lowHue", lowHue); put("lowStrength", lowStrength); put("maxBright", maxBright); put("look", look)
-        put("balWarm", balWarm); put("balTint", balTint)
+        put("balWarm", balWarm); put("balTint", balTint); put("room", room)
         if (withKey) put("key", key)
     }
 
@@ -55,7 +60,8 @@ class Lamp(
             o.optDouble("lowHue", 190.0), o.optDouble("lowStrength", 0.0),
             o.optDouble("maxBright", 1.0).coerceIn(0.1, 1.0),
             o.optString("look"),
-            o.optDouble("balWarm", 0.0).coerceIn(-1.0, 1.0), o.optDouble("balTint", 0.0).coerceIn(-1.0, 1.0)
+            o.optDouble("balWarm", 0.0).coerceIn(-1.0, 1.0), o.optDouble("balTint", 0.0).coerceIn(-1.0, 1.0),
+            o.optString("room")
         )
     }
 }
@@ -134,6 +140,17 @@ class Group(val id: String, var name: String, val settings: Settings = Settings(
     }
 }
 
+/** Kamer met een eigen plattegrond. Precies één kamer heeft de tv: daar synct de tv, de andere kamers bedien je met scènes. */
+class Room(val id: String, var name: String, var color: String, var tv: Boolean, @Volatile var layout: JSONObject) {
+    fun toJson() = JSONObject().put("id", id).put("name", name).put("color", color).put("tv", tv).put("layout", layout)
+    companion object {
+        const val FIRST = "woonkamer"
+        fun fromJson(o: JSONObject) = Room(o.getString("id"), o.optString("name", o.getString("id")).take(30),
+            o.optString("color").takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) } ?: "#b5743a", o.optBoolean("tv"),
+            o.optJSONObject("layout") ?: JSONObject())
+    }
+}
+
 /** Tekst in de gekozen taal (Nederlands of Engels). */
 fun tr(nl: String, en: String) = if (Store.settings.lang == "en") en else nl
 
@@ -141,10 +158,36 @@ fun tr(nl: String, en: String) = if (Store.settings.lang == "en") en else nl
 object Store {
     private lateinit var file: File
 
-    /** Plattegrond zoals de telefoon-editor hem maakt: w, h, floor (rijen van '0'/'1'), tv, couch. */
-    @Volatile var layout: JSONObject = defaultLayout()
     val lamps = mutableListOf<Lamp>()
     val settings = Settings()
+    // Na settings: de naam van de eerste kamer volgt de taal
+    /** Kamers in de volgorde van de gebruiker; nooit leeg. */
+    @Volatile var rooms: List<Room> = listOf(firstRoom(defaultLayout()))
+    /** De kamer met de tv (daar synct de tv). */
+    val tvRoom: Room get() = rooms.firstOrNull { it.tv } ?: rooms.first()
+    fun room(id: String): Room? = rooms.firstOrNull { it.id == id }
+
+    /** Plattegrond van de tv-kamer zoals de telefoon-editor hem maakt: w, h, floor (rijen van '0'/'1'), tv, items. */
+    var layout: JSONObject
+        get() = tvRoom.layout
+        set(v) { tvRoom.layout = v }
+
+    private fun firstRoom(layout: JSONObject) = Room(Room.FIRST, tr("Woonkamer", "Living room"), "#b5743a", true, layout)
+
+    /**
+     * Kamers op orde houden: minstens één, precies één met de tv. Met één kamer horen alle lampen daarin
+     * (wie alleen een tv heeft, merkt niets van kamers); met meer kamers gaan lampen in een onbekende kamer naar "zonder kamer".
+     */
+    @Synchronized
+    fun normalizeRooms() {
+        if (rooms.isEmpty()) rooms = listOf(firstRoom(defaultLayout()))
+        val tvs = rooms.filter { it.tv }
+        if (tvs.size != 1) { val keep = tvs.firstOrNull() ?: rooms.first(); rooms.forEach { it.tv = it === keep } }
+        val ids = rooms.map { it.id }.toSet()
+        fun leave(l: Lamp, to: String) { l.room = to; l.x = -1.0; l.y = -1.0 }
+        if (rooms.size == 1) lamps.forEach { if (it.room != rooms[0].id) leave(it, rooms[0].id) }
+        else lamps.forEach { if (it.room.isNotEmpty() && it.room !in ids) leave(it, "") }
+    }
     @Volatile var groups: List<Group> = emptyList()
     @Volatile var customScenes: List<Scene> = emptyList()
     /** Profiel per app op de tv (pakketnaam → film | game | calm), zie [Profiles]. */
@@ -203,7 +246,13 @@ object Store {
     /** Leest een opgeslagen stand in (config.json of een backup). Per onderdeel: één kapot veld mag de rest niet meenemen. */
     private fun parse(o: JSONObject) {
         fun part(block: () -> Unit) = try { block() } catch (_: Exception) { }
-        part { o.optJSONObject("layout")?.let { layout = it } }
+        // Kamers; een oude config (één plattegrond) wordt de woonkamer met de tv
+        part {
+            val a = o.optJSONArray("rooms")
+            rooms = if (a != null && a.length() > 0) (0 until a.length()).mapNotNull { try { Room.fromJson(a.getJSONObject(it)) } catch (_: Exception) { null } }
+                .distinctBy { it.id }
+            else listOf(firstRoom(o.optJSONObject("layout") ?: defaultLayout()))
+        }
         lamps.clear()
         o.optJSONArray("lamps")?.let { a -> for (i in 0 until a.length()) part { lamps += Lamp.fromJson(a.getJSONObject(i)) } }
         part { o.optJSONObject("settings")?.let { settings.apply(it) } }
@@ -232,6 +281,9 @@ object Store {
         hidden.clear(); forgotten.clear()
         part { o.optJSONObject("hidden")?.let { h -> h.keys().forEach { k -> hidden[k] = h.optString(k) } } }
         part { o.optJSONObject("forgotten")?.let { h -> h.keys().forEach { k -> forgotten[k] = h.optString(k) } } }
+        // Oude config (nog geen kamers): alle lampen horen in de woonkamer, op hun eigen plek
+        if (o.optJSONArray("rooms") == null) lamps.forEach { it.room = rooms.first().id }
+        normalizeRooms()
         version++
     }
 
@@ -285,6 +337,8 @@ object Store {
 
     private fun buildJson(): JSONObject {
         return JSONObject().apply {
+            put("rooms", JSONArray().apply { rooms.forEach { put(it.toJson()) } })
+            // Ook de plattegrond van de tv-kamer los: een oudere versie van de app kan een backup dan nog terugzetten
             put("layout", layout)
             put("lamps", JSONArray().apply { lamps.forEach { put(it.toJson(true)) } })
             put("settings", settings.toJson())

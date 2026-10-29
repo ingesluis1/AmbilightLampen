@@ -21,7 +21,7 @@ object Mixer {
     /** Positie van de lamp op het tv-vlak: x -1..1 is de breedte van de tv, y 1 = bovenrand. */
     fun project(layout: JSONObject, lamp: Lamp): DoubleArray? {
         val tv = layout.optJSONObject("tv") ?: return null
-        if (!lamp.placed) return null
+        if (!lamp.synced) return null
         val tx = tv.optDouble("x"); val ty = tv.optDouble("y")
         val w = tv.optDouble("w", 1.44).coerceAtLeast(0.3)
         val a = Math.toRadians(tv.optDouble("dir", 90.0))
@@ -232,6 +232,7 @@ object Engine {
      */
     private val workersLock = Object()
     fun syncWorkers() = synchronized(workersLock) {
+        Store.normalizeRooms()   // nieuwe lampen: bij één kamer meteen in die kamer
         val lamps = Store.lampsSnapshot().associateBy { it.id }
         for ((id, w) in workers) {
             val l = lamps[id]
@@ -427,12 +428,35 @@ object Engine {
     /** Staan alle lampen uit via de knop "Lampen uit"? */
     @Volatile var lampsOff = false
 
+    /**
+     * Lampen van één kamer uit (of weer aan in warm wit); een scène daar stopt. De tv-kamer: ook de sync stopt.
+     * room "*" = hele huis, maar bij uit blijft de tv-kamer aan als de tv synct of daar een scène loopt.
+     * Geeft de namen van de kamers die bleven staan.
+     */
+    fun roomLamps(room: String, on: Boolean): List<String> {
+        val tv = Store.tvRoom
+        val targets = if (room == "*") Store.rooms.filter { r -> on || !(r === tv && (running || SceneEngine.activeIn(r.id) != null)) }
+            else listOfNotNull(Store.room(room))
+        for (r in targets) {
+            if (r === tv) { if (running) { Platform.userStopped(); Store.syncWanted = false; Store.save(); stop(handOver = true) }; lampsOff = !on }
+            SceneEngine.stop(handOver = true, room = r.id)
+        }
+        syncWorkers()
+        val ids = targets.map { it.id }.toSet() + (if (room == "*") setOf("") else emptySet())
+        for (l in Store.lampsSnapshot().filter { it.enabled && it.room in ids }) {
+            val w = workers[l.id] ?: continue
+            w.send(if (on) mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 300) else mapOf("20" to false))
+            w.shownColor = if (on) 0xFFFFE1B4.toInt() else 0xFF555555.toInt()
+        }
+        return Store.rooms.filter { it !in targets }.map { it.name }.takeIf { room == "*" } ?: emptyList()
+    }
+
     /** Sync en scène stoppen en alle lampen uit (of weer aan in warm wit). */
     fun allLamps(on: Boolean) {
         if (!on) {
             Platform.userStopped()
             // Niet eerst terugzetten: de lampen gaan meteen uit
-            Store.syncWanted = false; Store.save(); stop(handOver = true); SceneEngine.stop(handOver = true)
+            Store.syncWanted = false; Store.save(); stop(handOver = true); SceneEngine.stopAll(handOver = true)
         }
         syncWorkers()
         for (l in Store.lampsSnapshot().filter { it.enabled }) {
@@ -676,7 +700,7 @@ object Engine {
         var zoneCount = Triple(0, 0, 0)
 
         // Alleen lampen die in de kamer staan: een niet-geplaatste lamp hoort (nog) niet bij de tv
-        val startLamps = Store.lampsSnapshot().filter { it.enabled && it.placed && workers.containsKey(it.id) }
+        val startLamps = Store.lampsSnapshot().filter { it.enabled && it.synced && workers.containsKey(it.id) }
         val touched = LinkedHashSet<String>()
         var blackSince = 0L
         var pauseScene = ""   // id van de scène die nu speelt tijdens de pauze (startscherm of tv uit)
@@ -741,7 +765,7 @@ object Engine {
                     // Instellingen gewijzigd (kleurbalans, helderheid...): elke lamp één keer opnieuw sturen, ook bij stilstaand beeld
                     last.clear(); lastWhite.clear()
                     // Lampen op "Bovenrand" krijgen op volgorde van links naar rechts een gelijk verdeelde plek op de bovenrand
-                    val topLamps = frameLamps.filter { it.follow == "top" && it.placed }
+                    val topLamps = frameLamps.filter { it.follow == "top" && it.synced }
                         .sortedBy { Mixer.project(Store.layout, it)?.get(0) ?: 0.0 }
                     val topX = topLamps.withIndex().associate { (k, l) -> l.id to (-1 + (2.0 * k + 1) / topLamps.size) }
                     for (l in frameLamps) weights[l.id] = Mixer.weights(Store.layout, l, Store.settingsFor(l).spread, zc.first, zc.second, zc.third, topX[l.id])
@@ -749,7 +773,7 @@ object Engine {
                 // Voorronde voor donker beeld: welke lampen hebben nog kleur (tint + verzadiging), en wat is het gemiddelde van het hele beeld
                 lit.clear()
                 for (l in frameLamps) {
-                    if (!l.enabled || !l.placed || l.layers > 0) continue
+                    if (!l.enabled || !l.synced || l.layers > 0) continue
                     val ls = eff(Store.settingsFor(l))
                     val tgt = Mixer.mix(weights[l.id] ?: continue, sample)
                     val hv = FloatArray(3)
@@ -767,7 +791,7 @@ object Engine {
                 for (l in frameLamps) {
                     val id = l.id
                     val worker = workers[id] ?: continue
-                    if (!l.enabled || !l.placed) continue
+                    if (!l.enabled || !l.synced) continue
                     // Lamp toont een kalibratievoorbeeld: niet overschrijven, en daarna alles opnieuw sturen.
                     // Het voorbeeld zet de lamp zelf aan en in wit- of kleurmodus; zonder dit vergeten stuurde de sync
                     // daarna soms geen "21" mee of sloeg hij de lamp over, en bleef die op de voorbeeldkleur hangen.

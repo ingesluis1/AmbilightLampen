@@ -5,32 +5,77 @@
 const Room = (() => {
   const PPM = 16;
 
+  // cat = groep in de meubelkiezer (zie CATS); top = klein ding dat op een tafel of bureau staat (wordt erbovenop getekend)
   const ITEMS = {
-    sofa:     { name: 'Bank',       w: 2.2, d: 0.9 },
-    corner:   { name: 'Hoekbank',   w: 2.6, d: 2.0 },
-    armchair: { name: 'Fauteuil',   w: 0.9, d: 0.9 },
-    coffee:   { name: 'Salontafel', w: 1.0, d: 0.55 },
-    dining:   { name: 'Eettafel',   w: 1.6, d: 1.5 },
-    plant:    { name: 'Plant',      w: 0.5, d: 0.5 },
-    rug:      { name: 'Kleed',      w: 2.4, d: 1.6 },
-    cabinet:  { name: 'Kast',       w: 1.2, d: 0.45 },
-    bed:      { name: 'Bed',        w: 1.6, d: 2.0 },
-    bookshelf:{ name: 'Boekenkast', w: 1.0, d: 0.35 },
-    sidetable:{ name: 'Bijzettafel', w: 0.5, d: 0.5 },
-    roundtable:{ name: 'Ronde eettafel', w: 1.5, d: 1.5 },
-    desk:     { name: 'Bureau',     w: 1.4, d: 1.1 },
-    chair:    { name: 'Stoel',      w: 0.5, d: 0.5 },
-    wardrobe: { name: 'Kledingkast', w: 1.6, d: 0.6 },
-    kitchen:  { name: 'Keukenblok', w: 2.4, d: 0.65 },
-    fireplace:{ name: 'Haard',      w: 1.4, d: 0.45 },
-    piano:    { name: 'Piano',      w: 1.5, d: 0.6 },
-    beanbag:  { name: 'Zitzak',     w: 0.8, d: 0.8 },
-    pouf:     { name: 'Poef',       w: 0.55, d: 0.55 },
+    sofa:     { name: 'Bank',       w: 2.2, d: 0.9, cat: 'living' },
+    corner:   { name: 'Hoekbank',   w: 2.6, d: 2.0, cat: 'living' },
+    armchair: { name: 'Fauteuil',   w: 0.9, d: 0.9, cat: 'living' },
+    coffee:   { name: 'Salontafel', w: 1.0, d: 0.55, cat: 'living' },
+    dining:   { name: 'Eettafel',   w: 1.6, d: 1.5, cat: 'living' },
+    plant:    { name: 'Plant',      w: 0.5, d: 0.5, cat: 'other' },
+    rug:      { name: 'Kleed',      w: 2.4, d: 1.6, cat: 'other' },
+    cabinet:  { name: 'Kast',       w: 1.2, d: 0.45, cat: 'other' },
+    bed:      { name: 'Bed',        w: 1.6, d: 2.0, cat: 'bedroom' },
+    bookshelf:{ name: 'Boekenkast', w: 1.0, d: 0.35, cat: 'living' },
+    sidetable:{ name: 'Bijzettafel', w: 0.5, d: 0.5, cat: 'living' },
+    roundtable:{ name: 'Ronde eettafel', w: 1.5, d: 1.5, cat: 'living' },
+    desk:     { name: 'Bureau',     w: 1.4, d: 1.1, cat: 'work' },
+    chair:    { name: 'Stoel',      w: 0.5, d: 0.5, cat: 'other' },
+    wardrobe: { name: 'Kledingkast', w: 1.6, d: 0.6, cat: 'bedroom' },
+    kitchen:  { name: 'Keukenblok', w: 2.4, d: 0.65, cat: 'kitchen' },
+    fireplace:{ name: 'Haard',      w: 1.4, d: 0.45, cat: 'living' },
+    piano:    { name: 'Piano',      w: 1.5, d: 0.6, cat: 'living' },
+    beanbag:  { name: 'Zitzak',     w: 0.8, d: 0.8, cat: 'living' },
+    pouf:     { name: 'Poef',       w: 0.55, d: 0.55, cat: 'living' },
+    // keuken (zelfde diepte als het keukenblok, zodat ze er netjes naast passen)
+    fridge:   { name: 'Koelkast',   w: 0.6, d: 0.65, cat: 'kitchen' },
+    stove:    { name: 'Fornuis',    w: 0.6, d: 0.65, cat: 'kitchen' },
+    hob:      { name: 'Kookplaat',  w: 0.6, d: 0.65, cat: 'kitchen' },
+    oven:     { name: 'Oven',       w: 0.6, d: 0.65, cat: 'kitchen' },
+    sink:     { name: 'Spoelbak',   w: 0.8, d: 0.65, cat: 'kitchen' },
+    dishwasher:{ name: 'Vaatwasser', w: 0.6, d: 0.65, cat: 'kitchen' },
+    island:   { name: 'Kookeiland', w: 1.8, d: 1.3, cat: 'kitchen' },
+    // slaapkamer
+    singlebed:{ name: 'Eenpersoonsbed', w: 0.9, d: 2.0, cat: 'bedroom' },
+    nightstand:{ name: 'Nachtkastje', w: 0.45, d: 0.4, cat: 'bedroom' },
+    vanity:   { name: 'Kaptafel',   w: 1.0, d: 0.8, cat: 'bedroom' },
+    // werkplek
+    computer: { name: 'Computer',   w: 0.8, d: 0.45, cat: 'work', top: true },
+    dualdesk: { name: 'Bureau met twee schermen', w: 1.6, d: 1.2, cat: 'work' },
+    laptop:   { name: 'Laptop',     w: 0.35, d: 0.3, cat: 'work', top: true },
+    pctower:  { name: 'Pc-kast',    w: 0.25, d: 0.5, cat: 'work' },
+    officechair:{ name: 'Bureaustoel', w: 0.6, d: 0.6, cat: 'work' },
+    gamingchair:{ name: 'Gamestoel', w: 0.7, d: 0.7, cat: 'work' },
+    // gang
+    coatrack: { name: 'Kapstok',    w: 1.2, d: 0.45, cat: 'hall' },
+    shoerack: { name: 'Schoenenkast', w: 0.8, d: 0.35, cat: 'hall' },
+    stairs:   { name: 'Trap',       w: 0.9, d: 2.6, cat: 'hall' },
+    // badkamer en wc
+    toilet:   { name: 'Wc',         w: 0.4, d: 0.65, cat: 'bath' },
+    washbasin:{ name: 'Wastafel',   w: 0.6, d: 0.45, cat: 'bath' },
+    shower:   { name: 'Douche',     w: 0.9, d: 0.9, cat: 'bath' },
+    bath:     { name: 'Bad',        w: 1.7, d: 0.75, cat: 'bath' },
+    washer:   { name: 'Wasmachine', w: 0.6, d: 0.6, cat: 'bath' },
+    dryer:    { name: 'Droger',     w: 0.6, d: 0.6, cat: 'bath' },
+    towelrail:{ name: 'Handdoekrek', w: 0.6, d: 0.25, cat: 'bath' },
     // Muuronderdelen: springen naar de dichtstbijzijnde muur (wall), plaatje van voren (thumbD)
-    door:     { name: 'Deur',       w: 0.9, d: 0.3, wall: true, thumbD: 1.0 },
-    window:   { name: 'Raam',       w: 1.2, d: 0.3, wall: true, thumbD: 0.8 },
-    windowsill:{ name: 'Vensterbank', w: 1.2, d: 0.3, wall: true, thumbD: 0.8 },
+    door:     { name: 'Deur',       w: 0.9, d: 0.3, wall: true, thumbD: 1.0, cat: 'doors' },
+    window:   { name: 'Raam',       w: 1.2, d: 0.3, wall: true, thumbD: 0.8, cat: 'doors' },
+    windowsill:{ name: 'Vensterbank', w: 1.2, d: 0.3, wall: true, thumbD: 0.8, cat: 'doors' },
   };
+
+  /** Groepen in de meubelkiezer, in deze volgorde. */
+  const CATS = [
+    { id: 'living', name: 'Woonkamer' }, { id: 'kitchen', name: 'Keuken' }, { id: 'bedroom', name: 'Slaapkamer' },
+    { id: 'work', name: 'Werkplek' }, { id: 'bath', name: 'Badkamer' }, { id: 'hall', name: 'Gang' },
+    { id: 'other', name: 'Overig' }, { id: 'doors', name: 'Deuren en ramen' },
+  ];
+  /** Groep die de kiezer als eerste laat zien bij een kamernaam (bijv. "Keuken" → kitchen). */
+  function catForRoom(name) {
+    const n = String(name || '').toLowerCase();
+    return /keuken|kitchen/.test(n) ? 'kitchen' : /slaap|bed/.test(n) ? 'bedroom' : /bad|wc|toilet|douche|bath|shower/.test(n) ? 'bath'
+      : /gang|hal\b|hall|entree|overloop|landing/.test(n) ? 'hall' : /\bpc\b|werk|kantoor|studeer|office|game|gaming|computer/.test(n) ? 'work' : 'living';
+  }
 
   function hash(x, y, k) {
     let h = (x * 374761393 + y * 668265263 + k * 1442695041) | 0;
@@ -125,8 +170,9 @@ const Room = (() => {
     walls(g, L);
     drawWallItems(g, L);
 
-    // Kleden eerst, dan meubels van achter naar voren
-    const items = (L.items || []).slice().sort((a, b) => (a.type === 'rug' ? -1 : 0) - (b.type === 'rug' ? -1 : 0) || a.y - b.y);
+    // Kleden eerst, dan meubels van achter naar voren; kleine spullen die op een tafel of bureau staan (top) als laatste
+    const onTop = it => (ITEMS[it.type] || {}).top ? 1 : 0;
+    const items = (L.items || []).slice().sort((a, b) => (a.type === 'rug' ? -1 : 0) - (b.type === 'rug' ? -1 : 0) || onTop(a) - onTop(b) || a.y - b.y);
     for (const it of items) drawItem(g, it);
     if (L.tv) drawTv(g, L.tv);
     return c;
@@ -199,6 +245,47 @@ const Room = (() => {
     g.fillStyle = '#5a3820';
     if (rot === 0) g.fillRect(x + 1, y + 1, 3, 1); else if (rot === 1) g.fillRect(x + 3, y + 1, 1, 3);
     else if (rot === 2) g.fillRect(x + 1, y + 3, 3, 1); else g.fillRect(x + 1, y + 1, 1, 3);
+  }
+
+  /** Aanrechtkastje zoals het keukenblok: grijs werkblad, houten front met een naad in het midden. */
+  function counter(g, w, d) {
+    shadow(g, w, d);
+    box(g, 0, 0, w, d, '#d8d2c4', '#4a4440');
+    g.fillStyle = '#9a6438'; g.fillRect(1, d - 3, w - 2, 2);
+    g.fillStyle = '#6a4024'; g.fillRect(Math.round(w / 2), d - 3, 1, 2);
+  }
+  /** Vier gaspitten (ring met donker hart) in het vlak x, y, w, h. */
+  function gasRings(g, x, y, w, h) {
+    for (const [fx, fy] of [[0.27, 0.3], [0.73, 0.3], [0.27, 0.74], [0.73, 0.74]]) {
+      const cx = x + Math.round(w * fx), cy = y + Math.round(h * fy);
+      g.fillStyle = '#6a6a74'; g.fillRect(cx - 1, cy - 1, 3, 3);
+      g.fillStyle = '#16141a'; g.fillRect(cx, cy, 1, 1);
+    }
+  }
+  /** Bureaustoel van bovenaf in het vak x, y, w, h: stervoet, zitting, rugleuning achter (boven). */
+  function officeChairAt(g, x, y, w, h) {
+    g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(x + 2, y + 2, w - 2, h - 2);
+    g.fillStyle = '#16141c';
+    const cx = x + Math.floor(w / 2), cy = y + Math.floor(h / 2);
+    g.fillRect(x, y + h - 1, 2, 1); g.fillRect(x + w - 2, y + h - 1, 2, 1); g.fillRect(x, cy, 1, 2); g.fillRect(x + w - 1, cy, 1, 2); g.fillRect(cx, y + h - 1, 1, 1);
+    box(g, x + 1, y + 2, w - 2, h - 3, '#4a4a5a', '#16141c');
+    g.fillStyle = '#5a5a6a'; g.fillRect(x + 2, y + h - 3, w - 4, 1);
+    g.fillStyle = '#3a3a48'; g.fillRect(x + 2, y + 3, 1, h - 6); g.fillRect(x + w - 3, y + 3, 1, h - 6);
+    box(g, x + 2, y, w - 4, 3, '#2a2a36', '#16141c');
+    g.fillStyle = '#5a5a6a'; g.fillRect(x + 3, y + 1, w - 6, 1);
+  }
+  /** Wasmachine of droger: wit, bedieningsstrook achter, deurtje met glas en wasgoed. */
+  function laundry(g, w, d, dry) {
+    shadow(g, w, d);
+    box(g, 0, 0, w, d, '#eef0ee', '#4a4440');
+    g.fillStyle = '#d0d4d8'; g.fillRect(1, 1, w - 2, 2);
+    g.fillStyle = '#7a848e'; g.fillRect(w - 3, 1, 1, 2);
+    g.fillStyle = dry ? '#e0904a' : '#5a8ac0'; g.fillRect(2, 1, Math.max(1, Math.round(w / 3)), 1);
+    const r = Math.max(2, Math.min(w, d - 3) / 2 - 0.8), cy = 3 + (d - 3) / 2;
+    disc(g, w / 2, cy, r, r, '#aab4be', '#5a646e');
+    disc(g, w / 2, cy, r - 1, r - 1, dry ? '#4a4656' : '#5a7ab0', dry ? '#4a4656' : '#5a7ab0');
+    g.fillStyle = dry ? '#e0b050' : '#c0604a'; g.fillRect(Math.round(w / 2) - 1, Math.round(cy), 2, 1);
+    g.fillStyle = dry ? '#e8e0cc' : '#a8d2ee'; g.fillRect(Math.round(w / 2) - 1, Math.round(cy) - 1, 1, 1);
   }
 
   const SPRITES = {
@@ -412,6 +499,323 @@ const Room = (() => {
       disc(g, w / 2 + 1, d / 2 + 1, w / 2 - 0.5, d / 2 - 0.5, 'rgba(30,10,30,.3)', 'rgba(30,10,30,.3)');
       disc(g, w / 2, d / 2, w / 2 - 0.5, d / 2 - 0.5, '#c8b08a', '#5a4a30');
       g.fillStyle = '#a8906a'; g.fillRect(Math.round(w / 2), 2, 1, d - 4); g.fillRect(2, Math.round(d / 2), w - 4, 1);
+    },
+    // ---------- keuken ----------
+    fridge(g, w, d) {
+      // koelkast: wit, vriesvak bovenin, twee handgrepen
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#eef0ee', '#4a4440');
+      g.fillStyle = '#ffffff'; g.fillRect(1, 1, w - 2, 1);
+      g.fillStyle = '#c8ccd0'; g.fillRect(w - 2, 2, 1, d - 3);
+      const fz = Math.max(3, Math.round(d * 0.32));
+      g.fillStyle = '#9aa2aa'; g.fillRect(1, fz, w - 2, 1);
+      g.fillStyle = '#7a848e'; g.fillRect(w - 4, 2, 1, fz - 3); g.fillRect(w - 4, fz + 2, 1, Math.max(1, d - fz - 4));
+      g.fillStyle = '#e07a6a'; g.fillRect(2, fz + 2, 1, 1); g.fillStyle = '#5a8ac0'; g.fillRect(3, fz + 3, 1, 1);
+    },
+    stove(g, w, d) {
+      // vrijstaand fornuis: gaspitten boven, knoppen en ovenruit aan de voorkant
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#aab4be', '#3a3e44');
+      g.fillStyle = '#c8d0d8'; g.fillRect(1, 1, w - 2, 1);
+      const th = Math.max(4, d - 6);
+      g.fillStyle = '#2a2a30'; g.fillRect(1, 2, w - 2, th);
+      gasRings(g, 1, 2, w - 2, th);
+      g.fillStyle = '#1e1a20';
+      for (let x = 2; x < w - 2; x += 2) g.fillRect(x, th + 2, 1, 1);
+      box(g, 1, d - 3, w - 2, 2, '#e0904a', '#2a2a30'); g.fillStyle = '#3a3440'; g.fillRect(2, d - 3, w - 4, 1);
+      g.fillStyle = '#e0904a'; g.fillRect(2, d - 2, w - 4, 1);
+    },
+    hob(g, w, d) {
+      // aanrechtkastje met inductiekookplaat (zwart glas met vier kookzones)
+      counter(g, w, d);
+      const th = Math.max(4, d - 5);
+      box(g, 1, 1, w - 2, th, '#2a2a30', '#141418');
+      g.fillStyle = '#3a3a44'; g.fillRect(2, 2, w - 4, 1);
+      for (const [fx, fy] of [[0.3, 0.32], [0.7, 0.32], [0.3, 0.72], [0.7, 0.72]]) {
+        const cx = 1 + Math.round((w - 2) * fx), cy = 1 + Math.round(th * fy);
+        g.fillStyle = '#5a5a66'; g.fillRect(cx - 1, cy - 1, 2, 2);
+      }
+      g.fillStyle = '#d0605a'; g.fillRect(w - 3, th - 1, 1, 1);
+    },
+    oven(g, w, d) {
+      // hoge keukenkast met inbouwoven, van bovenaf (net als de koelkast): houten bovenkant met nerf,
+      // aan de voorkant de rvs-rand van de ovendeur met greep en een randje warm licht
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#9a6438', '#3a2214');
+      g.fillStyle = '#b87c4a'; g.fillRect(1, 1, w - 2, 1);
+      g.fillStyle = '#8a5630';
+      for (let y = 3; y < d - 4; y += 3) g.fillRect(2, y, w - 4, 1);
+      g.fillStyle = '#aab4be'; g.fillRect(1, d - 3, w - 2, 1);
+      g.fillStyle = '#5a646e'; g.fillRect(Math.max(2, Math.round(w * 0.25)), d - 4, Math.max(2, Math.round(w * 0.5)), 1);
+      g.fillStyle = '#e0904a'; g.fillRect(2, d - 2, w - 4, 1);
+    },
+    sink(g, w, d) {
+      // aanrechtkastje met spoelbak, kraan aan de achterkant en een afdruiprek
+      counter(g, w, d);
+      const bw = Math.max(5, Math.round(w * 0.5)), bx = 2;
+      box(g, bx, 2, bw, d - 6, '#8a949e', '#5a646e'); g.fillStyle = '#aab4be'; g.fillRect(bx + 1, 2 + 1, bw - 2, 1);
+      g.fillStyle = '#5a646e'; g.fillRect(bx + Math.floor(bw / 2), d - 6, 1, 1);
+      g.fillStyle = '#7a848e'; g.fillRect(bx + Math.floor(bw / 2), 1, 1, 2); g.fillStyle = '#c8d0d8'; g.fillRect(bx + Math.floor(bw / 2), 1, 1, 1);
+      g.fillStyle = '#b8b2a6';
+      for (let x = bx + bw + 1; x < w - 2; x += 2) g.fillRect(x, 3, 1, d - 7);
+    },
+    dishwasher(g, w, d) {
+      // aanrechtkastje met vaatwasser: rvs-front met bedieningsstrip en lampje
+      counter(g, w, d);
+      g.fillStyle = '#aab4be'; g.fillRect(1, d - 3, w - 2, 2);
+      g.fillStyle = '#3a3a48'; g.fillRect(1, d - 4, w - 2, 1);
+      g.fillStyle = '#6ad06a'; g.fillRect(w - 3, d - 4, 1, 1);
+      g.fillStyle = '#7a848e'; g.fillRect(2, d - 2, w - 4, 1);
+      g.fillStyle = '#c4beb2'; g.fillRect(2, 3, w - 4, 1); g.fillRect(2, 5, w - 4, 1);
+    },
+    island(g, w, d) {
+      // kookeiland: werkblad met kookplaat en fruitschaal, krukjes aan de voorkant
+      const td = Math.max(8, d - 6);
+      const n = w >= 26 ? 3 : 2;
+      for (let i = 0; i < n; i++) {
+        const cx = Math.round(w * (i + 0.5) / n);
+        disc(g, cx + 1, td + 3.5, 2.5, 2.5, 'rgba(30,10,30,.3)', 'rgba(30,10,30,.3)');
+        disc(g, cx, td + 2.5, 2.5, 2.5, '#8a5a35', '#3a2214');
+        g.fillStyle = '#a8744a'; g.fillRect(cx - 1, td + 1, 2, 1);
+      }
+      g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(1, 1, w, td + 1);
+      box(g, 0, 0, w, td, '#9a6438', '#3a2214');
+      box(g, 1, 1, w - 2, td - 3, '#e8e2d6', '#9a948a');
+      g.fillStyle = '#f6f2ea'; g.fillRect(2, 2, w - 4, 1);
+      g.fillStyle = '#6a4024';
+      for (let x = Math.round(w / 4); x < w - 2; x += Math.round(w / 4)) g.fillRect(x, td - 2, 1, 1);
+      const kw = Math.max(6, Math.round(w * 0.3)), kh = Math.max(4, td - 7);
+      box(g, 3, 3, kw, kh, '#2a2a30', '#141418');
+      g.fillStyle = '#4a4a54';
+      for (const [fx, fy] of [[0.28, 0.3], [0.72, 0.3], [0.28, 0.72], [0.72, 0.72]]) g.fillRect(3 + Math.round(kw * fx) - 1, 3 + Math.round(kh * fy) - 1, 2, 2);
+      const fx0 = w - 9, fy0 = Math.round(td / 2) - 2;
+      disc(g, fx0 + 2.5, fy0 + 2, 2.5, 2, '#c98a52', '#7a4a2a');
+      g.fillStyle = '#e05a4a'; g.fillRect(fx0 + 1, fy0 + 1, 1, 1); g.fillStyle = '#e8c84a'; g.fillRect(fx0 + 3, fy0 + 1, 1, 1);
+      g.fillStyle = '#6dbb5a'; g.fillRect(fx0 + 2, fy0 + 2, 1, 1);
+    },
+    // ---------- slaapkamer ----------
+    singlebed(g, w, d) {
+      // eenpersoonsbed: één kussen, groen dekbed
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#7a4a2a', '#3a2214');
+      box(g, 1, 1, w - 2, d - 2, '#e8e2d6', '#9a948a');
+      g.fillStyle = '#ffffff'; g.fillRect(3, 3, w - 6, 4);
+      const t = Math.round(d * 0.35);
+      box(g, 1, t, w - 2, d - t - 1, '#5e8a5a', '#3f6b45');
+      g.fillStyle = '#7aa874'; g.fillRect(2, t + 1, w - 4, 1);
+      g.fillStyle = '#4c7a4c'; g.fillRect(2, t + 4, w - 4, 1);
+    },
+    nightstand(g, w, d) {
+      // nachtkastje: lade met knopje, wekker en boekje erop
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#9a6438', '#3a2214');
+      g.fillStyle = '#b87c4a'; g.fillRect(1, 1, w - 2, 1);
+      g.fillStyle = '#7a4a2a'; g.fillRect(1, d - 2, w - 2, 1);
+      g.fillStyle = '#e0c070'; g.fillRect(Math.floor(w / 2), d - 2, 1, 1);
+      g.fillStyle = '#e8e0cc'; g.fillRect(1, 2, 2, 2); g.fillStyle = '#d0605a'; g.fillRect(2, 2, 1, 1);
+      if (w > 5) { g.fillStyle = '#4f7aa8'; g.fillRect(w - 3, 2, 2, Math.max(1, d - 5)); }
+    },
+    vanity(g, w, d) {
+      // kaptafel tegen de muur: spiegel, make-up en een krukje ervoor
+      const td = Math.max(5, Math.round(d * 0.58));
+      const sx = w / 2;
+      disc(g, sx + 1, td + (d - td) / 2 + 1, 2.5, (d - td) / 2 - 0.5, 'rgba(30,10,30,.3)', 'rgba(30,10,30,.3)');
+      disc(g, sx, td + (d - td) / 2, 2.5, (d - td) / 2 - 0.5, '#e8a0b0', '#7a3a4a');
+      g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(1, 1, w, td + 1);
+      box(g, 0, 0, w, td, '#efe6da', '#5a4a40');
+      const mw = Math.max(5, Math.round(w * 0.5)), mx = Math.round((w - mw) / 2);
+      g.fillStyle = '#e0c070'; g.fillRect(mx - 1, 1, mw + 2, 2);
+      g.fillStyle = '#a8d2ee'; g.fillRect(mx, 1, mw, 1); g.fillStyle = '#d8eefa'; g.fillRect(mx + 1, 1, 1, 1);
+      g.fillStyle = '#e07a8a'; g.fillRect(2, td - 3, 1, 2);
+      g.fillStyle = '#c8a0d8'; g.fillRect(4, td - 3, 2, 2);
+      g.fillStyle = '#f2ead8'; g.fillRect(w - 4, td - 3, 2, 1);
+      g.fillStyle = '#c8b8a8'; g.fillRect(1, td - 2, w - 2, 1);
+      g.fillStyle = '#e0c070'; g.fillRect(Math.round(w / 4), td - 2, 1, 1); g.fillRect(Math.round(w * 3 / 4), td - 2, 1, 1);
+    },
+    // ---------- werkplek ----------
+    computer(g, w, d) {
+      // losse computer (op een bureau of tafel zetten): pc-kast links, scherm, toetsenbord en muis
+      const tw = Math.max(3, Math.round(w * 0.22));
+      g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(1, 1, tw, d); g.fillRect(tw + 2, 1, w - tw - 2, 3);
+      box(g, 0, 0, tw, d, '#2a2a30', '#141418');
+      g.fillStyle = '#6ad0e0'; g.fillRect(1, d - 3, tw - 2, 1); g.fillStyle = '#c070e0'; g.fillRect(1, 2, tw - 2, 1);
+      const mx = tw + 2, mw = w - tw - 3;
+      g.fillStyle = '#1e1a24'; g.fillRect(mx, 0, mw, 3); g.fillStyle = '#5a8ac0'; g.fillRect(mx + 1, 1, mw - 2, 1);
+      g.fillStyle = '#3a3a48'; g.fillRect(mx + Math.floor(mw / 2) - 1, 3, 2, 1);
+      const kw = Math.max(4, mw - 4);
+      g.fillStyle = '#d8d2c4'; g.fillRect(mx + 1, d - 2, kw, 1); g.fillStyle = '#8a8478'; g.fillRect(mx + 1, d - 1, kw, 1);
+      g.fillStyle = '#d8d2c4'; g.fillRect(mx + kw + 2, d - 2, 1, 1);
+    },
+    dualdesk(g, w, d) {
+      // bureau met twee schermen, pc-kast eronder en een bureaustoel ervoor
+      const td = Math.max(7, Math.round(d * 0.55));
+      g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(1, 1, w, td + 1);
+      box(g, 0, 0, w, td, '#c9a06a', '#4a2a1a');
+      g.fillStyle = '#e0bc86'; g.fillRect(1, 1, w - 2, 1);
+      const mw = Math.max(5, Math.round(w * 0.27)), gap = 1, mx = Math.round(w / 2 - mw - gap / 2);
+      for (const x of [mx, mx + mw + gap]) {
+        g.fillStyle = '#1e1a24'; g.fillRect(x, 2, mw, 2); g.fillStyle = '#5a8ac0'; g.fillRect(x + 1, 2, mw - 2, 1);
+      }
+      g.fillStyle = '#7ab0e0'; g.fillRect(mx + 2, 2, 1, 1);
+      g.fillStyle = '#d8d2c4'; g.fillRect(Math.round(w / 2) - 4, td - 3, 8, 1); g.fillRect(Math.round(w / 2) + 6, td - 3, 1, 1);
+      g.fillStyle = '#e8e0cc'; g.fillRect(3, td - 4, 2, 2);
+      box(g, w - 6, 1, 4, td - 2, '#2a2a30', '#141418'); g.fillStyle = '#6ad0e0'; g.fillRect(w - 5, td - 3, 2, 1);
+      const cw = 8, ch = Math.max(5, d - td - 1), cx = Math.round((w - cw) / 2);
+      officeChairAt(g, cx, td + 1, cw, ch);
+    },
+    laptop(g, w, d) {
+      // opengeklapte laptop: scherm achter, toetsenbord voor
+      g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(1, 1, w, d);
+      const sh = Math.max(1, Math.floor(d / 3));
+      g.fillStyle = '#1e1a24'; g.fillRect(0, 0, w, sh + 1); g.fillStyle = '#5a8ac0'; g.fillRect(1, 0, w - 2, sh);
+      box(g, 0, sh + 1, w, d - sh - 1, '#c8d0d8', '#5a646e');
+      g.fillStyle = '#7a848e'; if (d - sh - 1 > 3) g.fillRect(1, sh + 2, w - 2, 1);
+    },
+    pctower(g, w, d) {
+      // pc-kast op de grond: zwarte kast met gekleurde verlichting, voorkant onder
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#2a2a30', '#141418');
+      g.fillStyle = '#3a3a48'; g.fillRect(1, 1, w - 2, 1);
+      g.fillStyle = '#c070e0'; g.fillRect(1, 2, 1, d - 4);
+      g.fillStyle = '#6ad0e0'; g.fillRect(w - 2, 2, 1, d - 4);
+      g.fillStyle = '#5a5a6a'; g.fillRect(1, d - 2, w - 2, 1);
+    },
+    officechair(g, w, d) {
+      // bureaustoel: rugleuning achter, stervoet, zitting
+      officeChairAt(g, 0, 0, w, d);
+    },
+    gamingchair(g, w, d) {
+      // gamestoel: hoge zwarte rugleuning met rode banen, armleuningen
+      g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(2, 1, w - 2, d);
+      g.fillStyle = '#16141c';
+      for (const [fx, fy] of [[0, 1], [1, 1], [0.5, 1]]) g.fillRect(Math.round((w - 1) * fx), Math.round((d - 1) * fy), 1, 1);
+      const bh = Math.max(3, Math.round(d * 0.38));
+      box(g, 1, 0, w - 2, bh, '#2a2632', '#100e14');
+      g.fillStyle = '#c0404a'; g.fillRect(3, 1, 1, bh - 2); g.fillRect(w - 4, 1, 1, bh - 2);
+      g.fillStyle = '#e8e0cc'; g.fillRect(Math.floor(w / 2), 1, 1, 1);
+      box(g, 0, bh - 1, 2, d - bh - 1, '#c0404a', '#100e14'); box(g, w - 2, bh - 1, 2, d - bh - 1, '#c0404a', '#100e14');
+      box(g, 2, bh - 1, w - 4, d - bh, '#2a2632', '#100e14');
+      g.fillStyle = '#c0404a'; g.fillRect(Math.floor(w / 2), bh, 1, d - bh - 2);
+      g.fillStyle = '#4a4656'; g.fillRect(3, d - 2, w - 6, 1);
+    },
+    // ---------- gang ----------
+    coatrack(g, w, d) {
+      // kapstok aan de muur, van bovenaf: houten lat met messing haken. Jassen zie je van boven als brede schouders
+      // (ongeveer 40 cm) met een kraag in het midden en de mouwen langs de zijkanten; aan één haak een gestreepte sjaal
+      const cols = [['#c0504a', '#7a2a2a'], ['#4f7aa8', '#2a3e66'], ['#5a9a5a', '#2f5a3a'], ['#e0b050', '#9a6a20'], ['#8a6a9a', '#4a3456']];
+      const cw = Math.max(4, Math.round(0.4 * PPM)), n = Math.max(1, Math.floor((w - 1) / (cw + 1)));
+      const gap = Math.max(1, Math.floor((w - n * cw) / (n + 1)));
+      g.fillStyle = 'rgba(30,10,30,.28)'; g.fillRect(1, 2, w - 1, d - 1);
+      box(g, 0, 0, w, 2, '#8a5a35', '#3a2214');
+      g.fillStyle = '#b07a48'; g.fillRect(1, 0, w - 2, 1);
+      const h = d - 2;
+      for (let i = 0; i < n; i++) {
+        const x = gap + i * (cw + gap), mid = x + Math.floor(cw / 2);
+        g.fillStyle = '#e0c070'; g.fillRect(mid, 1, 1, 1);   // haak
+        if (i === n - 1 && n > 2) {
+          // sjaal over de laatste haak: twee gestreepte panden naast elkaar
+          for (let y = 2; y < d; y++) { g.fillStyle = y % 2 ? '#e8e0cc' : '#c0504a'; g.fillRect(mid - 1, y, 1, 1); g.fillRect(mid + 1, y, 1, 1) }
+          continue;
+        }
+        const [c, o] = cols[i % cols.length];
+        g.fillStyle = o; g.fillRect(x + 1, 2, cw - 2, h); g.fillRect(x, 3, cw, h - 1);            // schouders afgerond
+        g.fillStyle = c; g.fillRect(x + 1, 3, cw - 2, h - 2);
+        g.fillStyle = o; g.fillRect(x + 1, 4, 1, Math.max(1, h - 3)); g.fillRect(x + cw - 2, 4, 1, Math.max(1, h - 3));   // mouwen
+        g.fillStyle = 'rgba(255,255,255,.28)'; g.fillRect(x + 2, 3, Math.max(1, Math.floor(cw / 2) - 2), 1);              // licht op de schouder
+        g.fillStyle = o; g.fillRect(mid - 1, 3, 2, 1); g.fillStyle = '#e8e0cc'; g.fillRect(mid, 2, 1, 1);                 // kraag en hangertje
+      }
+    },
+    shoerack(g, w, d) {
+      // schoenenkast: lage kast met klepdeurtjes, twee paar schoenen erop
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#9a6438', '#3a2214');
+      g.fillStyle = '#b87c4a'; g.fillRect(1, 1, w - 2, 1);
+      g.fillStyle = '#7a4a2a'; g.fillRect(Math.round(w / 2), 2, 1, d - 3);
+      g.fillStyle = '#e0c070'; g.fillRect(Math.round(w / 4), d - 2, 2, 1); g.fillRect(Math.round(w * 3 / 4) - 1, d - 2, 2, 1);
+      const pair = (x, c, s) => { g.fillStyle = c; g.fillRect(x, 2, 1, d - 4); g.fillRect(x + 2, 2, 1, d - 4); g.fillStyle = s; g.fillRect(x, 2, 1, 1); g.fillRect(x + 2, 2, 1, 1); };
+      if (d > 4) { pair(2, '#e8e0cc', '#c0504a'); if (w > 10) pair(Math.round(w / 2) + 2, '#5a8ac0', '#334a78'); }
+    },
+    stairs(g, w, d) {
+      // trap die naar achteren (boven) omhoog gaat: treden met lichte neus en donkere stootrand, loper in het midden,
+      // bovenaan verdwijnt hij in het donker (het gat naar boven); leuning rechts
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#5a3820', '#3a2214');
+      const step = 4, n = Math.max(2, Math.floor((d - 2) / step)), top = d - 1 - n * step;
+      const rw = Math.max(2, Math.round((w - 4) * 0.4)), rx = 1 + Math.floor((w - 3 - rw) / 2);
+      for (let i = 0; i < n; i++) {
+        const y = d - 1 - (i + 1) * step;
+        g.fillStyle = '#c9a06a'; g.fillRect(1, y, w - 4, step);
+        g.fillStyle = '#e0bc86'; g.fillRect(1, y, w - 4, 1);
+        g.fillStyle = '#6a4024'; g.fillRect(1, y + step - 1, w - 4, 1);
+        g.fillStyle = '#9a3a4a'; g.fillRect(rx, y, rw, step - 1); g.fillStyle = '#b8505a'; g.fillRect(rx, y, rw, 1);
+        g.fillStyle = '#6a2a34'; g.fillRect(rx, y + step - 1, rw, 1);
+      }
+      if (top > 1) { g.fillStyle = '#1d1124'; g.fillRect(1, 1, w - 4, top - 1); }
+      for (let i = 0; i < 3 && i < n; i++) { g.fillStyle = `rgba(29,17,36,${[0.75, 0.5, 0.25][i]})`; g.fillRect(1, top + i * step, w - 4, step); }
+      g.fillStyle = '#3a2214'; g.fillRect(w - 3, 1, 2, d - 2); g.fillStyle = '#a8744a'; g.fillRect(w - 3, 1, 1, d - 2);
+    },
+    // ---------- badkamer ----------
+    toilet(g, w, d) {
+      // wc: stortbak tegen de muur, pot met bril ervoor
+      const th = Math.max(3, Math.round(d * 0.3));
+      g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(1, 1, w, th);
+      disc(g, w / 2 + 1, th + (d - th) / 2 + 0.5, w / 2 - 0.3, (d - th) / 2 + 0.5, 'rgba(30,10,30,.3)', 'rgba(30,10,30,.3)');
+      disc(g, w / 2, th + (d - th) / 2 - 0.5, w / 2 - 0.3, (d - th) / 2 + 0.5, '#f4f2ec', '#8a8478');
+      disc(g, w / 2, th + (d - th) / 2 - 0.5, w / 2 - 1.6, (d - th) / 2 - 1.2, '#a8d2ee', '#d8d2c4');
+      box(g, 0, 0, w, th, '#f4f2ec', '#8a8478');
+      g.fillStyle = '#ffffff'; g.fillRect(1, 1, w - 2, 1);
+      g.fillStyle = '#aab4be'; g.fillRect(Math.floor(w / 2) - (w > 6 ? 1 : 0), 1, w > 6 ? 2 : 1, 1);
+    },
+    washbasin(g, w, d) {
+      // wastafel op een kastje: witte bak, kraan achter, zeeppompje
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#9a6438', '#3a2214');
+      box(g, 0, 0, w, d - 2, '#f4f2ec', '#8a8478');
+      disc(g, w / 2, (d - 2) / 2 + 0.5, w / 2 - 1.5, (d - 2) / 2 - 1.2, '#d8e4ec', '#b8c4cc');
+      g.fillStyle = '#7a848e'; g.fillRect(Math.floor(w / 2), 1, 1, 2); g.fillStyle = '#c8d0d8'; g.fillRect(Math.floor(w / 2), 1, 1, 1);
+      g.fillStyle = '#e8a0b0'; g.fillRect(w - 3, 1, 1, 1);
+      g.fillStyle = '#e0c070'; g.fillRect(Math.floor(w / 2), d - 2, 1, 1);
+    },
+    shower(g, w, d) {
+      // douchebak met tegeltjes, putje in het midden, douchekop achter en glazen wand voor
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#dfe7f3', '#6f86b4');
+      g.fillStyle = '#c4d2e6';
+      for (let x = 4; x < w - 1; x += 4) g.fillRect(x, 1, 1, d - 2);
+      for (let y = 4; y < d - 1; y += 4) g.fillRect(1, y, w - 2, 1);
+      g.fillStyle = '#5a646e'; g.fillRect(Math.floor(w / 2) - 1, Math.floor(d / 2) - 1, 2, 2);
+      g.fillStyle = '#7a848e'; g.fillRect(Math.floor(w / 2), 1, 1, 2);
+      box(g, Math.floor(w / 2) - 1, 2, 3, 2, '#c8d0d8', '#5a646e');
+      g.fillStyle = 'rgba(140,200,240,.55)'; g.fillRect(1, d - 2, w - 2, 1); g.fillRect(w - 2, 1, 1, d - 2);
+      g.fillStyle = '#ffffff'; g.fillRect(w - 2, 2, 1, 2); g.fillRect(2, d - 2, 2, 1);
+      g.fillStyle = 'rgba(168,210,238,.7)';
+      for (const [fx, fy] of [[0.35, 0.45], [0.6, 0.4], [0.45, 0.65], [0.7, 0.62]]) g.fillRect(Math.round(w * fx), Math.round(d * fy), 1, 1);
+    },
+    bath(g, w, d) {
+      // ligbad tegen de muur: brede witte rand, water, kraan aan de linkerkant
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#f4f2ec', '#8a8478');
+      g.fillStyle = '#ffffff'; g.fillRect(1, 1, w - 2, 1);
+      const ix = 4, iy = 2, iw = w - 6, ih = d - 4;
+      g.fillStyle = '#b8c4cc'; g.fillRect(ix + 1, iy, iw - 2, ih); g.fillRect(ix, iy + 1, iw, ih - 2);
+      g.fillStyle = '#8ec4e4'; g.fillRect(ix + 1, iy + 1, iw - 2, ih - 2);
+      g.fillStyle = '#b8dcf0';
+      for (let x = ix + 3; x < ix + iw - 3; x += 5) g.fillRect(x, iy + 2 + (x % 2), 2, 1);
+      g.fillStyle = '#6aa8d0'; g.fillRect(ix + 1, iy + ih - 2, iw - 2, 1);
+      g.fillStyle = '#7a848e'; g.fillRect(1, Math.floor(d / 2) - 1, 2, 2); g.fillStyle = '#c8d0d8'; g.fillRect(2, Math.floor(d / 2) - 1, 2, 1);
+      g.fillStyle = '#5a646e'; g.fillRect(ix + 2, Math.floor(d / 2), 1, 1);
+    },
+    washer(g, w, d) { laundry(g, w, d, false); },
+    dryer(g, w, d) { laundry(g, w, d, true); },
+    towelrail(g, w, d) {
+      // handdoekrek aan de muur: verchroomde stang met een handdoek die naar voren hangt
+      g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(1, 1, w, d);
+      g.fillStyle = '#5a646e'; g.fillRect(0, 0, 1, Math.min(2, d)); g.fillRect(w - 1, 0, 1, Math.min(2, d));
+      g.fillStyle = '#c8d0d8'; g.fillRect(0, 1, w, 1);
+      const tx = Math.max(1, Math.round(w * 0.2)), tw = Math.max(2, w - 2 * tx);
+      g.fillStyle = '#b85a4a'; g.fillRect(tx, 1, tw, d - 1);
+      g.fillStyle = '#e07a6a'; g.fillRect(tx, 1, tw, Math.max(1, d - 2));
+      g.fillStyle = '#f2ead8'; g.fillRect(tx, d - 2, tw, 1);
     },
     // Plaatjes voor de keuzelijst: van voren, tegen een stukje behang
     door(g, w, d) { wallBg(g, w, d); doorFront(g, Math.round(w * 0.15), 2, Math.round(w * 0.7), d - 2); },
@@ -894,5 +1298,5 @@ const Room = (() => {
   // Plek in halve banden (0 = onderste band, 0.5 = tussen de onderste twee), of 'above'/'below'/null
   const bandPos = (y, n) => y == null ? null : y > 1.05 ? 'above' : y < -1.05 ? 'below' : Math.min(n - 1, Math.max(0, Math.round(((y + 1) / 2 * n - 0.5) * 2) / 2));
 
-  return { PPM, ITEMS, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandPos, presetFor, lampBox, wallSnap, FIXTURES, fixtureSpots, drawFixtures, stripOf, aimOf, tiltOf };
+  return { PPM, ITEMS, CATS, catForRoom, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandPos, presetFor, lampBox, wallSnap, FIXTURES, fixtureSpots, drawFixtures, stripOf, aimOf, tiltOf };
 })();

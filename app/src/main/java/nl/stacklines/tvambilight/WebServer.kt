@@ -126,7 +126,7 @@ class WebServer(private val ctx: Context) {
                         out.write(content); out.flush()
                     }
                     path == "/api/restore" && method == "POST" -> {
-                        if (Engine.running || SceneEngine.active != null) msg(false, tr("Stop eerst de sync of scène", "Stop the sync or scene first"))
+                        if (Engine.running || SceneEngine.anyActive()) msg(false, tr("Stop eerst de sync of scène", "Stop the sync or scene first"))
                         else {
                             val n = Store.restore(JSONObject(req))
                             Engine.syncWorkers()
@@ -141,15 +141,15 @@ class WebServer(private val ctx: Context) {
                         msg(true, tr("Opgeslagen", "Saved"))
                     }
                     path == "/api/identify" && method == "POST" -> {
-                        if (Engine.running) msg(false, tr("Stop eerst de sync", "Stop the sync first")) else { Engine.blink(JSONObject(req).getString("id")); msg(true, tr("Lamp knippert", "Lamp is blinking")) }
+                        if (Engine.running && lampInTv(JSONObject(req).optString("id"))) msg(false, tr("Stop eerst de sync", "Stop the sync first")) else { Engine.blink(JSONObject(req).getString("id")); msg(true, tr("Lamp knippert", "Lamp is blinking")) }
                     }
                     path == "/api/lamp/power" && method == "POST" -> {
                         // Eén lamp aan of uit (lampenlijst). Loopt de eigen indeling van de kaart, dan via die indeling.
                         val j = JSONObject(req); val id = j.optString("id"); val on = j.optBoolean("on")
                         when {
                             Store.lampsSnapshot().none { it.id == id } -> msg(false, tr("Lamp niet gevonden", "Lamp not found"))
-                            Engine.running -> msg(false, tr("Stop eerst de sync", "Stop the sync first"))
-                            SceneEngine.active?.id == SceneEngine.LIVE -> { SceneEngine.liveSet(id, on, null, null, null); msg(true, if (on) tr("Lamp aan", "Lamp on") else tr("Lamp uit", "Lamp off")) }
+                            Engine.running && lampInTv(id) -> msg(false, tr("Stop eerst de sync", "Stop the sync first"))
+                            SceneEngine.activeIn(roomOf(id))?.id == SceneEngine.LIVE -> { SceneEngine.liveSet(id, on, null, null, null); msg(true, if (on) tr("Lamp aan", "Lamp on") else tr("Lamp uit", "Lamp off")) }
                             else -> { Engine.power(id, on); msg(true, if (on) tr("Lamp aan", "Lamp on") else tr("Lamp uit", "Lamp off")) }
                         }
                     }
@@ -163,7 +163,7 @@ class WebServer(private val ctx: Context) {
                     }
                     path == "/api/color" && method == "POST" -> {
                         val j = JSONObject(req)
-                        if (Engine.running) msg(false, tr("Stop eerst de sync", "Stop the sync first"))
+                        if (Engine.running && lampInTv(j.optString("id"))) msg(false, tr("Stop eerst de sync", "Stop the sync first"))
                         else { Engine.setColor(j.getString("id"), android.graphics.Color.parseColor(j.getString("color"))); msg(true, tr("Kleur gezet", "Colour set")) }
                     }
                     path == "/api/sync" && method == "POST" && JSONObject(req).optString("temp").isNotBlank() -> {
@@ -209,9 +209,17 @@ class WebServer(private val ctx: Context) {
                         msg(true, if (on) tr("Kijk naar de tv", "Look at the TV") else tr("Kalibratie klaar", "Calibration done"))
                     }
                     path == "/api/lamps/power" && method == "POST" -> {
-                        val on = JSONObject(req).optBoolean("on")
-                        Engine.allLamps(on)
-                        msg(true, if (on) tr("Lampen aan", "Lamps on") else tr("Lampen uit", "Lamps off"))
+                        val j = JSONObject(req); val on = j.optBoolean("on"); val room = j.optString("room")
+                        when {
+                            room.isEmpty() -> { Engine.allLamps(on); msg(true, if (on) tr("Lampen aan", "Lamps on") else tr("Lampen uit", "Lamps off")) }
+                            room != "*" && Store.room(room) == null -> msg(false, tr("Kamer niet gevonden", "Room not found"))
+                            else -> {
+                                val kept = Engine.roomLamps(room, on)
+                                val what = if (room == "*") tr("Hele huis", "Whole house") else Store.room(room)!!.name
+                                msg(true, what + (if (on) tr(" aan", " on") else tr(" uit", " off")) +
+                                    (if (kept.isNotEmpty()) tr(", ${kept.joinToString()} blijft aan (sync of scène)", ", ${kept.joinToString()} stays on (sync or scene)") else ""))
+                            }
+                        }
                     }
                     path == "/api/pair/request" && method == "POST" -> {
                         JSONObject(req).optString("host").ifBlank { null }?.let { Store.tvHost = it; Store.save() }
@@ -287,15 +295,21 @@ class WebServer(private val ctx: Context) {
                         else msg(false, tr("Je hebt al de nieuwste versie", "You already have the latest version") + " (${Updater.current(ctx)})")
                     }
                     path == "/api/scene" && method == "POST" -> {
-                        val id = JSONObject(req).optString("id")
+                        val j = JSONObject(req); val id = j.optString("id")
+                        val room = j.optString("room").ifBlank { Store.tvRoom.id }
                         val sc = SceneEngine.all().firstOrNull { it.id == id }
-                        if (sc == null) { SceneEngine.stop(); msg(true, tr("Scène gestopt", "Scene stopped")) }
-                        else { SceneEngine.start(sc); msg(true, tr("Scène: ", "Scene: ") + sc.name) }
+                        when {
+                            room != "*" && Store.room(room) == null -> msg(false, tr("Kamer niet gevonden", "Room not found"))
+                            room == "*" -> { SceneEngine.startEverywhere(sc); msg(true, if (sc == null) tr("Scènes gestopt", "Scenes stopped") else tr("Hele huis: ", "Whole house: ") + sc.name) }
+                            sc == null -> { SceneEngine.stop(room = room); msg(true, tr("Scène gestopt", "Scene stopped")) }
+                            else -> { SceneEngine.start(sc, room = room); msg(true, tr("Scène: ", "Scene: ") + sc.name) }
+                        }
                     }
                     path == "/api/live" && method == "POST" -> {
                         // Kaart op de telefoon: lamp aan/uit, kleur (#rrggbb), helderheid (0..1) en effect
                         val j = JSONObject(req); val id = j.optString("id").ifBlank { null }
                         if (id != null && Store.lampsSnapshot().none { it.id == id }) msg(false, tr("Lamp niet gevonden", "Lamp not found"))
+                        else if (id != null && Store.room(roomOf(id)) == null) msg(false, tr("Zet de lamp eerst in een kamer", "Put the lamp in a room first"))
                         else {
                             val colour = j.optString("colour").takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) }?.let {
                                 val hsv = FloatArray(3); android.graphics.Color.colorToHSV(android.graphics.Color.parseColor(it), hsv)
@@ -308,7 +322,8 @@ class WebServer(private val ctx: Context) {
                         }
                     }
                     path == "/api/scene/save" && method == "POST" -> {
-                        val sc = SceneEngine.saveCurrent(JSONObject(req).optString("name").trim())
+                        val j = JSONObject(req)
+                        val sc = SceneEngine.saveCurrent(j.optString("name").trim(), j.optString("room").takeIf { Store.room(it) != null } ?: Store.tvRoom.id)
                         msg(true, tr("Opgeslagen als scène: ", "Saved as scene: ") + sc.name)
                     }
                     path == "/api/hue/scenes" && method == "GET" -> {
@@ -333,9 +348,58 @@ class WebServer(private val ctx: Context) {
                             msg(true, tr("$n scène(s) uit Hue overgenomen", "$n scene(s) imported from Hue"))
                         } catch (e: Exception) { msg(false, tr("Importeren mislukt: ", "Import failed: ") + e.message) }
                     }
+                    path == "/api/room/save" && method == "POST" -> {
+                        val j = JSONObject(req); val id = j.optString("id")
+                        val name = j.optString("name").trim().take(30)
+                        val color = j.optString("color").takeIf { it.matches(Regex("#[0-9a-fA-F]{6}")) }
+                        val existing = if (id.isBlank()) null else Store.room(id)
+                        when {
+                            id.isNotBlank() && existing == null -> msg(false, tr("Kamer niet gevonden", "Room not found"))
+                            j.optBoolean("tv", false) && existing?.tv != true && Engine.running -> msg(false, tr("Stop eerst de sync", "Stop the sync first"))
+                            existing == null && name.isEmpty() -> msg(false, tr("Geef de kamer een naam", "Give the room a name"))
+                            else -> {
+                                val r = synchronized(Store) {
+                                    val r = existing ?: Room(newRoomId(name), name, color ?: "#7a8fb5", false, JSONObject()).also { Store.rooms = Store.rooms + it }
+                                    if (name.isNotEmpty()) r.name = name
+                                    color?.let { r.color = it }
+                                    // Maat in meters: een nieuwe of lege vloer wordt een rechthoek van die maat
+                                    val w = j.optDouble("w", Double.NaN); val h = j.optDouble("h", Double.NaN)
+                                    if (!w.isNaN() && !h.isNaN()) r.layout = resized(r.layout, w.coerceIn(1.0, 20.0), h.coerceIn(1.0, 20.0))
+                                    if (j.optBoolean("tv", false) && !r.tv) Store.rooms.forEach { it.tv = it === r }
+                                    Store.normalizeRooms()
+                                    r
+                                }
+                                Store.save(); Engine.syncWorkers()
+                                json(JSONObject().put("ok", true).put("id", r.id).put("message", if (existing == null) tr("Kamer toegevoegd: ", "Room added: ") + r.name else tr("Opgeslagen", "Saved")))
+                            }
+                        }
+                    }
+                    path == "/api/room/delete" && method == "POST" -> {
+                        val r = Store.room(JSONObject(req).optString("id"))
+                        when {
+                            r == null -> msg(false, tr("Kamer niet gevonden", "Room not found"))
+                            Store.rooms.size == 1 -> msg(false, tr("De laatste kamer kan niet weg", "The last room can't be removed"))
+                            r.tv -> msg(false, tr("Hier staat de tv. Zet de tv eerst in een andere kamer.", "The TV is in this room. Move the TV to another room first."))
+                            else -> {
+                                SceneEngine.stop(room = r.id)
+                                synchronized(Store) {
+                                    Store.lamps.forEach { if (it.room == r.id) { it.room = ""; it.x = -1.0; it.y = -1.0 } }
+                                    Store.rooms = Store.rooms.filter { it !== r }
+                                }
+                                Store.save(); Engine.syncWorkers()
+                                msg(true, tr("Kamer verwijderd: ", "Room removed: ") + r.name)
+                            }
+                        }
+                    }
+                    path == "/api/room/order" && method == "POST" -> {
+                        val a = JSONObject(req).optJSONArray("ids") ?: JSONArray()
+                        val order = (0 until a.length()).map { a.optString(it) }
+                        synchronized(Store) { Store.rooms = Store.rooms.sortedBy { r -> order.indexOf(r.id).let { if (it < 0) Int.MAX_VALUE else it } } }
+                        Store.save(); msg(true, tr("Volgorde opgeslagen", "Order saved"))
+                    }
                     path == "/api/scene/delete" && method == "POST" -> {
                         val id = JSONObject(req).optString("id")
-                        if (SceneEngine.active?.id == id) SceneEngine.stop()
+                        Store.rooms.forEach { r -> if (SceneEngine.activeIn(r.id)?.id == id) SceneEngine.stop(room = r.id) }
                         Store.customScenes = Store.customScenes.filter { it.id != id }; Store.save()
                         msg(true, tr("Scène verwijderd", "Scene deleted"))
                     }
@@ -389,7 +453,7 @@ class WebServer(private val ctx: Context) {
             val w = Engine.workers[l.id]
             lamps.put(l.toJson(false).apply {
                 put("online", w?.online == true)
-                val live = Engine.running || SceneEngine.active != null
+                val live = (Engine.running && l.inTvRoom) || SceneEngine.activeIn(l.room) != null
                 val col = (if (live) w?.shownColor else w?.idleColor()) ?: 0x555555
                 put("color", "#%06x".format(col and 0xffffff))
                 put("on", w?.powered != false)
@@ -404,6 +468,10 @@ class WebServer(private val ctx: Context) {
             put("lowRef", Engine.previewRef ?: "")
             put("demo", Engine.demoKey)
             put("layout", Store.layout)
+            put("rooms", JSONArray().apply { Store.rooms.forEach { r ->
+                val sc = SceneEngine.activeIn(r.id)
+                put(r.toJson().put("scene", sc?.id ?: "").put("sceneName", sc?.name ?: ""))
+            } })
             put("lamps", lamps)
             put("settings", Store.settings.toJson())
             put("groups", JSONArray().apply { Store.groups.forEach { put(it.toJson()) } })
@@ -442,7 +510,8 @@ class WebServer(private val ctx: Context) {
     }
 
     private fun save(o: JSONObject) {
-        o.optJSONObject("layout")?.let { Store.layout = it }
+        val room = Store.room(o.optString("room")) ?: Store.tvRoom
+        o.optJSONObject("layout")?.let { room.layout = it }
         o.optJSONObject("settings")?.let { Store.settings.apply(it) }
         // Groepjes: volledige lijst (nieuw, hernoemd, verwijderd); bestaande houden hun instellingen tenzij meegestuurd
         o.optJSONArray("groups")?.let { a ->
@@ -458,6 +527,7 @@ class WebServer(private val ctx: Context) {
             val ids = Store.groups.map { it.id }.toSet()
             synchronized(Store) { Store.lamps.forEach { if (it.group.isNotEmpty() && it.group !in ids) it.group = "" } }
         }
+        val moved = HashSet<String>()
         o.optJSONArray("lamps")?.let { a ->
             synchronized(Store) {
                 for (i in 0 until a.length()) {
@@ -478,6 +548,13 @@ class WebServer(private val ctx: Context) {
                     if (j.has("balWarm")) l.balWarm = j.optDouble("balWarm", l.balWarm).coerceIn(-1.0, 1.0)
                     if (j.has("balTint")) l.balTint = j.optDouble("balTint", l.balTint).coerceIn(-1.0, 1.0)
                     if (j.has("group")) l.group = j.optString("group")
+                    if (j.has("room")) j.optString("room").let { r ->
+                        if ((r.isEmpty() || Store.room(r) != null) && r != l.room) {
+                            moved += l.room; moved += r; l.room = r
+                            // De plek hoorde bij de oude kamer; zonder nieuwe plek is de lamp nog niet geplaatst
+                            if (!j.has("x")) { l.x = -1.0; l.y = -1.0 }
+                        }
+                    }
                     l.enabled = j.optBoolean("enabled", l.enabled)
                     j.optString("ip").trim().takeIf { it.matches(Net.IPV4) }?.let { l.ip = it }
                 }
@@ -485,6 +562,7 @@ class WebServer(private val ctx: Context) {
         }
         Store.save()
         Engine.syncWorkers()
+        if (moved.isNotEmpty()) SceneEngine.lampsMoved(moved)
     }
 
     /** Neemt een devices.json van tinytuya over (lijst met id, key, name, ip), eventueel met tv-gegevens. */
@@ -542,6 +620,23 @@ class WebServer(private val ctx: Context) {
 
     /** Adres dat de telefoon opent (via de QR-code). */
     fun phoneLink(): String? = Net.localIp()?.let { "http://$it:$port/" }
+
+    private fun roomOf(lampId: String) = Store.lampsSnapshot().firstOrNull { it.id == lampId }?.room ?: ""
+    private fun lampInTv(lampId: String) = Store.lampsSnapshot().firstOrNull { it.id == lampId }?.inTvRoom == true
+
+    /** Id voor een nieuwe kamer uit de naam (letters, cijfers, streepjes), uniek. */
+    private fun newRoomId(name: String): String {
+        val base = java.text.Normalizer.normalize(name.lowercase(), java.text.Normalizer.Form.NFD).replace(Regex("[^a-z0-9]+"), "-").trim('-').take(30).ifBlank { "kamer" }
+        var id = base; var n = 2
+        while (Store.room(id) != null) id = "$base-${n++}"
+        return id
+    }
+
+    /** Vloer als rechthoek van w x h meter (in hele vakjes van een meter, zoals de editor), meubels blijven staan. */
+    private fun resized(layout: JSONObject, w: Double, h: Double): JSONObject {
+        val cw = kotlin.math.ceil(w).toInt(); val ch = kotlin.math.ceil(h).toInt()
+        return JSONObject(layout.toString()).put("w", cw).put("h", ch).put("floor", JSONArray().apply { repeat(ch) { put("1".repeat(cw)) } })
+    }
 
     companion object {
         /** Groeps-id's komen in de pagina terecht: alleen letters, cijfers, - en _. */

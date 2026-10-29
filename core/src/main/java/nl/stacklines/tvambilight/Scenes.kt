@@ -80,11 +80,20 @@ class Scene(
     }
 }
 
-/** Speelt een scène af op alle lampen die meedoen. */
+/** Speelt scènes af, per kamer: elke kamer kan tegelijk een eigen scène hebben. */
 object SceneEngine {
-    @Volatile var active: Scene? = null
-        private set
-    private var thread: Thread? = null
+    /** Een lopende scène in één kamer. */
+    private class Run(val scene: Scene, val room: String) {
+        /** Lampen na afloop niet terugzetten: er neemt meteen iets anders over (de sync of een andere scène). */
+        @Volatile var skipRestore = false
+        var thread: Thread? = null
+    }
+    private val runs = ConcurrentHashMap<String, Run>()
+
+    /** Scène in de tv-kamer (daar wisselt hij af met de sync). */
+    val active: Scene? get() = runs[Store.tvRoom.id]?.scene
+    /** Scène die in deze kamer loopt, of null. */
+    fun activeIn(room: String): Scene? = runs[room]?.scene
 
     fun all(): List<Scene> = Scene.BUILTIN + Store.customScenes
 
@@ -96,16 +105,25 @@ object SceneEngine {
      * ("Na stoppen"); bij het stoppen van de scène gaan die lampen daarheen terug in plaats van naar de sync-kleur.
      */
     @Synchronized
-    fun start(scene: Scene, restoreTo: Map<String, JSONObject?>? = null) {
+    fun start(scene: Scene, restoreTo: Map<String, JSONObject?>? = null, room: String = Store.tvRoom.id) {
+        if (Store.room(room) == null) return   // lampen zonder kamer krijgen geen scène (die zou je niet meer kunnen stoppen)
         // Van scène naar scène: niet eerst terug naar de oude stand, de nieuwe scène vloeit vanaf de huidige kleuren
-        stop(handOver = true)
-        Engine.lampsOff = false
-        // Sync loopt: niet eerst terug naar de oude stand; de scène zet de lampen bij stoppen terug naar hoe ze vóór de sync stonden
+        stop(handOver = true, room = room)
+        val tv = room == Store.tvRoom.id
+        if (tv) Engine.lampsOff = false
+        // Sync loopt (alleen in de tv-kamer): niet eerst terug naar de oude stand; de scène zet de lampen bij stoppen terug naar hoe ze vóór de sync stonden
         var rt = restoreTo
-        if (Engine.running) { Platform.userStopped(); Store.syncWanted = false; Store.save(); Engine.stop(handOver = true); rt = Engine.handedOver }
+        if (tv && Engine.running) { Platform.userStopped(); Store.syncWanted = false; Store.save(); Engine.stop(handOver = true); rt = Engine.handedOver }
         Engine.syncWorkers()
-        active = scene
-        thread = Thread({ loop(scene, restoreTo = rt) }, "scene").apply { isDaemon = true; start() }
+        val ids = Store.lampsSnapshot().filter { it.room == room }.map { it.id }.toSet()
+        val run = Run(scene, room)
+        runs[room] = run
+        run.thread = Thread({ loop(scene, only = ids, restoreTo = rt, run = run) }, "scene-$room").apply { isDaemon = true; start() }
+    }
+
+    /** Scène in alle kamers tegelijk (Huis gekozen op de telefoon); null stopt overal. */
+    fun startEverywhere(scene: Scene?) {
+        for (r in Store.rooms) if (scene == null) stop(room = r.id) else start(scene, room = r.id)
     }
 
     /**
@@ -117,7 +135,7 @@ object SceneEngine {
 
     fun startPause(scene: Scene, lampIds: Set<String>) = synchronized(pauseLock) {
         stopPause()
-        pauseThread = Thread({ loop(scene, only = lampIds, restore = false) }, "pause-scene").apply { isDaemon = true; start() }
+        pauseThread = Thread({ loop(scene, only = lampIds, restore = false, run = Run(scene, Store.tvRoom.id)) }, "pause-scene").apply { isDaemon = true; start() }
     }
 
     fun stopPause() = synchronized(pauseLock) {
@@ -128,18 +146,26 @@ object SceneEngine {
         try { t.join(3000) } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
     }
 
-    /** Lampen na afloop niet terugzetten: er neemt meteen iets anders over (de sync of een andere scène). */
-    @Volatile private var skipRestore = false
-
     @Synchronized
-    fun stop(handOver: Boolean = false) {
-        val t = thread ?: return
-        active = null
-        skipRestore = handOver
-        t.interrupt(); t.join(3000)
-        thread = null
-        skipRestore = false
+    fun stop(handOver: Boolean = false, room: String = Store.tvRoom.id) {
+        val r = runs.remove(room) ?: return
+        r.skipRestore = handOver
+        r.thread?.let { it.interrupt(); it.join(3000) }
     }
+
+    /** Loopt er ergens een scène? */
+    fun anyActive() = runs.isNotEmpty()
+
+    /**
+     * Lampen zijn verhuisd: scènes in deze kamers opnieuw starten, zodat ze de nieuwe lampenset gebruiken
+     * (anders blijft de scène van de oude kamer een verhuisde lamp aansturen en vechten twee scènes).
+     */
+    fun lampsMoved(rooms: Collection<String>) {
+        for (id in rooms.toSet()) { val r = runs[id] ?: continue; start(r.scene, room = id) }
+    }
+
+    /** Alle scènes stoppen (alle lampen uit, afsluiten van de hub). */
+    fun stopAll(handOver: Boolean = false) { for (id in runs.keys.toList()) stop(handOver, id) }
 
     /** Id van de indeling die je op de kaart van de telefoon maakt (tikken: aan/uit, vasthouden: kleur en effect). */
     const val LIVE = "live"
@@ -148,8 +174,12 @@ object SceneEngine {
     private val liveOnV = ConcurrentHashMap<String, Int>()   // helderheid van voor het uitzetten, voor weer aanzetten
 
     /** Kleur (h, s, v) en effect per lamp van de lopende indeling, of null als die niet loopt. */
-    fun liveLamps(): Map<String, Pair<IntArray, String?>>? =
-        if (active?.id == LIVE) livePer.mapValues { (k, c) -> c to liveFx[k] } else null
+    fun liveLamps(): Map<String, Pair<IntArray, String?>>? {
+        val rooms = runs.filterValues { it.scene.id == LIVE }.keys
+        if (rooms.isEmpty()) return null
+        val ids = Store.lampsSnapshot().filter { it.room in rooms }.map { it.id }.toSet()
+        return livePer.filterKeys { it in ids }.mapValues { (k, c) -> c to liveFx[k] }
+    }
 
     /**
      * Eén lamp in de indeling aanpassen (aan/uit, kleur, helderheid, effect). De eerste keer begint de indeling bij wat
@@ -157,11 +187,15 @@ object SceneEngine {
      */
     @Synchronized
     fun liveSet(id: String?, on: Boolean?, colour: IntArray?, bright: Double?, effect: String?) {
-        if (active?.id != LIVE) {
-            val cur = active
-            val running = Engine.running || cur != null
-            livePer.clear(); liveFx.clear(); liveOnV.clear()
-            for (l in Store.lampsSnapshot()) {
+        // De indeling loopt in de kamer van de lamp (zonder lamp: de tv-kamer)
+        val room = id?.let { i -> Store.lampsSnapshot().firstOrNull { it.id == i }?.room } ?: Store.tvRoom.id
+        if (Store.room(room) == null) return   // lamp zonder kamer: eerst in een kamer zetten
+        if (activeIn(room)?.id != LIVE) {
+            val cur = activeIn(room)
+            val running = (room == Store.tvRoom.id && Engine.running) || cur != null
+            val inRoom = Store.lampsSnapshot().filter { it.room == room }
+            inRoom.forEach { livePer.remove(it.id); liveFx.remove(it.id); liveOnV.remove(it.id) }
+            for (l in inRoom) {
                 val w = Engine.workers[l.id] ?: continue
                 if (!running && w.powered == false) { livePer[l.id] = intArrayOf(30, 600, 0); continue }
                 val col = (if (running) w.shownColor else w.idleColor()) ?: continue
@@ -169,8 +203,8 @@ object SceneEngine {
                 val v = if (hsv[2] < 0.02f) 0 else (hsv[2] * 1000 / l.maxBright).roundToInt().coerceIn(30, 1000)
                 livePer[l.id] = intArrayOf(hsv[0].roundToInt() % 360, (hsv[1] * 1000).roundToInt(), v)
             }
-            if (cur?.kind == "custom") liveFx.putAll(cur.effects)
-            start(Scene(LIVE, tr("Eigen indeling", "Own setup"), "custom", perLamp = livePer, effects = liveFx, builtin = false))
+            if (cur?.kind == "custom") cur.effects.forEach { (k, v) -> if (inRoom.any { it.id == k }) liveFx[k] = v }
+            start(Scene(LIVE, tr("Eigen indeling", "Own setup"), "custom", perLamp = livePer, effects = liveFx, builtin = false), room = room)
         }
         if (id == null) return
         val old = livePer[id] ?: intArrayOf(30, 600, 0)
@@ -186,17 +220,19 @@ object SceneEngine {
     }
 
     /** Huidige kleuren van alle lampen opslaan als eigen scène (bij de eigen indeling: met de effecten). */
-    fun saveCurrent(name: String): Scene {
-        if (active?.id == LIVE) {
+    fun saveCurrent(name: String, room: String = Store.tvRoom.id): Scene {
+        val inRoom = Store.lampsSnapshot().filter { it.room == room }
+        val ids = inRoom.map { it.id }.toSet()
+        if (activeIn(room)?.id == LIVE) {
             val s = Scene("c" + System.currentTimeMillis().toString(36), name.ifBlank { tr("Eigen scène", "Own scene") }, "custom",
-                perLamp = livePer.mapValues { it.value.copyOf() }, effects = HashMap(liveFx), builtin = false)
+                perLamp = livePer.filterKeys { it in ids }.mapValues { it.value.copyOf() }, effects = HashMap(liveFx.filterKeys { it in ids }), builtin = false)
             Store.customScenes = Store.customScenes + s; Store.save()
             return s
         }
         val m = HashMap<String, IntArray>()
         // Tijdens sync of scène: wat de app nu stuurt; anders de stand die de lamp zelf meldt (uit of onbekend = niet opnemen)
-        val live = Engine.running || active != null
-        for (l in Store.lampsSnapshot()) {
+        val live = (room == Store.tvRoom.id && Engine.running) || activeIn(room) != null
+        for (l in inRoom) {
             val w = Engine.workers[l.id] ?: continue
             val col = (if (live) w.shownColor else w.idleColor()) ?: continue
             val hsv = FloatArray(3); Color.colorToHSV(col, hsv)
@@ -226,7 +262,7 @@ object SceneEngine {
     fun hueId(hueSceneId: String) = "h-" + hueSceneId.filter { it.isLetterOrDigit() || it == '-' }.take(38)
 
     /** only: alleen deze lampen; restore = false: lampen na afloop niet terugzetten (de sync neemt het over). */
-    private fun loop(scene: Scene, only: Set<String>? = null, restore: Boolean = true, restoreTo: Map<String, JSONObject?>? = null) {
+    private fun loop(scene: Scene, only: Set<String>? = null, restore: Boolean = true, restoreTo: Map<String, JSONObject?>? = null, run: Run) {
         val lamps = Store.lampsSnapshot().filter { it.enabled && Engine.workers.containsKey(it.id) && (only == null || it.id in only) }
             .sortedBy { Mixer.project(Store.layout, it)?.get(0) ?: it.x }
         // Lampen die de sync niet aanraakte (niet geplaatst) zelf opvragen
@@ -239,7 +275,7 @@ object SceneEngine {
             else lamps.withIndex().mapNotNull { (i, l) -> colourFor(scene, l, i, lamps.size, 0.0, emptyList())?.let { c ->
                 l.id to intArrayOf(c[0], c[1].coerceIn(0, 1000), if (c[2] <= 0) 0 else (c[2] * l.maxBright).roundToInt().coerceIn(10, 1000)) } }.toMap()
         Fade.run(lamps.mapNotNull { l -> Engine.workers[l.id]?.let { w -> first[l.id]?.let { Fade.Target(l, w, it) } } })
-        if (Thread.currentThread().isInterrupted) { if (restore && !skipRestore) restoreScene(lamps, saved); return }
+        if (Thread.currentThread().isInterrupted) { if (restore && !run.skipRestore) restoreScene(lamps, saved); return }
         val t0 = SystemClock.elapsedRealtime()
         try {
             // Wit: één keer instellen
@@ -282,7 +318,7 @@ object SceneEngine {
             AppLog.add("Scène: " + (e.message ?: e.javaClass.simpleName))
         } finally {
             Thread.interrupted()
-            if (restore && !skipRestore) restoreScene(lamps, saved)
+            if (restore && !run.skipRestore) restoreScene(lamps, saved)
         }
     }
 
