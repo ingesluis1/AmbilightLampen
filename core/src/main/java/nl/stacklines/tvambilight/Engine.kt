@@ -241,6 +241,7 @@ object Engine {
         }
         // Alleen lampen krijgen een lamp-verbinding; een airco heeft andere functies (die bedienen we later apart)
         for (l in lamps.values) if (l.isLight && !workers.containsKey(l.id) && l.ip.isNotBlank()) workers[l.id] = TuyaLamp(l)
+        Airco.sync()
     }
 
     /** Vraagt de stand van een stel lampen tegelijk op (wacht hooguit één keer, niet per lamp). */

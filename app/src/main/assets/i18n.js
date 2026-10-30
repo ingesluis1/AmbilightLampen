@@ -104,7 +104,7 @@ const I18N = (() => {
     '"{n}" definitief verwijderen? Hij komt dan niet meer terug bij zoeken.': 'Delete "{n}" for good? It will not come back when searching.',
     'Alle lampen zitten al in een andere groep.': 'All lamps are already in another group.',
     'Lampen uit': 'Lamps off', 'Lampen aan': 'Lamps on',
-    'Bediening': 'Control', 'Kamer': 'Room', 'Status': 'Status', 'Instellingen van deze lamp': 'Settings for this lamp',
+    'Bediening': 'Control', 'Kamer': 'Room', 'Status': 'Status', 'Instellingen van deze lamp': 'Settings for this lamp', 'Instellingen van deze airco': 'Settings for this air conditioner', 'Extra warm': 'Extra warm', 'Zacht wit': 'Soft white', 'Neutraal wit': 'Neutral white', 'Koel wit': 'Cool white', 'Daglicht': 'Daylight', 'De airco bedien je op de House hub.': 'You control the air conditioner on the House hub.', 'Even geduld, de stand wordt opgehaald...': 'One moment, getting the status...', 'De airco is niet bereikbaar.': 'The air conditioner cannot be reached.', 'De airco is nu niet bereikbaar.': 'The air conditioner cannot be reached right now.', 'Binnen': 'Inside', 'Stand': 'Mode', 'Koelen': 'Cool', 'Drogen': 'Dry', 'Ventileren': 'Fan', 'Koelen tot': 'Cool to', 'Ventilator': 'Fan speed', 'Laag': 'Low', 'Medium': 'Medium', 'Hoog': 'High', 'Swing': 'Swing', 'Slaapstand': 'Sleep mode', 'Airco': 'Air conditioner', 'binnen {n} °C': 'inside {n} °C', 'binnen': 'inside', '{n}: bedien de airco onder Bediening, onder de kaart.': '{n}: control the air conditioner under Control, below the map.', 'Alle lampen tegelijk': 'All lamps at once', 'Een kleur of effect zet alle lampen hier aan. De helderheid verandert alleen de lampen die al aan staan.': 'A colour or effect turns on all lamps here. Brightness only changes the lamps that are already on.',
     'Tik op de naam van een lamp om hem in te stellen.': 'Tap the name of a lamp to set it up.',
     'Bovenrand': 'Top edge', 'Groep': 'Group', 'Voor': 'For', 'Nieuwe groep': 'New group', 'Verwijderen': 'Delete',
     'Naam van de groep': 'Name of the group', 'Alle lampen (standaard)': 'All lamps (default)', 'Geen (standaard)': 'None (default)',
@@ -201,8 +201,8 @@ const I18N = (() => {
     'Bediening van de airco (aan of uit, temperatuur) volgt later. Nu zet je hem alleen op de kaart.': 'Air conditioner controls (on or off, temperature) will follow later. For now you only place it on the map.',
     'Een airco kan niet in een armatuur.': 'An air conditioner cannot go in a fixture.', '{n}: bediening van de airco volgt later.': '{n}: air conditioner controls will follow later.',
     ' (nog neerzetten)': ' (not placed yet)',
-    // Lampen-hub op de server
-    'Lampen-hub': 'Lamp hub',
+    // House hub op de server (vroeger Lampen-hub)
+    'House hub': 'House hub',
     'Bewaar je kamer, lampen, groepen, scènes en instellingen in een bestand, bijvoorbeeld als reserve of om over te zetten.': 'Save your room, lamps, groups, scenes and settings to a file, for example as a spare copy or to move them.',
     'Vaste of langzaam bewegende kleuren op je lampen.': 'Fixed or slowly moving colours on your lamps.',
     'Zet lampen die bij elkaar horen in een groep, bijvoorbeeld alle spotjes. Tik de lampen aan die in de groep horen. Een lamp die al in een groep zit, zie je bij de andere groepen niet.':

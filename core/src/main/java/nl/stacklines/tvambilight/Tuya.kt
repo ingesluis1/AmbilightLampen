@@ -172,7 +172,8 @@ object TuyaCodec {
  * Houdt een vaste verbinding met één lamp open in een eigen thread.
  * send() voegt waarden samen; alleen de laatste stand wordt verstuurd (geen wachtrij die achterloopt).
  */
-class TuyaLamp(val lamp: Lamp) {
+/** keepOpen = verbinding altijd openhouden, ook op de hub (airco: dan komen standen uit Smart Life meteen binnen). */
+class TuyaLamp(val lamp: Lamp, private val keepOpen: Boolean = false) {
     @Volatile var online = false
         private set
     @Volatile var lastError: String? = null
@@ -189,6 +190,13 @@ class TuyaLamp(val lamp: Lamp) {
     /** Staat de lamp aan? null = nog onbekend. */
     @Volatile var powered: Boolean? = null
         private set
+    /** Alle functies (dps) zoals het apparaat ze laatst meldde of wij ze stuurden (airco), en wanneer dat was. */
+    val allDps = java.util.concurrent.ConcurrentHashMap<String, Any>()
+    @Volatile var dpsAt = 0L
+        private set
+    private fun noteAll(d: JSONObject) { d.keys().forEach { k -> d.opt(k)?.let { if (it != JSONObject.NULL) allDps[k] = it } }; dpsAt = SystemClock.elapsedRealtime() }
+    /** Stand opnieuw opvragen zonder te wachten (het antwoord komt in allDps). */
+    fun refresh() { queryWanted = true; synchronized(lock) { lock.notifyAll() } }
 
     fun noteState(d: Map<String, Any?>) {
         synchronized(known) { for (k in STATE_KEYS) d[k]?.let { known[k] = it } }
@@ -256,7 +264,7 @@ class TuyaLamp(val lamp: Lamp) {
             LinkedHashMap(dps).apply { put("24", hsvHex(b[0], b[1], b[2])) }
         } ?: dps
         synchronized(lock) { pending.putAll(d); lock.notifyAll() }
-        noteState(d)
+        noteState(d); d.forEach { (k, v) -> allDps[k] = v }
     }
 
     private fun hasBalance() = abs(lamp.balWarm) > 0.005 || abs(lamp.balTint) > 0.005
@@ -516,13 +524,14 @@ class TuyaLamp(val lamp: Lamp) {
         var lastBeat = 0L
         var connectedOnce = false
         var failSince = 0L
+        val idleClose = if (keepOpen) 0L else Platform.idleCloseMs
         while (running) {
             try {
                 if (sock == null) {
                     if (ip.isBlank() || !lamp.supported) { online = false; sleepQuiet(2000); continue }
                     // Server: pas verbinden als er iets te sturen is (de tv moet de lamp ook kunnen bereiken)
-                    if (Platform.idleCloseMs > 0 && connectedOnce && !hasWork()) { idleWait(5000); continue }
-                    if (Platform.idleCloseMs > 0 && lastError != null) {
+                    if (idleClose > 0 && connectedOnce && !hasWork()) { idleWait(5000); continue }
+                    if (idleClose > 0 && lastError != null) {
                         // Houdt iemand anders de lamp vast (tv of server), dan rustig opnieuw proberen en opdrachten
                         // na 15 s laten vallen, in plaats van de lamp elke 0,3 s lastig te vallen
                         connectedOnce = true
@@ -575,7 +584,7 @@ class TuyaLamp(val lamp: Lamp) {
                     if (wait > 0) Thread.sleep(wait)
                     sendControl(adapt(batch)); inflight++
                     lastSend = SystemClock.elapsedRealtime(); lastBeat = lastSend
-                } else if (Platform.idleCloseMs > 0 && now - lastSend > Platform.idleCloseMs) {
+                } else if (idleClose > 0 && now - lastSend > idleClose) {
                     close()   // even niets te doen: verbinding vrijgeven (online blijft de laatst bekende stand)
                 } else if (now - lastBeat > 8000) {
                     write(TuyaCodec.HEART_BEAT, "{}", header = false)
@@ -632,7 +641,7 @@ class TuyaLamp(val lamp: Lamp) {
             if (f.cmd == TuyaCodec.DP_QUERY || f.cmd == TuyaCodec.DP_QUERY_NEW || f.cmd == TuyaCodec.STATUS) {
                 val dps = TuyaCodec.jsonOf(f.plain)?.let { TuyaCodec.dpsOf(it) } ?: continue
                 (dps.opt("24") as? String)?.let { colourV1 = it.length == 14 }
-                noteState(dps)
+                noteState(dps); noteAll(dps)
                 if (dps.has("20") && dps.has("21")) statusResult = dps
             }
         }

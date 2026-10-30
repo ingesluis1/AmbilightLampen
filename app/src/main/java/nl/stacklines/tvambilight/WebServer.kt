@@ -315,9 +315,12 @@ class WebServer(private val ctx: Context) {
                                 val hsv = FloatArray(3); android.graphics.Color.colorToHSV(android.graphics.Color.parseColor(it), hsv)
                                 intArrayOf(hsv[0].roundToInt() % 360, (hsv[1] * 1000).roundToInt(), 1000)
                             }
-                            SceneEngine.liveSet(id, if (j.has("on")) j.optBoolean("on") else null, colour,
-                                if (j.has("bright")) j.optDouble("bright", 1.0).coerceIn(0.01, 1.0) else null,
-                                j.optString("effect").ifBlank { null })
+                            val on = if (j.has("on")) j.optBoolean("on") else null
+                            val bright = if (j.has("bright")) j.optDouble("bright", 1.0).coerceIn(0.01, 1.0) else null
+                            val room = j.optString("room").ifBlank { null }
+                            // Zonder lamp maar met kamer: alle lampen van die kamer tegelijk
+                            if (id == null && room != null) SceneEngine.liveRoom(room, on, colour, bright, j.optString("effect").ifBlank { null })
+                            else SceneEngine.liveSet(id, on, colour, bright, j.optString("effect").ifBlank { null })
                             msg(true, "")
                         }
                     }

@@ -49,6 +49,25 @@ class Scene(
         fun hsv(c: IntArray) = Color.HSVToColor(floatArrayOf(c[0].toFloat(), c[1] / 1000f, max(0.15f, c[2] / 1000f)))
         /** Kleurvakjes voor het voorbeeld: zonder lampen die uit staan en zonder dubbele. */
         fun swatches(cols: Collection<IntArray>) = cols.filter { it[2] > 0 }.map { hsv(it) }.distinct()
+
+        /**
+         * Wit licht in een eigen scène of de eigen indeling: een kleur die precies op de witlijn ligt (de wittinten op de
+         * telefoon, gemaakt met Engine.whiteRgb) gaat met de witte leds van de lamp. Geeft de kleurtemperatuur
+         * (0 warm .. 1000 koel) of null voor een gewone kleur. Gewoon wit (#ffffff) valt ook op de lijn: dat wordt koel wit.
+         */
+        fun whiteTempOf(c: IntArray): Int? {
+            var best: Int? = null; var bd = Int.MAX_VALUE
+            for (t in 0..1000 step 10) {
+                val hsv = FloatArray(3); Color.colorToHSV(Engine.whiteRgb(t, 1000, 0.01f), hsv)
+                val s = (hsv[1] * 1000).roundToInt(); val ds = abs(s - c[1])
+                // Bij bijna-grijs wat ruimer: de lijn komt niet helemaal op 0 uit, puur wit moet er ook bij
+                if (ds > (if (s < 40) 30 else 12)) continue
+                // Bijna geen verzadiging: de tint zegt dan niets
+                if (s > 30 && abs(hsv[0].roundToInt() - c[0]).let { min(it, 360 - it) } > 3) continue
+                if (ds < bd) { bd = ds; best = t }
+            }
+            return best
+        }
         fun fromStore(o: JSONObject): Scene {
             val m = HashMap<String, IntArray>()
             o.optJSONObject("perLamp")?.let { p -> p.keys().forEach { k -> val a = p.getJSONArray(k); m[k] = IntArray(3) { a.getInt(it) } } }
@@ -186,9 +205,9 @@ object SceneEngine {
      * de lampen nu doen (sync, scène of hun eigen stand); een lopende sync of scène stopt dan, net als bij een scène.
      */
     @Synchronized
-    fun liveSet(id: String?, on: Boolean?, colour: IntArray?, bright: Double?, effect: String?) {
-        // De indeling loopt in de kamer van de lamp (zonder lamp: de tv-kamer)
-        val room = id?.let { i -> Store.lampsSnapshot().firstOrNull { it.id == i }?.room } ?: Store.tvRoom.id
+    fun liveSet(id: String?, on: Boolean?, colour: IntArray?, bright: Double?, effect: String?, inRoom: String? = null) {
+        // De indeling loopt in de kamer van de lamp (zonder lamp: de gevraagde kamer, anders de tv-kamer)
+        val room = id?.let { i -> Store.lampsSnapshot().firstOrNull { it.id == i }?.room } ?: inRoom ?: Store.tvRoom.id
         if (Store.room(room) == null) return   // lamp zonder kamer: eerst in een kamer zetten
         if (activeIn(room)?.id != LIVE) {
             val cur = activeIn(room)
@@ -217,6 +236,21 @@ object SceneEngine {
         }
         livePer[id] = c
         effect?.let { if (it in Scene.EFFECTS) liveFx[id] = it else liveFx.remove(id) }
+    }
+
+    /**
+     * Alle lampen van een kamer tegelijk (blok "Hele kamer" onder Bediening). Alleen de helderheid veranderen laat
+     * lampen die uit staan uit; een kleur of effect kiezen zet ze aan.
+     */
+    @Synchronized
+    fun liveRoom(room: String, on: Boolean?, colour: IntArray?, bright: Double?, effect: String?) {
+        if (Store.room(room) == null) return
+        liveSet(null, null, null, null, null, inRoom = room)
+        val dimOnly = on == null && colour == null && effect == null
+        for (l in Store.lampsSnapshot().filter { it.room == room && it.enabled && it.kind == "light" }) {
+            if (dimOnly && (livePer[l.id]?.get(2) ?: 0) <= 0) continue
+            liveSet(l.id, on, colour, bright, effect)
+        }
     }
 
     /** Huidige kleuren van alle lampen opslaan als eigen scène (bij de eigen indeling: met de effecten). */
@@ -301,10 +335,22 @@ object SceneEngine {
                     }
                     if (p != null && p[2] > 0 && hueDist(p[0], c[0]) < 2 && abs(p[1] - c[1]) < 10 && abs(p[2] - c[2]) < 10) continue
                     val dps = LinkedHashMap<String, Any>()
-                    if (p == null || p[2] <= 0) { dps["20"] = true; dps["21"] = "colour" }
-                    dps["24"] = TuyaLamp.hsvHex(c[0], c[1].coerceIn(0, 1000), (c[2] * l.maxBright).roundToInt().coerceIn(10, 1000))
+                    val v = (c[2] * l.maxBright).roundToInt().coerceIn(10, 1000)
+                    // Wittinten met de witte leds (een ledstrip zonder witte leds, categorie dd, mengt ze met kleur)
+                    val wt = if (l.category != "dd") Scene.whiteTempOf(c) else null
+                    val pwt = p?.takeIf { it[2] > 0 && l.category != "dd" }?.let { Scene.whiteTempOf(it) }
+                    if (wt != null) {
+                        if (p == null || p[2] <= 0) dps["20"] = true
+                        if (pwt == null) dps["21"] = "white"
+                        dps["22"] = v; dps["23"] = wt
+                        w.shownColor = Engine.whiteRgb(wt, v)
+                    } else {
+                        if (p == null || p[2] <= 0) dps["20"] = true
+                        if (p == null || p[2] <= 0 || pwt != null) dps["21"] = "colour"
+                        dps["24"] = TuyaLamp.hsvHex(c[0], c[1].coerceIn(0, 1000), v)
+                        w.shownColor = Scene.hsv(c)
+                    }
                     w.send(dps)
-                    w.shownColor = Scene.hsv(c)
                     last[l.id] = c
                 }
                 // Vaste scènes hoeven niet steeds opnieuw; bewegende ongeveer 4 keer per seconde
