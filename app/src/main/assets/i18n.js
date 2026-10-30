@@ -277,7 +277,8 @@ const I18N = (() => {
       if (/^#+\s*/.test(l)) { any = true; inSec = want.test(l); continue; }
       if (!any || inSec) out.push(l);
     }
-    return out.map(l => l.replace(/^[-*]\s*/, '').trim()).filter(Boolean);
+    // Plaatjes horen op GitHub, niet op de tv; van een link alleen de tekst
+    return out.filter(l => !/^\s*!\[/.test(l)).map(l => l.replace(/^[-*]\s*/, '').replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').trim()).filter(Boolean);
   }
 
   return { t, apply, notes, set(l) { lang = l === 'en' ? 'en' : 'nl'; }, get lang() { return lang; } };
