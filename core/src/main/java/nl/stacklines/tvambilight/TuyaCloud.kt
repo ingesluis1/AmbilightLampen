@@ -89,7 +89,7 @@ object TuyaCloud {
             for (d in devices) {
                 val id = d.optString("id"); val key = d.optString("local_key")
                 if (id.isBlank() || key.length != 16) continue
-                if (d.optString("category") !in LIGHTS) { skipped++; continue }
+                if (d.optString("category") !in LIGHTS && d.optString("category") !in Lamp.AIRCO) { skipped++; continue }
                 if (id in Store.hidden || id in Store.forgotten) continue
                 val ex = Store.lamps.firstOrNull { it.id == id }
                 if (ex != null) {
@@ -97,7 +97,11 @@ object TuyaCloud {
                     ex.category = d.optString("category", ex.category)
                 } else if (d.optBoolean("online", true)) {   // offline registraties (oude lampen) overslaan
                     val name = d.optString("name", id).replace(Regex("\\s+"), " ").trim().take(60).ifBlank { id }
-                    Store.lamps += Lamp(id, key, name).apply { category = d.optString("category") }
+                    Store.lamps += Lamp(id, key, name).apply {
+                        category = d.optString("category")
+                        // Airco: standaard-uiterlijk op de kaart (mobiel of aan de muur, wit); kiezen kan in het menu van het apparaat
+                        if (kind == "airco") look = if (category == "ydkt") "airco-mobiel-wit" else "airco-wand-wit"
+                    }
                     added += name
                 }
             }
@@ -105,7 +109,7 @@ object TuyaCloud {
         Store.save(); Engine.syncWorkers()
         if (added.isNotEmpty()) Discovery.lookupNew()
         return buildString {
-            append(if (added.isEmpty()) tr("Geen nieuwe lampen gevonden.", "No new lamps found.") else tr("Nieuw: ", "New: ") + added.joinToString(", ") + tr(". Hang ze op via Lampen.", ". Place them under Lamps."))
+            append(if (added.isEmpty()) tr("Geen nieuwe lampen gevonden.", "No new lamps found.") else tr("Nieuw: ", "New: ") + added.joinToString(", ") + tr(". Zet ze in hun kamer op de kaart.", ". Put them in their room on the map."))
             if (updated > 0) append(tr(" $updated sleutel(s) bijgewerkt.", " $updated key(s) updated."))
             if (added.isNotEmpty()) append(tr(" Het ip-adres wordt binnen een halve minuut vanzelf gevonden.", " The IP address is found automatically within half a minute."))
         }

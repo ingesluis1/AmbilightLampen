@@ -186,6 +186,8 @@ function render(){
   const img=Room.frame(baseImg,L,S.lamps,live,S.sync||!!S.activeScene||S.lampsOff,S.sync&&S.top);
   const st=$('mapBox');Room.present($('map'),img,st.clientWidth-14,st.clientHeight-14,true);
 }
+/* Het tv-scherm gaat over de kamer met de tv: alleen de lampen daarvan (geen airco's of lampen uit andere kamers) */
+function tvOnly(s){const tv=(s.rooms||[]).find(r=>r.tv);s.lamps=(s.lamps||[]).filter(l=>l.kind!=='airco'&&(!tv||l.room===tv.id));return s}
 function status(){
   const s=S,on=s.lamps.filter(l=>l.online).length,placed=s.lamps.filter(l=>l.x>=0).length;
   document.body.classList.toggle('night',s.sync);
@@ -233,7 +235,7 @@ function calibRender(){
   if(bands.length!==cols.length){bands.forEach(b=>b.remove());cols.forEach(c=>{const d=document.createElement('div');d.className='band';d.style.cssText='flex:1;background:'+c;box.insertBefore(d,$('calibMsg'))})}
 }
 async function poll(){
-  try{S=await api('/api/state');if(!langDone){langDone=true;I18N.set(S.settings.lang);I18N.apply()}status();render();rbRender();calibRender();lowRefRender()}catch(e){}
+  try{S=tvOnly(await api('/api/state'));if(!langDone){langDone=true;I18N.set(S.settings.lang);I18N.apply()}status();render();rbRender();calibRender();lowRefRender()}catch(e){}
   setTimeout(poll,S&&S.sync?150:500);
 }
 $('syncBtn').onclick=async()=>{if(busy)return;busy=true;const on=!(S&&S.sync);toast(t(on?'Sync start...':'Sync stopt...'));await api('/api/sync',{on});busy=false};
@@ -439,7 +441,7 @@ let updMsg='';
 /** Nu op GitHub kijken; is er een nieuwe versie, dan meteen het update-venster openen. */
 async function checkUpdates(){updMsg=t('Zoeken...');renderSettings();
   const r=await api('/api/update/check',{});updMsg=r.message;renderSettings();
-  S=await api('/api/state');status();if(S.update&&S.update.available){closeSettings();openUpd()}}
+  S=tvOnly(await api('/api/state'));status();if(S.update&&S.update.available){closeSettings();openUpd()}}
 /** OK op een regel met een scène: scènelijst openen. */
 function pickScene(r){openScenes(id=>{setVals[r.k]=r.scene+id;lastScene[r.k]=id;saveSetting(r)})}
 /** Volgende of vorige profiel voor een app. Meteen opslaan: de volgende statusvraag zou de keuze anders even terugdraaien. */
@@ -498,7 +500,7 @@ document.addEventListener('keydown',async e=>{
   else if(e.key==='ArrowDown')scIdx=Math.min(n-1,scIdx+4);else if(e.key==='ArrowUp')scIdx=Math.max(0,scIdx-4);
   // OK hier niet laten doorgaan naar de instellingen eronder (die zouden de regel meteen weer veranderen)
   else if(e.key==='Enter'&&scPick){e.preventDefault();e.stopImmediatePropagation();const f=scPick,sc=scList()[scIdx];if(sc)f(sc.id);closeScenes();return}
-  else if(e.key==='Enter'){const sc=scList()[scIdx];toast((await api('/api/scene',{id:sc.id})).message);S=await api('/api/state');closeScenes();status();return}
+  else if(e.key==='Enter'){const sc=scList()[scIdx];toast((await api('/api/scene',{id:sc.id})).message);S=tvOnly(await api('/api/state'));closeScenes();status();return}
   else if(e.key==='Escape'||e.key==='Backspace'){closeScenes()}
   else return;
   e.preventDefault();e.stopImmediatePropagation();renderScenes();

@@ -67,6 +67,9 @@ main{max-width:640px;margin:0 auto;padding:0 max(12px,env(safe-area-inset-right)
 .tools{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-bottom:10px}
 .tools .btn{padding:6px 1px 5px;font-size:12px;display:flex;flex-direction:column;align-items:center;gap:3px}
 .tools canvas,.palette canvas{image-rendering:pixelated}
+/* Op de hub is "Apparaten" langer dan "Lampen": op één regel houden */
+.tools .btn span{white-space:nowrap}
+body.srv .tools .lt{font-size:10px;letter-spacing:-.3px}
 .mapwrap{background:#1d1124;padding:6px;border:4px solid var(--ink);box-shadow:inset 0 0 0 3px #3b2240;display:flex;justify-content:center;overflow:hidden;min-width:0}
 #map{display:block;touch-action:none;image-rendering:pixelated;max-width:100%;height:auto!important}
 .sizes{display:flex;justify-content:space-between;gap:10px;margin-top:10px}
@@ -145,6 +148,15 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 .lrow select.lroom{width:auto;flex:1 1 0!important;min-width:0;max-width:150px;padding:5px 4px;font-size:14px}
 /* Met keuzemenu Kamer: naam op een eigen regel, knoppen eronder */
 .lrow.rm .name{flex:1 1 100%!important}
+/* Airco (een apparaat, geen lamp): alleen naam, kamer, plek en uiterlijk; lampinstellingen verdwijnen */
+.isair .lightonly{display:none!important}
+.aironly{display:none}
+.isair .aironly{display:block}
+.airlooks{grid-template-columns:repeat(2,1fr)!important;gap:6px!important}
+.airlooks .btn{flex-direction:row!important;gap:8px!important;font-size:13px!important;padding:5px 7px!important;text-align:left;line-height:1.15}
+.devic{flex-shrink:0;image-rendering:pixelated}
+.lrow .name .devic{margin-right:5px;vertical-align:-4px}
+.chip .devic{margin:-2px 0}
 #hostTag{vertical-align:middle;text-shadow:none;font-size:12px;font-weight:700;color:var(--text);background:var(--gold);border:3px solid var(--ink);padding:1px 7px;box-shadow:inset 0 -2px 0 var(--gold-dk)}
 </style>
 </head>
@@ -212,7 +224,7 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 <div class="page hidden" id="page-room">
 <section class="panel hidden" id="roomListPanel">
   <h2>Kamers</h2>
-  <p>Elke kamer heeft een eigen plattegrond en eigen lampen. De volgorde hier is ook de volgorde bij Bediening.</p>
+  <p data-dev>Elke kamer heeft een eigen plattegrond en eigen lampen. De volgorde hier is ook de volgorde bij Bediening.</p>
   <p class="tvonly">De tv synct alleen de kamer waar hij staat.</p>
   <div id="roomList"></div>
   <button class="btn gold" id="roomAddBtn" style="margin-top:10px;width:100%">+ Kamer toevoegen</button>
@@ -244,7 +256,7 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
     <div class="sizeRow"><div class="sg"><span class="sideLbl">Links</span><button class="btn" data-size="w,-1,start">-</button><button class="btn" data-size="w,1,start">+</button></div><div class="sg"><span class="sideLbl">Rechts</span><button class="btn" data-size="w,-1">-</button><button class="btn" data-size="w,1">+</button></div></div>
     <div style="margin-top:8px">Diepte <b id="hv"></b> m</div>
     <div class="sizeRow"><div class="sg"><span class="sideLbl">Achterkant</span><button class="btn" data-size="h,-1,start">-</button><button class="btn" data-size="h,1,start">+</button></div><div class="sg"><span class="sideLbl">Voorkant</span><button class="btn" data-size="h,-1">-</button><button class="btn" data-size="h,1">+</button></div></div>
-    <div class="hint">Links of achter iets aanpassen schuift je meubels, tv en lampen mee, zodat alles op zijn plek blijft.</div>
+    <div class="hint" data-dev>Links of achter iets aanpassen schuift je meubels, tv en lampen mee, zodat alles op zijn plek blijft.</div>
   </div>
   </div>
   <div id="panelTv" class="hidden" style="margin-top:12px">
@@ -264,15 +276,19 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
     <div class="hint">Kies een meubel en tik op de kaart. Tik op een meubel om het te kiezen, sleep om te verschuiven.</div>
   </div>
   <div id="panelLamp" class="hidden" style="margin-top:12px">
-    <div class="seg" id="modeSeg" style="margin-bottom:8px"><button class="btn" data-m="lamp">Lamp</button><button class="btn" data-m="fx">Armatuur</button></div>
+    <div class="seg" id="modeSeg" style="margin-bottom:8px"><button class="btn" data-m="lamp" data-dev>Lamp</button><button class="btn" data-m="fx">Armatuur</button></div>
     <div id="lampMode">
     <div class="chips" id="chips"></div>
     <div class="row hidden" id="roomLampRow" style="margin-bottom:6px"><b class="grow" id="roomLampName"></b><button class="btn" id="roomLampSettings">Instellingen van deze lamp</button></div>
     <div class="row hidden" id="roomFxNote" style="margin-bottom:6px"><span class="grow" id="roomFxText" style="font-size:14px"></span><button class="btn" id="roomFxEdit">Armatuur bewerken</button></div>
-    <div class="hidden" id="roomLookBox" style="margin-bottom:8px"><div style="font-size:14px">Soort lamp</div><div class="looks" id="lookGrid"></div>
+    <div class="hidden" id="roomLookBox" style="margin-bottom:8px"><div class="lightonly" style="font-size:14px">Soort lamp</div><div class="looks lightonly" id="lookGrid"></div>
+      <div class="aironly"><div style="font-size:14px">Uiterlijk</div><div class="looks airlooks" id="airLooksRoom"></div>
+        <div class="row hidden" id="airRotRow" style="margin-top:6px"><span class="grow">Richting</span><button class="btn" id="airRot"></button></div>
+        <div class="hint" id="airWallHint">Een hangende airco gaat vanzelf tegen de dichtstbijzijnde muur.</div>
+        <div class="hint">Bediening van de airco volgt later.</div></div>
       <div class="row hidden" id="stripBox" style="margin-top:6px"><span class="grow">Lengte <b id="stripLen"></b> m</span><button class="btn" data-strip="-0.25">-</button><button class="btn" data-strip="0.25">+</button><button class="btn" id="stripRot"></button></div>
       <div class="hidden" id="aimBox" style="margin-top:6px"><div class="row"><span class="grow">Richting</span><button class="btn" id="aimBtn"></button><button class="btn hidden" id="tiltBtn"></button></div><div class="hint tvonly">Telt mee voor de kleur: de lamp volgt het stuk beeld waar zijn licht naartoe valt.</div></div></div>
-    <div class="hint">Kies een lamp en tik op de kaart om hem op te hangen. Sleep om te verschuiven.</div>
+    <div class="hint" data-dev>Kies een lamp en tik op de kaart om hem op te hangen. Sleep om te verschuiven.</div>
     </div>
     <div id="fxMode" class="hidden">
       <div class="chips" id="fxChips"></div>
@@ -293,7 +309,7 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 <!-- Naam, kleur en tv van de kamer die je bewerkt; met één kamer ook "Kamer toevoegen" -->
 <section class="panel" id="roomMetaPanel">
   <h2 id="roomMetaTitle">Deze kamer</h2>
-  <label class="s">Naam</label><div class="row"><input type="text" id="erName" class="grow" maxlength="30" style="flex-basis:0"><button class="btn" id="erNameSave">Opslaan</button></div>
+  <label class="s">Naam van deze kamer</label><div class="row"><input type="text" id="erName" class="grow" maxlength="30" style="flex-basis:0"><button class="btn" id="erNameSave">Naam opslaan</button></div>
   <label class="s">Kleur</label><div class="rcolors" id="erColors"></div>
   <div id="erTvBox"><label class="s"><input type="checkbox" id="erTv"> De tv staat in deze kamer</label>
     <div class="hint" id="erTvHint"></div></div>
@@ -304,7 +320,7 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
       <div class="row" style="margin-top:8px"><button class="btn red" id="erDelYes">Ja, verwijderen</button><button class="btn" id="erDelNo">Nee</button></div></div>
   </div>
   <div id="erAddBox" class="hidden" style="margin-top:14px">
-    <p style="margin:0 0 8px">Lampen in meer kamers? Maak een kamer erbij, met een eigen plattegrond.</p>
+    <p style="margin:0 0 8px" data-dev>Lampen in meer kamers? Maak een kamer erbij, met een eigen plattegrond.</p>
     <button class="btn gold" id="erAdd">+ Kamer toevoegen</button>
   </div>
 </section>
@@ -313,40 +329,42 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 <!-- Tabblad: Lampen -->
 <div class="page hidden" id="page-lamps">
 <section class="panel">
-  <h2>Je lampen</h2>
-  <p class="hint" style="margin:0 0 8px">Tik op de naam van een lamp om hem in te stellen.</p>
-  <p>Knipper laat een lamp aan en uit gaan zodat je hem vindt. Aan en Uit zetten hem aan of uit. Met het kleurvakje kies je zelf een kleur. Het kruisje haalt een lamp weg; je zet hem terug onder Lampen toevoegen.</p>
+  <h2 data-dev>Je lampen</h2>
+  <p class="hint" style="margin:0 0 8px" data-dev>Tik op de naam van een lamp om hem in te stellen.</p>
+  <p data-dev>Knipper laat een lamp aan en uit gaan zodat je hem vindt. Aan en Uit zetten hem aan of uit. Met het kleurvakje kies je zelf een kleur. Het kruisje haalt een lamp weg; je zet hem terug onder Lampen toevoegen.</p>
   <div id="lampList"></div>
   <div id="lampDetailHold"><div class="ldetail hidden" id="lampDetailPanel">
   <div class="row" style="margin-bottom:8px"><b id="lampDetailTitle" class="grow" style="font-size:17px"></b><button class="btn up" id="lampClose">Sluiten</button></div>
     <div id="lampDetail">
-      <div class="row"><input type="text" id="lampName" class="grow" placeholder="Naam"><button class="btn" id="blinkBtn">Knipper</button></div>
-      <div class="row" id="reviveRow" style="margin-top:6px"><span class="grow" style="font-size:14px">Reageert deze lamp niet?</span><button class="btn gold" id="reviveBtn">Opnieuw verbinden</button></div>
-      <div class="tvonly" style="margin-top:8px;font-size:14px">Volgt</div>
-      <div class="seg tvonly" id="followSeg" style="margin-top:3px">
+      <div class="row"><input type="text" id="lampName" class="grow" placeholder="Naam"><button class="btn lightonly" id="blinkBtn">Knipper</button></div>
+      <div class="aironly" id="airBox"><div style="margin-top:8px;font-size:14px">Uiterlijk</div><div class="looks airlooks" id="airLooks"></div>
+        <div class="hint">Bediening van de airco (aan of uit, temperatuur) volgt later. Nu zet je hem alleen op de kaart.</div></div>
+      <div class="row lightonly" id="reviveRow" style="margin-top:6px"><span class="grow" style="font-size:14px">Reageert deze lamp niet?</span><button class="btn gold" id="reviveBtn">Opnieuw verbinden</button></div>
+      <div class="tvonly lightonly" style="margin-top:8px;font-size:14px">Volgt</div>
+      <div class="seg tvonly lightonly" id="followSeg" style="margin-top:3px">
         <button class="btn" data-f="auto">Automatisch</button><button class="btn" data-f="top">Bovenrand</button><button class="btn" data-f="side">Hele zijkant</button><button class="btn" data-f="all">Hele beeld</button>
       </div>
-      <div class="tvonly" style="margin-top:8px;font-size:14px">Lagen apart <span style="opacity:.7">(voor lampen met meerdere kleurlagen, zoals een Wall Washer)</span></div>
-      <div class="seg tvonly" id="layerSeg" style="margin-top:3px">
+      <div class="tvonly lightonly" style="margin-top:8px;font-size:14px">Lagen apart <span style="opacity:.7">(voor lampen met meerdere kleurlagen, zoals een Wall Washer)</span></div>
+      <div class="seg tvonly lightonly" id="layerSeg" style="margin-top:3px">
         <button class="btn" data-n="0">Uit</button><button class="btn" data-n="2">2</button><button class="btn" data-n="3">3</button><button class="btn" data-n="4">4</button><button class="btn" data-n="5">5</button>
       </div>
-      <div class="row" style="margin-top:8px"><span>Groep</span><select id="lampGroup" class="grow"></select><button class="btn hidden tvonly" id="lampGroupSet">Instellingen van groep</button></div>
-      <div class="tvonly" style="margin-top:8px;font-size:14px">Kleur</div>
-      <div class="seg tvonly" id="satSeg" style="margin-top:3px">
+      <div class="row lightonly" style="margin-top:8px"><span>Groep</span><select id="lampGroup" class="grow"></select><button class="btn hidden tvonly" id="lampGroupSet">Instellingen van groep</button></div>
+      <div class="tvonly lightonly" style="margin-top:8px;font-size:14px">Kleur</div>
+      <div class="seg tvonly lightonly" id="satSeg" style="margin-top:3px">
         <button class="btn" data-k="0.8">Zwakker</button><button class="btn" data-k="1">Normaal</button><button class="btn" data-k="1.4">Sterker</button><button class="btn" data-k="1.8">Veel sterker</button>
       </div>
-      <div style="margin-top:8px;font-size:14px">Maximale helderheid</div>
-      <div class="seg" id="briSeg" style="margin-top:3px">
+      <div class="lightonly" style="margin-top:8px;font-size:14px">Maximale helderheid</div>
+      <div class="seg lightonly" id="briSeg" style="margin-top:3px">
         <button class="btn" data-k="0.25">25%</button><button class="btn" data-k="0.5">50%</button><button class="btn" data-k="0.75">75%</button><button class="btn" data-k="1">100%</button>
       </div>
-      <div class="sect tvonly">Kalibreren</div>
-      <div class="acc tvonly"><button class="btn acch" id="calibBtn"><span class="ttl">Hoogte</span><span class="st" id="calibState"></span></button>
+      <div class="sect tvonly lightonly">Kalibreren</div>
+      <div class="acc tvonly lightonly"><button class="btn acch" id="calibBtn"><span class="ttl">Hoogte</span><span class="st" id="calibState"></span></button>
       <div id="calibPick" class="hidden accb">
           <p class="hint" style="margin:0 0 6px">De tv toont nu gekleurde banden. Tik de kleur die op dezelfde hoogte staat als deze lamp. De lamp neemt die kleur dan over, zo zie je meteen of het klopt. Hangt de lamp aan het plafond, kies dan Plafond.</p>
           <div id="calibBands" style="display:flex;flex-direction:column;gap:3px"></div>
           <button class="btn gold" id="calibDone" style="margin-top:6px">Klaar</button>
         </div></div>
-      <div class="acc tvonly"><button class="btn acch" id="lowBtn"><span class="ttl">Kleur bij weinig licht</span><span class="st" id="lowState"></span></button>
+      <div class="acc tvonly lightonly"><button class="btn acch" id="lowBtn"><span class="ttl">Kleur bij weinig licht</span><span class="st" id="lowState"></span></button>
       <div id="lowPick" class="hidden accb">
         <p class="hint" style="margin:0 0 6px">Bij Wit wisselt de lamp steeds tussen zijn eigen witte licht en kleurlicht. Schuif de tegenkleur en de sterkte tot je bij het wisselen geen verschil in tint meer ziet. Is het kleurlicht roze, schuif dan naar cyaan of groen. Bij Donkerblauw laat de tv dezelfde kleur zien om mee te vergelijken. De correctie werkt alleen als de lamp zacht brandt.</p>
         <label class="s">Tegelijk instellen</label>
@@ -358,7 +376,7 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
         <label class="s">Sterkte <span id="v_lowStrength"></span></label><input type="range" id="lowStrength" min="0" max="0.6" step="0.01">
         <div class="row" style="margin-top:6px"><button class="btn gold" id="lowDone">Klaar</button><button class="btn" id="lowReset">Geen correctie</button></div>
       </div></div>
-      <div class="acc tvonly"><button class="btn acch" id="matchBtn"><span class="ttl">Kleur gelijk aan andere lamp</span><span class="st" id="matchState"></span></button>
+      <div class="acc tvonly lightonly"><button class="btn acch" id="matchBtn"><span class="ttl">Kleur gelijk aan andere lamp</span><span class="st" id="matchState"></span></button>
       <div id="matchPick" class="hidden accb">
         <p class="hint" style="margin:0 0 6px">Kies een lamp om mee te vergelijken. Beide lampen tonen dezelfde testkleur. Schuif tot deze lamp dezelfde kleur geeft als de andere. Begin met Wit, kijk daarna bij de andere kleuren of het ook klopt.</p>
         <label class="s">Vergelijken met</label><select id="matchRef"></select>
@@ -368,9 +386,9 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
         <div class="row" style="margin-top:6px"><button class="btn gold" id="matchDone">Klaar</button><button class="btn" id="matchReset">Geen kleurbalans</button></div>
       </div></div>
       <div class="row" style="margin-top:8px"><span class="grow tvonly" id="follows"></span><span class="grow srvonly"></span><button class="btn" id="unplaceBtn">Van kaart</button></div>
-      <div class="row" style="margin-top:8px"><label class="grow tvonly"><input type="checkbox" id="lampEnabled"> Doet mee met sync</label><span id="lampIp" style="font-size:13px"></span></div>
-      <div class="row" style="margin-top:6px"><span>Ip-adres</span><input type="text" id="lampIpEdit" class="grow" placeholder="wordt vanzelf gevonden" inputmode="decimal"></div>
-      <div class="row" style="margin-top:10px;justify-content:flex-end"><button class="btn up" id="lampClose2">Lamp sluiten</button></div>
+      <div class="row lightonly" style="margin-top:8px"><label class="grow tvonly"><input type="checkbox" id="lampEnabled"> Doet mee met sync</label><span id="lampIp" style="font-size:13px"></span></div>
+      <div class="row lightonly" style="margin-top:6px"><span>Ip-adres</span><input type="text" id="lampIpEdit" class="grow" placeholder="wordt vanzelf gevonden" inputmode="decimal"></div>
+      <div class="row" style="margin-top:10px;justify-content:flex-end"><button class="btn up" id="lampClose2" data-dev>Lamp sluiten</button></div>
     </div>
 </div></div>
   <button class="btn" id="testAll" style="margin-top:8px">Alle lampen na elkaar testen</button>
@@ -387,11 +405,11 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 
 
 <section class="panel">
-  <h2>Lampen toevoegen</h2>
+  <h2 data-dev>Lampen toevoegen</h2>
   <div id="cloudOn" class="hidden">
     <p class="tvonly" data-en="New lamp? First pair it in the &lt;b&gt;Smart Life&lt;/b&gt; app, then press here. The name and key come from your Tuya project, the TV finds the address itself.">Nieuwe lamp? Koppel hem eerst in de <b>Smart Life</b>-app en druk dan hier. Naam en sleutel komen uit je Tuya-project, het adres vindt de tv zelf.</p>
-    <p class="srvonly" data-en="New lamp? First pair it in the &lt;b&gt;Smart Life&lt;/b&gt; app, then press here. The name and key come from your Tuya project, the server finds the address itself.">Nieuwe lamp? Koppel hem eerst in de <b>Smart Life</b>-app en druk dan hier. Naam en sleutel komen uit je Tuya-project, het adres vindt de server zelf.</p>
-    <button class="btn gold" id="cloudRefresh">Nieuwe lampen zoeken</button>
+    <p class="srvonly" data-en="New device, such as a lamp or an air conditioner? First pair it in the &lt;b&gt;Smart Life&lt;/b&gt; app, then press here. The name and key come from your Tuya project, the server finds the address itself.">Nieuw apparaat, zoals een lamp of airco? Koppel het eerst in de <b>Smart Life</b>-app en druk dan hier. Naam en sleutel komen uit je Tuya-project, het adres vindt de server zelf.</p>
+    <button class="btn gold" id="cloudRefresh" data-dev>Nieuwe lampen zoeken</button>
     <button class="btn" id="cloudChange" style="margin-left:6px">Andere sleutels</button>
   </div>
   <div id="cloudSetup">
@@ -442,8 +460,8 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 </section>
 
 <section class="panel hidden" id="hiddenBox">
-  <details><summary><b>Verwijderde lampen</b> <span id="hiddenCount"></span></summary>
-    <p style="margin:8px 0">Terugzetten zet de lamp weer in je lijst. Definitief verwijderen haalt hem hier weg; hij komt dan ook niet terug bij nieuwe lampen zoeken.</p>
+  <details><summary><b data-dev>Verwijderde lampen</b> <span id="hiddenCount"></span></summary>
+    <p style="margin:8px 0" data-dev>Terugzetten zet de lamp weer in je lijst. Definitief verwijderen haalt hem hier weg; hij komt dan ook niet terug bij nieuwe lampen zoeken.</p>
     <div id="hiddenList"></div>
   </details>
 </section>
@@ -578,7 +596,7 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 <nav class="tabbar">
   <button class="btn" data-tab="home"><span class="ic">▶</span>Bediening</button>
   <button class="btn" data-tab="room"><span class="ic">▦</span>Kamers</button>
-  <button class="btn" data-tab="lamps"><span class="ic">✺</span>Lampen</button>
+  <button class="btn" data-tab="lamps"><span class="ic">✺</span><span data-dev>Lampen</span></button>
   <button class="btn" data-tab="settings"><span class="ic">⚙</span>Instellingen</button>
 </nav>
 <div id="toast"></div>
@@ -604,7 +622,46 @@ function toast(t){const e=$('toast');e.textContent=t;e.classList.add('show');cle
    body.srv verbergt .tvonly en toont .srvonly; zonder host (de tv) blijft alles zoals het was. */
 let SRV=false;
 function hostMode(s){const v=!!s&&s.host==='server';if(v===SRV&&document.body.classList.contains('srv')===v)return;
-  SRV=v;document.body.classList.toggle('srv',v);document.title=t(v?'Lampen-hub':'Ambilight Lampen')}
+  SRV=v;document.body.classList.toggle('srv',v);document.title=t(v?'Lampen-hub':'Ambilight Lampen');devTexts()}
+/* Op de hub heten lampen "apparaten": daar kunnen ook airco's tussen zitten. Op de tv blijft alles "lampen".
+   Alleen teksten over de lijst, het toevoegen en het neerzetten; wat echt over licht gaat (Lampen uit, scènes) blijft lampen.
+   dv('tekst') = t() met het hub-woord; elementen met data-dev wisselen mee (data-base = de Nederlandse lamp-tekst). */
+const DEV={'Lampen':'Apparaten','Je lampen':'Je apparaten','Lamp':'Apparaat','Lamp sluiten':'Apparaat sluiten',
+  'Tik op de naam van een lamp om hem in te stellen.':'Tik op de naam van een apparaat om het in te stellen.',
+  'Knipper laat een lamp aan en uit gaan zodat je hem vindt. Aan en Uit zetten hem aan of uit. Met het kleurvakje kies je zelf een kleur. Het kruisje haalt een lamp weg; je zet hem terug onder Lampen toevoegen.':
+    'Knipper laat een lamp aan en uit gaan zodat je hem vindt. Aan en Uit zetten hem aan of uit. Met het kleurvakje kies je zelf een kleur. Het kruisje haalt een apparaat weg; je zet het terug onder Apparaten toevoegen.',
+  'Lampen toevoegen':'Apparaten toevoegen','Nieuwe lampen zoeken':'Nieuwe apparaten zoeken','Verwijderde lampen':'Verwijderde apparaten',
+  'Terugzetten zet de lamp weer in je lijst. Definitief verwijderen haalt hem hier weg; hij komt dan ook niet terug bij nieuwe lampen zoeken.':
+    'Terugzetten zet het apparaat weer in je lijst. Definitief verwijderen haalt het hier weg; het komt dan ook niet terug bij nieuwe apparaten zoeken.',
+  'Kies een lamp en tik op de kaart om hem op te hangen. Sleep om te verschuiven.':'Kies een apparaat en tik op de kaart om het neer te zetten. Sleep om te verschuiven.',
+  'Kies eerst een lamp hieronder':'Kies eerst een apparaat hieronder','Instellingen van deze lamp':'Instellingen van dit apparaat',
+  'Hang je lampen op, of maak een armatuur met meerdere lampen (rails, hanglamp-balk, staande lamp met spots).':
+    'Zet je apparaten neer: hang je lampen op en zet een airco op zijn plek. Of maak een armatuur met meerdere lampen (rails, hanglamp-balk, staande lamp met spots).',
+  'Nog geen lampen. Voeg ze onderaan toe.':'Nog geen apparaten. Voeg ze toe onder Apparaten.',
+  'Nog geen lampen in deze kamer. Kies bij Lampen welke lampen hier horen.':'Nog geen apparaten in deze kamer. Kies bij Apparaten welke apparaten hier horen.',
+  'Nog geen lampen.':'Nog geen apparaten.','Nieuwe lampen komen hier tot je ze in een kamer zet.':'Nieuwe apparaten komen hier tot je ze in een kamer zet.',
+  '"{n}" verwijderen? Je kunt hem later terugzetten onder Lampen toevoegen.':'"{n}" verwijderen? Je kunt het later terugzetten onder Apparaten toevoegen.',
+  '{n} lamp(en) staan nog niet op de kaart. Zet ze neer onder Kamers.':'Apparaten nog niet op de kaart: {n}. Zet ze neer onder Kamers.',
+  '{w} × {h} m · {n} lamp(en)':'{w} × {h} m · apparaten: {n}',
+  '"{r}" verwijderen? De plattegrond is dan weg en {n} lamp(en) gaan naar Zonder kamer.':'"{r}" verwijderen? De plattegrond is dan weg en de apparaten hier ({n}) gaan naar Zonder kamer.',
+  'Lampen in meer kamers? Maak een kamer erbij, met een eigen plattegrond.':'Apparaten in meer kamers? Maak een kamer erbij, met een eigen plattegrond.',
+  'Elke kamer heeft een eigen plattegrond en eigen lampen. De volgorde hier is ook de volgorde bij Bediening.':'Elke kamer heeft een eigen plattegrond en eigen apparaten. De volgorde hier is ook de volgorde bij Bediening.',
+  'Links of achter iets aanpassen schuift je meubels, tv en lampen mee, zodat alles op zijn plek blijft.':'Links of achter iets aanpassen schuift je meubels, tv en apparaten mee, zodat alles op zijn plek blijft.'};
+const dv=(s,v)=>t(SRV&&DEV[s]?DEV[s]:s,v);
+// De Nederlandse tekst onthouden voordat de vertaling hem vervangt
+document.querySelectorAll('[data-dev]').forEach(e=>{if(!e.dataset.base)e.dataset.base=e.textContent.trim()});
+function devTexts(){document.querySelectorAll('[data-dev]').forEach(e=>{e.textContent=dv(e.dataset.base)})}
+/* ---------- airco: een apparaat, geen lamp ----------
+   kind 'airco' (van de server): geen lampverbinding, doet niet mee met sync, scènes en lampen aan/uit.
+   Op de kaart en in de lijst: naam, kamer, plek en uiterlijk (look airco-...). Bediening volgt later. */
+const isAir=l=>!!l&&l.kind==='airco';
+const isLight=l=>!isAir(l);
+const aircoWall=l=>/^airco-wand/.test(l.look||'');
+// Een airco zonder airco-uiterlijk (bijvoorbeeld van een oudere server): mobiel of aan de muur, wit
+function airNorm(l){if(isAir(l)&&!Room.isAircoLook(l.look))l.look=l.category==='ydkt'?'airco-mobiel-wit':'airco-wand-wit';return l}
+/* Klein plaatje van een airco (lijst, chips, keuzeknoppen); px = getoonde maat */
+function airIcon(look,size,px){const wall=/^airco-wand/.test(look),c=preview(g=>Room.lampFixture(g,{id:'i',x:size/2/Room.PPM-1,y:(wall?size*.72:size*.55)/Room.PPM-1,look},'#fff',null),size);
+  c.className='devic';c.style.width=c.style.height=px+'px';return c}
 async function api(path, body){
   const r = await fetch(path, body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
   return r.json();
@@ -625,11 +682,13 @@ const tvRoom=()=>roomsList().find(r=>r.tv)||roomsList()[0];
 // Kamer van een lamp; met één kamer hoort elke lamp daarbij (zo doet de server het ook)
 function lampRoom(l){const rs=roomsList();if(rs.length===1)return rs[0].id;return rs.some(r=>r.id===l.room)?l.room:''}
 const lampsIn=id=>lamps.filter(l=>lampRoom(l)===id);
+// Alleen de echte lampen (voor aan/uit, tellingen en de kaartbediening)
+const lightsIn=id=>lampsIn(id).filter(isLight);
 const roomLamps=()=>lampsIn(curRoom);
 // 'room' alleen meesturen als de app kamers kent
 const withRoom=(b,id)=>hasRooms()&&id?{...b,room:id}:b;
 /* Lamp aan: zoals op de kaart (eigen indeling) of zoals de lamp zelf meldt */
-function lampIsOn(id){const ll=S&&S.liveLamps&&S.liveLamps[id];if(ll)return ll.bright>0;const lv=live[id];return !!lv&&lv.online!==false&&lv.on!==false}
+function lampIsOn(id){if(isAir(lamps.find(l=>l.id===id)||live[id]))return false;const ll=S&&S.liveLamps&&S.liveLamps[id];if(ll)return ll.bright>0;const lv=live[id];return !!lv&&lv.online!==false&&lv.on!==false}
 const roomAnyOn=id=>lampsIn(id).some(l=>lampIsOn(l.id));
 /* Indeling compleet maken: een nieuwe kamer kan zonder vloer, meubels of (als tv-kamer) zonder tv binnenkomen */
 function fixLayout(L0,r){const L=Room.migrate(L0||{});L.w=Math.max(2,Math.round(L.w||4));L.h=Math.max(2,Math.round(L.h||3));
@@ -679,7 +738,8 @@ function buildTools(){
     if(k==='item')icon=spriteThumb('sofa');
     if(k==='tv')icon=preview(g=>{g.fillStyle='#6b4430';g.fillRect(0,6,13,5);g.fillStyle='#0c0c10';g.fillRect(1,3,11,4);g.fillStyle='#f2b35a';g.fillRect(1,7,11,1)},13);
     if(k==='lamp')icon=preview(g=>{g.fillStyle='rgba(255,214,150,.45)';g.fillRect(2,2,9,9);g.fillStyle='#2a1a2e';g.fillRect(4,3,5,7);g.fillRect(3,4,7,5);g.fillStyle='#d8d2c4';g.fillRect(4,4,5,5);g.fillStyle='#ffd696';g.fillRect(5,5,3,3)},13);
-    b.append(icon,document.createTextNode(t(label)));b.onclick=()=>setTool(k);tb.append(b);
+    const lb=document.createElement('span');if(k==='lamp')lb.className='lt';lb.dataset.dev='';lb.dataset.base=label;lb.textContent=dv(label);
+    b.append(icon,lb);b.onclick=()=>setTool(k);tb.append(b);
   }
   const fl=$('floors');fl.innerHTML='';
   for(const f of Room.FLOORS){
@@ -723,7 +783,7 @@ function setTool(k){
   $('panelFloor').classList.toggle('hidden',k!=='floor');floorState();
   $('panelTv').classList.toggle('hidden',k!=='tv');$('panelItem').classList.toggle('hidden',k!=='item');$('panelLamp').classList.toggle('hidden',k!=='lamp');
   if(k==='lamp')fxUI();
-  $('toolHelp').textContent=t(HELP[k]);
+  $('toolHelp').textContent=dv(HELP[k]);
   if(k!=='item'){selItem=null;newItemType=null}
   if(k!=='lamp')selLamp=null;
   paletteState();draw();
@@ -805,6 +865,7 @@ cv.addEventListener('pointerdown',e=>{if(!L||!view||curTab!=='room')return;cv.se
     // Armatuur (of een lamp erin) aantikken = dat armatuur kiezen en verslepen; losse lamp = toevoegen; lege plek = armatuur daarheen.
     // Een lamp uit een ander armatuur halen gaat met de knoppen, zodat slepen nooit per ongeluk een lamp verhuist.
     const f=fxSel(),hitL=lampHit(mx,my),hitF=(hitL&&fxOf(hitL.id))||(!hitL&&fxAt(mx,my));
+    if(isAir(hitL)){toast(t('Een airco kan niet in een armatuur.'));return}
     if(hitF){selFx=hitF.id;fxNew=false;drag='fx';fxOff=[hitF.x-mx,hitF.y-my];fxUI();draw()}
     else if(!f)toast(t('Kies of maak eerst een armatuur'));
     else if(hitL)fxToggle(f,hitL.id);
@@ -819,7 +880,7 @@ cv.addEventListener('pointerdown',e=>{if(!L||!view||curTab!=='room')return;cv.se
       else{const l=lamps.find(l=>l.id===selLamp);if(!l)return;
         // Lamp zonder kamer: neerzetten = in deze kamer zetten
         if(hasRooms()&&lampRoom(l)!==curRoom){l.room=curRoom;lampList()}
-        l.x=snap(mx);l.y=snap(my);drag='lamp';changed();showLamp();chips()}}
+        l.x=snap(mx);l.y=snap(my);airFix(l);drag='lamp';changed();showLamp();chips()}}
     else toast(t('Kies eerst een lamp hieronder'));
   }
 });
@@ -828,7 +889,7 @@ cv.addEventListener('pointermove',e=>{if(!L||!view)return;const [mx,my]=pos(e);
   else if(drag==='tv'){L.tv.x=snap(mx);L.tv.y=snap(my);changed()}
   else if(drag==='item'&&L.items[selItem]){L.items[selItem].x=snap(mx);L.items[selItem].y=snap(my);wallFix(L.items[selItem]);changed()}
   else if(drag==='fx'){const f=fxSel();if(f){f.x=Math.max(0,snap(mx+fxOff[0]));f.y=Math.max(0,snap(my+fxOff[1]));fxPlace(f);changed()}}
-  else if(drag==='lamp'&&selLamp){const l=lamps.find(l=>l.id===selLamp);l.x=Math.max(0,snap(mx));l.y=Math.max(0,snap(my));changed();showLamp()}
+  else if(drag==='lamp'&&selLamp){const l=lamps.find(l=>l.id===selLamp);l.x=Math.max(0,snap(mx));l.y=Math.max(0,snap(my));airFix(l);changed();showLamp()}
 });
 const up=()=>{painting=false;drag=null};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
 /* ---------- kamer groot: lampen bedienen op de kaart ----------
@@ -878,7 +939,7 @@ function lampHit(mx,my){let best=null,bd=1e9;
     if(mx<x0||mx>x1||my<y0||my>y1)continue;const d=Math.hypot((x0+x1)/2-mx,(y0+y1)/2-my);if(d<bd){bd=d;best=l}}
   return best}
 cv.addEventListener('pointerdown',e=>{if(!fullOpen||!view)return;const [mx,my]=pos(e);const l=lampHit(mx,my);if(!l)return;
-  e.preventDefault();const p={id:l.id,long:false,x:e.clientX,y:e.clientY};press=p;
+  e.preventDefault();if(isAir(l)){toast(t('{n}: bediening van de airco volgt later.',{n:l.name}));return}const p={id:l.id,long:false,x:e.clientX,y:e.clientY};press=p;
   p.timer=setTimeout(()=>{if(press!==p)return;p.long=true;if(navigator.vibrate)navigator.vibrate(20);openSheet(p.id)},450)});
 cv.addEventListener('pointermove',e=>{if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>12){clearTimeout(press.timer);press=null}});
 cv.addEventListener('pointerup',()=>{if(!fullOpen||!press)return;clearTimeout(press.timer);const p=press;press=null;if(p.long)return;
@@ -942,18 +1003,18 @@ function chips(){
   const c=$('chips');c.innerHTML='';
   // Lampen van deze kamer, en (met meer kamers) lampen zonder kamer: die zet je hier neer
   const mine=roomLamps(),free=multi()?lamps.filter(l=>!lampRoom(l)):[];
-  if(!lamps.length){c.innerHTML='<span>'+t('Nog geen lampen. Voeg ze onderaan toe.')+'</span>';return}
-  if(!mine.length&&!free.length){c.innerHTML='<span>'+t('Nog geen lampen in deze kamer. Kies bij Lampen welke lampen hier horen.')+'</span>';return}
+  if(!lamps.length){c.innerHTML='<span>'+dv('Nog geen lampen. Voeg ze onderaan toe.')+'</span>';return}
+  if(!mine.length&&!free.length){c.innerHTML='<span>'+dv('Nog geen lampen in deze kamer. Kies bij Lampen welke lampen hier horen.')+'</span>';return}
   for(const l of [...mine,...free]){const b=document.createElement('button');b.className='btn chip'+(l.id===selLamp?' sel':'');
-    const d=document.createElement('span');d.className='dot';const lv=live[l.id];d.style.background=lv&&lv.online?(S&&S.sync?lv.color:'#ffd696'):'#6a6070';
+    let d;if(isAir(l))d=airIcon(l.look,16,20);else{d=document.createElement('span');d.className='dot';const lv=live[l.id];d.style.background=lv&&lv.online?(S&&S.sync?lv.color:'#ffd696'):'#6a6070'}
     const gn=(groups.find(g=>g.id===l.group)||{}).name;
-    b.append(d,document.createTextNode(l.name+(gn?' · '+gn:'')+(!lampRoom(l)?t(' (zonder kamer)'):l.x<0?t(' (nog ophangen)'):'')));b.onclick=()=>selectLamp(l.id);c.append(b)}
+    b.append(d,document.createTextNode(l.name+(gn?' · '+gn:'')+(!lampRoom(l)?t(' (zonder kamer)'):l.x<0?t(isAir(l)?' (nog neerzetten)':' (nog ophangen)'):'')));b.onclick=()=>selectLamp(l.id);c.append(b)}
 }
 function lampList(){
   const box=$('lampList');
-  if(!lamps.length){box.innerHTML='<span>'+t('Nog geen lampen.')+'</span>';return}
+  if(!lamps.length){box.innerHTML='<span>'+dv('Nog geen lampen.')+'</span>';return}
   // Met meer kamers: per kamer een kopje, en per lamp een keuzemenu Kamer (lampen zonder kamer onderaan)
-  const key=lamps.map(l=>l.id+l.name+'@'+lampRoom(l)).join()+'|'+roomsList().map(r=>r.id+r.name+r.color).join();
+  const key=lamps.map(l=>l.id+l.name+'@'+lampRoom(l)+(isAir(l)?l.look:'')).join()+'|'+roomsList().map(r=>r.id+r.name+r.color).join()+SRV;
   if(box.dataset.ids!==key){
     box.dataset.ids=key;$('lampDetailHold').append($('lampDetailPanel'));box.innerHTML='';
     const parts=multi()?[...roomsList().map(r=>[r.id,r.name,r.color]),['',t('Zonder kamer'),'#6d5a4c']]:[[roomsList()[0].id]];
@@ -961,25 +1022,29 @@ function lampList(){
      if(multi()){if(!ls.length&&!rid)continue;
       const h=document.createElement('div');h.className='lhead';h.innerHTML=`<span class="rdot" style="background:${esc(rcol)}"></span><span class="grow"></span>`;
       h.querySelector('.grow').textContent=rname+(ls.length?' ('+ls.length+')':'');box.append(h);
-      if(!ls.length){const p=document.createElement('div');p.className='hint';p.style.margin='4px 0 6px';p.textContent=t('Nog geen lampen.');box.append(p)}
-      if(!rid){const p=document.createElement('div');p.className='hint';p.style.margin='4px 0 0';p.textContent=t('Nieuwe lampen komen hier tot je ze in een kamer zet.');box.append(p)}}
+      if(!ls.length){const p=document.createElement('div');p.className='hint';p.style.margin='4px 0 6px';p.textContent=dv('Nog geen lampen.');box.append(p)}
+      if(!rid){const p=document.createElement('div');p.className='hint';p.style.margin='4px 0 0';p.textContent=dv('Nieuwe lampen komen hier tot je ze in een kamer zet.');box.append(p)}}
     for(const l of ls){
-      const r=document.createElement('div');r.className='lrow';r.dataset.id=l.id;
-      r.innerHTML=`<span class="name"><span class="chev"></span><span class="nm"></span></span><button class="btn" data-a="blink">${t('Knipper')}</button><button class="btn" data-a="power"></button><input type="color" value="#ffb050"><button class="btn red x" data-a="del" title="${t('Verwijderen')}" aria-label="${t('Verwijderen')}">\u2715</button>`;
+      const r=document.createElement('div');r.className='lrow';r.dataset.id=l.id;const air=isAir(l);
+      // Airco: eigen plaatje, geen knipper, aan/uit of kleur (bediening volgt later)
+      r.innerHTML=air?`<span class="name"><span class="chev"></span><span class="nm"></span></span><span data-a="anchor"></span><button class="btn red x" data-a="del" title="${t('Verwijderen')}" aria-label="${t('Verwijderen')}">\u2715</button>`
+        :`<span class="name"><span class="chev"></span><span class="nm"></span></span><button class="btn" data-a="blink">${t('Knipper')}</button><button class="btn" data-a="power"></button><input type="color" value="#ffb050"><button class="btn red x" data-a="del" title="${t('Verwijderen')}" aria-label="${t('Verwijderen')}">\u2715</button>`;
+      if(air){r.dataset.air='1';r.querySelector('.nm').before(airIcon(l.look,16,22))}
       if(multi()){const sel=document.createElement('select');sel.className='lroom';sel.setAttribute('aria-label',t('Kamer van {n}',{n:l.name}));
         for(const [id,nm] of [...roomsList().map(x=>[x.id,x.name]),['',t('Zonder kamer')]]){const o=document.createElement('option');o.value=id;o.textContent=nm;sel.append(o)}
-        sel.value=lampRoom(l);sel.onchange=()=>moveLamp(l,sel.value);r.querySelector('[data-a=blink]').before(sel);r.classList.add('rm')}
+        sel.value=lampRoom(l);sel.onchange=()=>moveLamp(l,sel.value);r.querySelector(air?'[data-a=anchor]':'[data-a=blink]').before(sel);r.classList.add('rm')}
+      if(air)r.querySelector('[data-a=anchor]').remove();
       r.querySelector('.nm').textContent=l.name;r.querySelector('.name').onclick=()=>{if(selLamp===l.id){closeLamp();return}selectLamp(l.id);setTimeout(()=>r.scrollIntoView({block:'start'}),50)};
-      r.querySelector('[data-a=blink]').onclick=async()=>toast((await api('/api/identify',{id:l.id})).message);
+      if(!air){r.querySelector('[data-a=blink]').onclick=async()=>toast((await api('/api/identify',{id:l.id})).message);
       r.querySelector('[data-a=power]').onclick=async()=>{const lv=live[l.id],on=!!lv&&lv.on!==false;
         const res=await api('/api/lamp/power',{id:l.id,on:!on});toast(res.message);if(res.ok&&lv){lv.on=!on;lampList()}poll()};
-      r.querySelector('[data-a=del]').onclick=async()=>{if(!confirm(t('"{n}" verwijderen? Je kunt hem later terugzetten onder Lampen toevoegen.',{n:l.name})))return;
+      r.querySelector('input').onchange=async e=>toast((await api('/api/color',{id:l.id,color:e.target.value})).message)}
+      r.querySelector('[data-a=del]').onclick=async()=>{if(!confirm(dv('"{n}" verwijderen? Je kunt hem later terugzetten onder Lampen toevoegen.',{n:l.name})))return;
         const res=await api('/api/lamp/delete',{id:l.id});toast(res.message);if(selLamp===l.id)selLamp=null;load()};
-      r.querySelector('input').onchange=async e=>toast((await api('/api/color',{id:l.id,color:e.target.value})).message);
       box.append(r);
     }}
   }
-  for(const r of box.children){const lv=live[r.dataset.id];if(!lv)continue;
+  for(const r of box.children){const lv=live[r.dataset.id];if(!lv||r.dataset.air)continue;
     const off=lv.online&&lv.on===false;
     const ci=r.querySelector('input[type=color]');if(ci&&document.activeElement!==ci&&/^#[0-9a-f]{6}$/i.test(lv.color||'')&&lv.color!=='#555555'&&!off)ci.value=lv.color;
     if(ci){ci.style.opacity=!lv.online||off?'.35':'1';ci.title=!lv.online?t('niet bereikbaar'):off?t('uit'):t('aan')}
@@ -999,6 +1064,7 @@ function moveLamp(l,to){const from=lampRoom(l);if(from===to)return;
 $('testAll').onclick=async()=>toast((await api('/api/test',{})).message);
 function selectLamp(id){selLamp=id;chips();showLamp();draw()}
 function follows(l){
+  if(isAir(l))return '';
   // De sync gaat over de tv-kamer: plek ten opzichte van de tv in die kamer
   const tr=tvRoom(),L=layouts[tr.id];
   if(lampRoom(l)!==tr.id)return t('Staat niet in de kamer met de tv: doet niet mee met de sync');
@@ -1018,6 +1084,8 @@ function follows(l){
 }
 function showLamp(){
   const l=lamps.find(l=>l.id===selLamp);$('lampDetailPanel').classList.toggle('hidden',!l);$('roomLampRow').classList.toggle('hidden',!l);$('roomLookBox').classList.toggle('hidden',!l);
+  // Airco: de lampinstellingen verdwijnen (.lightonly), de keuze Uiterlijk komt erbij (.aironly)
+  for(const id of ['lampDetailPanel','panelLamp'])$(id).classList.toggle('isair',isAir(l));if(l&&isAir(l))airUI(l);
   const row=l&&[...$('lampList').children].find(r=>r.dataset.id===l.id);if(row&&row.nextSibling!==$('lampDetailPanel'))row.after($('lampDetailPanel'));
   for(const r of $('lampList').children){r.classList.toggle('sel',r.dataset.id===selLamp);const c=r.querySelector('.chev');if(c)c.textContent=r.dataset.id===selLamp?'\u25BE':'\u25B8'}if(!l)return;
   $('lampDetailTitle').textContent=l.name;$('roomLampName').textContent=l.name;
@@ -1084,7 +1152,7 @@ function fxUI(){
   $('fxAim').classList.toggle('hidden',f.type!=='rail');$('fxAimHint').classList.toggle('hidden',f.type!=='rail');$('fxAim').textContent=t('Spots wijzen')+': '+aimText(f.aim);
   $('fxName').textContent=fxName(f);$('fxRot').textContent=t('Draai')+' ('+(f.rot||0)+'°)';$('fxGap').textContent=f.gap.toFixed(1);
   const box=$('fxLamps');box.innerHTML='';
-  for(const l of roomLamps()){const k=f.lamps.indexOf(l.id),other=k<0&&fxOf(l.id);
+  for(const l of roomLamps().filter(isLight)){const k=f.lamps.indexOf(l.id),other=k<0&&fxOf(l.id);
     const b=document.createElement('button');b.className='btn'+(k>=0?' on':'');b.style.cssText='padding:6px 9px;font-size:14px'+(other?';opacity:.6':'');
     b.textContent=(k>=0?(k+1)+'. ':'')+l.name+(other?' · '+fxName(other):'');b.onclick=()=>fxToggle(f,l.id);box.append(b)}
 }
@@ -1140,6 +1208,23 @@ for(const k of Room.LOOKS){if(k.hidden)continue;const b=document.createElement('
   const s=document.createElement('span');s.textContent=t(k.label);b.append(s);
   b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.look=k.id;l.shape=k.id==='rod'?'rod':'bulb';l.height=k.height;changed();showLamp()}};
   $('lookGrid').append(b)}
+/* ---------- airco: uiterlijk kiezen, draaien (mobiel) en tegen de muur (hangend) ---------- */
+// Hangende airco: op de muurlijn van de dichtstbijzijnde muur (zoals een deur of raam)
+function airFix(l){if(!isAir(l)||!aircoWall(l)||l.x<0||!L)return;const s=Room.wallSnap(L,l.x,l.y);l.x=s.x;l.y=s.y}
+const airDir=l=>{const a=L&&L.aims?L.aims[l.id]:null;return a==null||a<0?90:a};
+function setAirLook(look){const l=lamps.find(x=>x.id===selLamp);if(!isAir(l)||l.look===look)return;const wasWall=aircoWall(l);l.look=look;
+  if(l.x>=0&&L&&lampRoom(l)===curRoom){
+    if(aircoWall(l))airFix(l);
+    // Van de muur naar mobiel: een stukje de kamer in, met de voorkant naar de kamer
+    else if(wasWall){const s=Room.wallSnap(L,l.x,l.y),d={n:[0,.5,90],s:[0,-.5,270],w:[.5,0,0],e:[-.5,0,180]}[s.wall];
+      l.x=Math.max(0,l.x+d[0]);l.y=Math.max(0,l.y+d[1]);L.aims=L.aims||{};L.aims[l.id]=d[2]}}
+  changed();showLamp();lampList();chips()}
+for(const box of ['airLooks','airLooksRoom'])for(const k of Room.AIRCO_LOOKS){const b=document.createElement('button');b.className='btn';b.dataset.k=k.id;
+  const s=document.createElement('span');s.textContent=t(k.label);b.append(airIcon(k.id,24,40),s);b.onclick=()=>setAirLook(k.id);$(box).append(b)}
+function airUI(l){document.querySelectorAll('#airLooks .btn,#airLooksRoom .btn').forEach(b=>b.classList.toggle('on',b.dataset.k===l.look));
+  const wall=aircoWall(l);$('airRotRow').classList.toggle('hidden',wall);$('airWallHint').classList.toggle('hidden',!wall);
+  $('airRot').textContent=t('Draai')+' ('+aimText(airDir(l))+')'}
+$('airRot').onclick=()=>{const l=lamps.find(x=>x.id===selLamp);if(!isAir(l)||!L)return;L.aims=L.aims||{};L.aims[l.id]=(airDir(l)+90)%360;changed();showLamp()};
 document.querySelectorAll('#satSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.satBoost=+b.dataset.k;changed();showLamp()}});
 document.querySelectorAll('#briSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.maxBright=+b.dataset.k;changed();showLamp()}});
 document.querySelectorAll('#layerSeg .btn').forEach(b=>b.onclick=()=>{const l=lamps.find(l=>l.id===selLamp);if(l){l.layers=+b.dataset.n;changed();showLamp()}});
@@ -1159,7 +1244,7 @@ function lowUI(l){
   $('lowState').textContent=st<0.005?t('Geen correctie'):t('Naar {c}, sterkte {s}%',{c:t(hueName(l.lowHue??190)),s:Math.round(st*100)});
   $('lowPick').classList.toggle('hidden',lowOpen!==l.id);$('lowBtn').classList.toggle('open',lowOpen===l.id);
   if(lowOpen!==l.id)return;
-  const box=$('lowMulti'),others=lamps.filter(x=>x.id!==l.id),key=others.map(x=>x.id+x.name).join();
+  const box=$('lowMulti'),others=lamps.filter(x=>x.id!==l.id&&isLight(x)),key=others.map(x=>x.id+x.name).join();
   if(box.dataset.k!==key){box.dataset.k=key;box.innerHTML='';
     for(const x of others){const b=document.createElement('button');b.className='btn';b.dataset.id=x.id;b.textContent=x.name;b.style.cssText='padding:6px 9px;font-size:14px';
       b.onclick=()=>{if(lowWith.has(x.id)){lowWith.delete(x.id);api('/api/lowcal',{id:x.id,on:false})}else lowWith.add(x.id);showLamp();lowSend()};box.append(b)}}
@@ -1195,7 +1280,7 @@ function matchUI(l){
   $('matchState').textContent=balText(l);
   $('matchPick').classList.toggle('hidden',matchOpen!==l.id);$('matchBtn').classList.toggle('open',matchOpen===l.id);
   if(matchOpen!==l.id)return;
-  const sel=$('matchRef'),others=lamps.filter(x=>x.id!==l.id),key=others.map(x=>x.id+x.name).join();
+  const sel=$('matchRef'),others=lamps.filter(x=>x.id!==l.id&&isLight(x)),key=others.map(x=>x.id+x.name).join();
   if(sel.dataset.k!==key){sel.dataset.k=key;sel.innerHTML='';for(const x of others){const o=document.createElement('option');o.value=x.id;o.textContent=x.name;sel.append(o)}}
   if(!others.some(x=>x.id===matchRef))matchRef=others[0]?others[0].id:'';sel.value=matchRef;
   if(document.activeElement!==$('balWarm'))$('balWarm').value=l.balWarm||0;
@@ -1282,7 +1367,7 @@ function groupList(){
       r.innerHTML=`<input type="text" style="width:100%"><div class="gl"></div><div class="hint gfull hidden">${t('Alle lampen zitten al in een andere groep.')}</div><div class="row" style="margin-top:8px"><button class="btn tvonly" data-a="set">${t('Instellingen')}</button><span class="grow"></span><button class="btn red" data-a="del">${t('Verwijderen')}</button></div><div class="gset"></div>`;
       const inp=r.querySelector('input');inp.placeholder=t('Naam van de groep');
       inp.oninput=()=>{g.name=inp.value;groupUI();chips();changed(true)};
-      for(const l of lamps){const b=document.createElement('button');b.className='btn';b.dataset.lamp=l.id;b.textContent=l.name;
+      for(const l of lamps.filter(isLight)){const b=document.createElement('button');b.className='btn';b.dataset.lamp=l.id;b.textContent=l.name;
         b.onclick=()=>{l.group=l.group===g.id?'':g.id;changed(true);groupUI();showLamp();chips()};r.querySelector('.gl').append(b)}
       r.querySelector('[data-a=set]').onclick=()=>groupSettings(g.id);
       r.querySelector('[data-a=del]').onclick=()=>{if(!confirm(t('Groep "{n}" verwijderen? De lampen erin gaan terug naar de standaardinstellingen.',{n:g.name})))return;
@@ -1391,7 +1476,7 @@ $('cloudSave').onclick=async()=>{const b=$('cloudSave');b.disabled=true;b.textCo
 $('wizScan').onclick=async()=>{const b=$('wizScan');b.disabled=true;b.textContent=t('Zoeken...');
   const r=await api('/api/wiz/scan',{});b.disabled=false;b.textContent=t('WiZ-lampen zoeken');toast(r.message);load()};
 $('cloudRefresh').onclick=async()=>{const b=$('cloudRefresh');b.disabled=true;b.textContent=t('Zoeken...');
-  const r=await api('/api/cloud/refresh',{});b.disabled=false;b.textContent=t('Nieuwe lampen zoeken');toast(r.message);load()};
+  const r=await api('/api/cloud/refresh',{});b.disabled=false;b.textContent=dv('Nieuwe lampen zoeken');toast(r.message);load()};
 $('cloudChange').onclick=()=>{$('cloudSetup').classList.remove('hidden');$('cloudOn').classList.add('hidden')};
 $('bkKeys').onchange=()=>{$('bkDown').href='/api/backup'+($('bkKeys').checked?'?keys=1':'')};
 $('bkFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
@@ -1475,13 +1560,13 @@ function setHomeView(id){homeView=id;try{localStorage.setItem('homeRoom',id)}cat
 // Kleur van een lamp op een kaartje: zoals hij nu brandt, grijs als hij uit staat
 function lampCol(l){if(!lampIsOn(l.id))return '#6d5a4c';const ll=S&&S.liveLamps&&S.liveLamps[l.id];if(ll&&ll.colour)return ll.colour;
   const lv=live[l.id];return lv&&/^#[0-9a-f]{6}$/i.test(lv.color||'')&&lv.color!=='#555555'?lv.color:'#ffd696'}
-function roomStatus(r){const ls=lampsIn(r.id),n=ls.filter(l=>lampIsOn(l.id)).length;
+function roomStatus(r){const ls=lightsIn(r.id),n=ls.filter(l=>lampIsOn(l.id)).length;
   if(r.tv&&S&&S.sync)return t('tv synct');if(r.scene)return t(r.sceneName||'Scène');
   if(!ls.length)return t('nog geen lampen');return n?t('{a} van {b} aan',{a:n,b:ls.length}):t('alles uit')}
 function homeUI(){if(!S)return;roomBar();const house=isHouse();
   $('housePanel').classList.toggle('hidden',!house);$('homeMapPanel').classList.toggle('hidden',house);$('ctrlPanel').classList.toggle('hidden',house);
   if(house){houseCards();return}
-  const rid=homeRoomId(),rm=roomById(rid)||{},ls=lampsIn(rid),isTv=!!rm.tv;
+  const rid=homeRoomId(),rm=roomById(rid)||{},ls=lampsIn(rid),lights=ls.filter(isLight),isTv=!!rm.tv;
   $('homeRoomTitle').classList.toggle('hidden',!multi());
   if(multi())$('homeRoomTitle').innerHTML=esc(rm.name)+(isTv?' <span class="badge">'+esc(t('tv'))+'</span>':'');
   $('tvBanner').classList.toggle('hidden',!(multi()&&isTv&&S.sync));
@@ -1489,16 +1574,16 @@ function homeUI(){if(!S)return;roomBar();const house=isHouse();
   // Sync en tv-status horen bij de kamer met de tv
   $('syncBtn').classList.toggle('hidden',!isTv);
   const unplaced=ls.filter(l=>l.x<0).length;$('homeUnplaced').classList.toggle('hidden',!multi()||(!!ls.length&&!unplaced));
-  $('homeUnplaced').textContent=!ls.length?t('Nog geen lampen in deze kamer. Kies bij Lampen welke lampen hier horen.'):t('{n} lamp(en) staan nog niet op de kaart. Zet ze neer onder Kamers.',{n:unplaced});
-  $('fullOpen').classList.toggle('hidden',!ls.length&&multi());
-  if(hasRooms()){$('offBtn').textContent=t(roomAnyOn(rid)?'Lampen uit':'Lampen aan');$('offBtn').disabled=offBusy||!ls.length}
+  $('homeUnplaced').textContent=!ls.length?dv('Nog geen lampen in deze kamer. Kies bij Lampen welke lampen hier horen.'):dv('{n} lamp(en) staan nog niet op de kaart. Zet ze neer onder Kamers.',{n:unplaced});
+  $('fullOpen').classList.toggle('hidden',!lights.length&&multi());
+  if(hasRooms()){$('offBtn').textContent=t(roomAnyOn(rid)?'Lampen uit':'Lampen aan');$('offBtn').disabled=offBusy||!lights.length}
   else $('offBtn').textContent=t(S.lampsOff?'Lampen aan':'Lampen uit');
   $('homeStatus').classList.toggle('hidden',multi()&&!isTv)}
-function houseCards(){const rs=roomsList(),all=lamps.filter(l=>lampRoom(l)),nOn=all.filter(l=>lampIsOn(l.id)).length;
+function houseCards(){const rs=roomsList(),all=lamps.filter(l=>lampRoom(l)&&isLight(l)),nOn=all.filter(l=>lampIsOn(l.id)).length;
   $('houseSum').textContent=t('{a} van {b} lampen aan',{a:nOn,b:all.length});
   $('houseHint').textContent=t('Hele huis uit laat {r} aan als de tv synct of daar een scène loopt.',{r:tvRoom().name});
   $('houseHint').classList.toggle('hidden',document.body.classList.contains('srv'));
-  const data=rs.map(r=>{const ls=lampsIn(r.id);return [r.id,r.name,r.color,!!r.tv,roomStatus(r),ls.length,roomAnyOn(r.id),(ls.length?ls.map(lampCol):['#6d5a4c']).slice(0,10)]});
+  const data=rs.map(r=>{const ls=lightsIn(r.id);return [r.id,r.name,r.color,!!r.tv,roomStatus(r),ls.length,roomAnyOn(r.id),(ls.length?ls.map(lampCol):['#6d5a4c']).slice(0,10)]});
   const box=$('houseCards'),key=JSON.stringify(data)+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;box.innerHTML='';
   for(const [id,name,color,tv,status,n,on,sw] of data){const c=document.createElement('div');c.className='rcard';c.tabIndex=0;c.setAttribute('role','button');
     c.innerHTML=`<span class="nm"><span class="rdot" style="background:${esc(color)}"></span><span class="grow"></span></span><span class="mrow"><span class="meta"></span><button class="btn bulb${on?' on':''}"${n?'':' disabled'}>${BULB}</button></span><span class="sw">${sw.map(x=>`<i style="background:${esc(x)}"></i>`).join('')}</span>`;
@@ -1533,7 +1618,7 @@ function roomListUI(){const rs=roomsList(),box=$('roomList');
   data.forEach(([id,name,color,tv,w,h,n],i)=>{const r=document.createElement('div');r.className='rrow';
     r.innerHTML=`<span class="rdot" style="background:${esc(color)}"></span><span class="name"><b></b><br><span class="sub"></span></span><button class="btn" data-a="up" aria-label="${esc(t('Omhoog'))}">▲</button><button class="btn" data-a="down" aria-label="${esc(t('Omlaag'))}">▼</button><button class="btn" data-a="edit">${esc(t('Bewerken'))}</button>`;
     r.querySelector('b').innerHTML=esc(name)+(tv?' <span class="badge">'+esc(t('tv'))+'</span>':'');
-    r.querySelector('.sub').textContent=t('{w} × {h} m · {n} lamp(en)',{w,h,n});
+    r.querySelector('.sub').textContent=dv('{w} × {h} m · {n} lamp(en)',{w,h,n});
     const up=r.querySelector('[data-a=up]'),dn=r.querySelector('[data-a=down]');up.disabled=i===0;dn.disabled=i===data.length-1;
     const move=d=>{const ids=data.map(x=>x[0]);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];roomOp('/api/room/order',{ids})};
     up.onclick=()=>move(-1);dn.onclick=()=>move(1);
@@ -1554,7 +1639,7 @@ function metaUI(rid){const r=roomById(rid);if(!r)return;const m=multi();
   const why=!m?t('De laatste kamer kan niet weg.'):r.tv?t('De kamer met de tv kan niet weg. Zet de tv eerst in een andere kamer.'):'';
   $('erDelBox').classList.toggle('hidden',!m);$('erDel').disabled=!!why;$('erDelHint').textContent=why;if(why)$('erDelAsk').classList.add('hidden');
   const n=lampsIn(r.id).length;
-  $('erDelText').textContent=n?t('"{r}" verwijderen? De plattegrond is dan weg en {n} lamp(en) gaan naar Zonder kamer.',{r:r.name,n}):t('"{r}" verwijderen? De plattegrond is dan weg.',{r:r.name});
+  $('erDelText').textContent=n?dv('"{r}" verwijderen? De plattegrond is dan weg en {n} lamp(en) gaan naar Zonder kamer.',{r:r.name,n}):t('"{r}" verwijderen? De plattegrond is dan weg.',{r:r.name});
   $('erAddBox').classList.toggle('hidden',m)}
 async function saveName(){const rid=editRoomId(),r=roomById(rid),n=$('erName').value.trim();if(!r)return;
   if(!n){toast(t('Geef de kamer eerst een naam'));$('erName').value=r.name;return}if(n===r.name)return;
@@ -1630,8 +1715,8 @@ function liveFrom(s){
   if(s.sun&&s.sun.sunset)$('sunInfo').textContent=t('Vandaag: zonsondergang {s}, de sync start om {b}. Zonsopkomst {r}.',{s:s.sun.sunset,b:s.sun.start,r:s.sun.sunrise});
   if(s.cloud&&!cloudShown){cloudShown=true;$('cloudOn').classList.toggle('hidden',!s.cloud.configured);$('cloudSetup').classList.toggle('hidden',s.cloud.configured);$('cloudRegion').value=s.cloud.region}
   if(!$('tvHost').value)$('tvHost').value=tv.host||'';
-  const on=s.lamps.filter(l=>l.online).length;
-  const lt=t('Lampen: {a} van {b} bereikbaar',{a:on,b:s.lamps.length});
+  const ls=s.lamps.filter(isLight),on=ls.filter(l=>l.online).length;
+  const lt=t('Lampen: {a} van {b} bereikbaar',{a:on,b:ls.length});
   $('tvStatus').innerHTML=SRV?lt:`${t('Tv')}: ${tv.paired?'<span class="ok">'+t('gekoppeld')+'</span>':'<span class="bad">'+t('niet gekoppeld')+'</span>'} | ${lt}`;
   $('homeStatus').innerHTML=$('tvStatus').innerHTML;
   homeUI();if(curTab==='room')roomsTabUI();
@@ -1639,8 +1724,8 @@ function liveFrom(s){
 async function load(){
   S=await api('/api/state');
   hostMode(S);
-  if(!dirty){syncLayouts(true);curRoom='';lamps=S.lamps.map(l=>({...l}));settings=S.settings;groups=(S.groups||[]).map(g=>JSON.parse(JSON.stringify(g)));base=stateSnapshot();if(!groups.find(g=>g.id===setTarget))setTarget='';groupUI();showSettings()}
-  else{syncLayouts(false);for(const nl of S.lamps)if(!lamps.find(l=>l.id===nl.id)){lamps.push({...nl});if(base)base.lamps.push(lampFields(nl))}}
+  if(!dirty){syncLayouts(true);curRoom='';lamps=S.lamps.map(l=>airNorm({...l}));settings=S.settings;groups=(S.groups||[]).map(g=>JSON.parse(JSON.stringify(g)));base=stateSnapshot();if(!groups.find(g=>g.id===setTarget))setTarget='';groupUI();showSettings()}
+  else{syncLayouts(false);for(const nl of S.lamps)if(!lamps.find(l=>l.id===nl.id)){const x=airNorm({...nl});lamps.push(x);if(base)base.lamps.push(lampFields(x))}}
   lamps=lamps.filter(l=>S.lamps.find(n=>n.id===l.id));
   useRoom(wantRoom());
   liveFrom(S);

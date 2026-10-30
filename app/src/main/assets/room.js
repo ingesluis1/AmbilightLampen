@@ -1026,6 +1026,7 @@ const Room = (() => {
    */
   function lampBox(l, L) {
     const look = l.look || '';
+    if (isAircoLook(look)) { const b = aircoBox(l, L), m = 2; return [(b[0] - m) / PPM, (b[1] - m) / PPM, (b[2] + m) / PPM, (b[3] + m) / PPM]; }
     let strip = null;
     if (look === 'strip') { const st = stripOf(L, l), a = st.rot * Math.PI / 180, h = st.len * PPM / 2;
       const dx = Math.abs(Math.cos(a)) * h, dy = Math.abs(Math.sin(a)) * h; strip = [-dx - 2, -dy - 2, dx + 2, dy + 2]; }
@@ -1039,7 +1040,87 @@ const Room = (() => {
     return [(px[0] - m) / PPM, (px[1] - m) / PPM, (px[2] + m) / PPM, (px[3] + m) / PPM];
   }
 
+  /**
+   * Airco's: geen lamp, maar wel een apparaat op de kaart. Uiterlijk = look:
+   * airco-wand-* hangt tegen de muur (op de achtermuur van voren, op de andere muren van bovenaf),
+   * airco-mobiel-* staat op de vloer (van bovenaf, met afvoerslang aan de achterkant; richting in L.aims, 90 = voorkant naar beneden).
+   */
+  const AIRCO_LOOKS = [
+    { id: 'airco-wand-wit', label: 'Hangende airco, wit' }, { id: 'airco-wand-zwart', label: 'Hangende airco, zwart' },
+    { id: 'airco-mobiel-wit', label: 'Mobiele airco, wit' }, { id: 'airco-mobiel-zwart', label: 'Mobiele airco, zwart' },
+  ];
+  const isAircoLook = look => /^airco-/.test(look || '');
+  const aircoWall = l => /^airco-wand/.test(l.look || '');
+  function aircoPal(look) {
+    return /zwart$/.test(look)
+      ? { O: '#0e0c12', B: '#3a3842', LT: '#5a5866', SD: '#26242c', SLOT: '#08070a', FLAP: '#4a4854', }
+      : { O: '#4a4440', B: '#eeebe4', LT: '#ffffff', SD: '#c9c3b8', SLOT: '#5a544e', FLAP: '#dcd7cc' };
+  }
+  const AIR_LED = '#5fd8ff';
+  /** Aan welke muur een hangende airco zit (n = achtermuur, s, w, e); zonder kamer (plaatje in een knop) de achtermuur. */
+  const aircoSide = (L, l) => (L && L.floor ? wallSnap(L, l.x, l.y).wall : 'n');
+  /** Richting van een mobiele airco in graden (voorkant), in stappen van 90. */
+  const aircoDir = (L, l) => { const a = L && L.aims ? L.aims[l.id] : null; return a == null || a < 0 ? 90 : Math.round(a / 90) * 90 % 360; };
+  /** Rechthoeken [x, y, w, h, kleur] om (cx, cy) tekenen, q keer een kwartslag met de klok mee gedraaid. */
+  function rects(g, cx, cy, q, list) {
+    for (let [x, y, w, h, c] of list) {
+      for (let i = 0; i < q; i++) [x, y, w, h] = [-(y + h), x, h, w];
+      g.fillStyle = c; g.fillRect(cx + x, cy + y, w, h);
+    }
+  }
+  function drawAirco(g, l, L) {
+    const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM), p = aircoPal(l.look);
+    if (aircoWall(l)) {
+      const side = aircoSide(L, l);
+      if (side === 'n') {
+        // Van voren, hoog op de achtermuur: lange kast met ronde hoeken, displaylampje rechts,
+        // onderaan de uitblaasopening met lamellen en de klep eronder
+        g.fillStyle = 'rgba(40,14,30,.35)'; g.fillRect(x - 7, y - 3, 16, 1); g.fillRect(x + 9, y - 11, 1, 8);
+        g.fillStyle = p.O; g.fillRect(x - 7, y - 12, 15, 9); g.fillRect(x - 8, y - 11, 17, 7);
+        g.fillStyle = p.B; g.fillRect(x - 7, y - 11, 15, 7);
+        g.fillStyle = p.LT; g.fillRect(x - 7, y - 11, 15, 1);
+        g.fillStyle = p.SD; g.fillRect(x - 7, y - 7, 15, 1); g.fillRect(x + 7, y - 10, 1, 3);
+        g.fillStyle = AIR_LED; g.fillRect(x + 4, y - 9, 2, 1);
+        g.fillStyle = p.SLOT; g.fillRect(x - 6, y - 6, 13, 1);
+        g.fillStyle = p.FLAP; for (let i = -5; i <= 5; i += 2) g.fillRect(x + i, y - 6, 1, 1);
+        g.fillStyle = p.FLAP; g.fillRect(x - 6, y - 5, 13, 1);
+        return;
+      }
+      // Van bovenaf tegen een zijmuur of de voormuur: smalle kast langs de muur, uitblaasopening aan de kamerkant
+      const q = side === 'w' ? 3 : side === 'e' ? 1 : 2;   // eigen tekening: muur boven, kamer onder
+      rects(g, x, y, q, [
+        [-8, 0, 17, 4, p.O], [-7, 0, 15, 2, p.B], [-7, 0, 15, 1, p.LT], [-6, 2, 13, 1, p.SLOT],
+        [-5, 2, 1, 1, p.FLAP], [-2, 2, 1, 1, p.FLAP], [1, 2, 1, 1, p.FLAP], [4, 2, 1, 1, p.FLAP], [5, 1, 2, 1, AIR_LED],
+      ]);
+      return;
+    }
+    // Mobiel, van bovenaf: kast met ronde hoeken en wieltjes, rooster bovenop, bedieningsstrook voor, afvoerslang achter
+    const q = (((aircoDir(L, l) - 90) / 90) % 4 + 4) % 4, dark = /zwart$/.test(l.look);
+    const H1 = dark ? '#5e5c68' : '#808089', H2 = dark ? '#8e8c98' : '#b8b8c0', W = dark ? '#6a6874' : '#16141a';
+    g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(x - 4, y - 3, 11, 9);
+    rects(g, x, y, q, [
+      // slang: ribbels in twee grijstinten, een bocht en het raamstuk
+      [-1, -6, 2, 1, H1], [-1, -7, 2, 1, H2], [-1, -8, 2, 1, H1], [-1, -9, 2, 1, H2], [-1, -10, 2, 1, H1],
+      [1, -10, 1, 2, H2], [2, -10, 1, 2, H1], [3, -10, 1, 2, H2], [4, -10, 1, 2, H1], [5, -11, 1, 4, dark ? '#2a2830' : '#5a5660'],
+      // wieltjes onder de voorkant
+      [-4, 5, 2, 1, W], [3, 5, 2, 1, W],
+      // kast
+      [-5, -4, 11, 8, p.O], [-4, -5, 9, 10, p.O], [-4, -4, 9, 8, p.B], [-4, -4, 9, 1, p.LT],
+      // rooster
+      [-3, -3, 7, 1, p.SLOT], [-3, -1, 7, 1, p.SLOT], [-3, -2, 7, 1, p.FLAP], [-3, 0, 7, 1, p.FLAP],
+      // bedieningsstrook met displaylampje
+      [-3, 2, 7, 1, p.SD], [2, 2, 1, 1, AIR_LED],
+    ]);
+  }
+  /** Tikvlak van een airco in pixels t.o.v. zijn plek: [links, boven, rechts, onder]. */
+  function aircoBox(l, L) {
+    if (!aircoWall(l)) return [-8, -8, 8, 8];
+    const side = aircoSide(L, l);
+    return side === 'n' ? [-9, -13, 9, -2] : side === 's' ? [-8, -6, 8, 1] : side === 'w' ? [-1, -8, 6, 8] : [-6, -8, 1, 8];
+  }
+
   function lampFixture(g, l, color, L) {
+    if (isAircoLook(l.look)) { drawAirco(g, l, L); return; }
     const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
     const O = '#2a1a2e', SHADE = mixHex('#efe0c0', color, 0.6), SH = 'rgba(30,10,30,.3)';
     const look = l.look || '';
@@ -1298,5 +1379,5 @@ const Room = (() => {
   // Plek in halve banden (0 = onderste band, 0.5 = tussen de onderste twee), of 'above'/'below'/null
   const bandPos = (y, n) => y == null ? null : y > 1.05 ? 'above' : y < -1.05 ? 'below' : Math.min(n - 1, Math.max(0, Math.round(((y + 1) / 2 * n - 0.5) * 2) / 2));
 
-  return { PPM, ITEMS, CATS, catForRoom, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandPos, presetFor, lampBox, wallSnap, FIXTURES, fixtureSpots, drawFixtures, stripOf, aimOf, tiltOf };
+  return { PPM, ITEMS, CATS, catForRoom, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandPos, presetFor, lampBox, wallSnap, AIRCO_LOOKS, isAircoLook, FIXTURES, fixtureSpots, drawFixtures, stripOf, aimOf, tiltOf };
 })();

@@ -237,9 +237,10 @@ object Engine {
         for ((id, w) in workers) {
             val l = lamps[id]
             // De Lamp wordt ter plekke aangepast; de verbinding houdt de waarden waarmee hij gestart is
-            if (l == null || l.ip != w.connIp || l.key != w.connKey || l.version != w.connVersion) { w.stop(); workers.remove(id) }
+            if (l == null || !l.isLight || l.ip != w.connIp || l.key != w.connKey || l.version != w.connVersion) { w.stop(); workers.remove(id) }
         }
-        for (l in lamps.values) if (!workers.containsKey(l.id) && l.ip.isNotBlank()) workers[l.id] = TuyaLamp(l)
+        // Alleen lampen krijgen een lamp-verbinding; een airco heeft andere functies (die bedienen we later apart)
+        for (l in lamps.values) if (l.isLight && !workers.containsKey(l.id) && l.ip.isNotBlank()) workers[l.id] = TuyaLamp(l)
     }
 
     /** Vraagt de stand van een stel lampen tegelijk op (wacht hooguit één keer, niet per lamp). */

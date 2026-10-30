@@ -33,6 +33,9 @@ class Lamp(
     /** Ledstrips tonen kleuren witter dan lampen; die standaard iets voller. */
     val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
     val placed get() = x >= 0 && y >= 0
+    /** Soort apparaat: "light" (lamp, ledstrip) of "airco". Alleen lampen doen mee met sync, scènes en lampen aan/uit. */
+    val kind get() = if (category in AIRCO) "airco" else "light"
+    val isLight get() = kind == "light"
     /** Staat in de kamer met de tv: alleen die lampen doen mee met de sync. */
     val inTvRoom get() = room == Store.tvRoom.id
     /** Doet mee met de sync: geplaatst en in de tv-kamer. */
@@ -44,11 +47,14 @@ class Lamp(
         put("x", x); put("y", y); put("height", height); put("enabled", enabled); put("shape", shape); put("follow", follow); put("layers", layers); put("category", category); put("satBoost", satBoost); put("satFactor", satFactor); put("group", group)
         heightY?.let { put("heightY", it) }
         put("lowHue", lowHue); put("lowStrength", lowStrength); put("maxBright", maxBright); put("look", look)
-        put("balWarm", balWarm); put("balTint", balTint); put("room", room)
+        put("balWarm", balWarm); put("balTint", balTint); put("room", room); put("kind", kind)
         if (withKey) put("key", key)
     }
 
     companion object {
+        /** Tuya-categorieën van airco's: kt = airco, ydkt = mobiele airco, ktkzq = airco-afstandsbediening. */
+        val AIRCO = setOf("kt", "ydkt", "ktkzq")
+
         fun fromJson(o: JSONObject) = Lamp(
             o.getString("id"), o.optString("key"), o.optString("name", o.getString("id")),
             o.optString("ip"), o.optString("version", "3.3"),

@@ -641,7 +641,8 @@ class WebServer(private val ctx: Context) {
     companion object {
         /** Groeps-id's komen in de pagina terecht: alleen letters, cijfers, - en _. */
         private val SAFE_ID = Regex("[A-Za-z0-9_-]{1,40}")
-        private val LOOKS = setOf("", "spot", "pendant", "floor", "arc", "table", "globe", "rod", "wall", "flush", "lightbar", "strip", "desk", "head", "wallspot")
+        private val LOOKS = setOf("", "spot", "pendant", "floor", "arc", "table", "globe", "rod", "wall", "flush", "lightbar", "strip", "desk", "head", "wallspot",
+            "airco-wand-wit", "airco-wand-zwart", "airco-mobiel-wit", "airco-mobiel-zwart")
         private val STATIC = mapOf(
             "/" to "text/html; charset=utf-8", "/index.html" to "text/html; charset=utf-8",
             "/tv.html" to "text/html; charset=utf-8", "/room.js" to "application/javascript; charset=utf-8",

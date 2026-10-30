@@ -5,6 +5,7 @@
 const I18N = (() => {
   let lang = 'nl';
   const EN = {
+    'Naam van deze kamer': 'Name of this room', 'Naam opslaan': 'Save name',
     // meubels (keuken, slaapkamer, werkplek, gang, badkamer) en hun groepen in de kiezer
     'Koelkast': 'Fridge', 'Fornuis': 'Cooker', 'Kookplaat': 'Hob', 'Oven': 'Oven', 'Spoelbak': 'Sink', 'Vaatwasser': 'Dishwasher', 'Kookeiland': 'Kitchen island',
     'Eenpersoonsbed': 'Single bed', 'Nachtkastje': 'Nightstand', 'Kaptafel': 'Dressing table',
@@ -174,6 +175,32 @@ const I18N = (() => {
     'Volgt {e}, {s}': 'Follows {e}, {s}', 'de bovenrand': 'the top edge', 'de zijkanten': 'the sides', 'de onderkant': 'the bottom',
     'linkerdeel': 'left part', 'rechterdeel': 'right part', 'midden': 'middle',
     'opslaan...': 'saving...', 'opgeslagen': 'saved', 'niet opgeslagen': 'not saved',
+    // Op de hub heten lampen "apparaten" (er kunnen ook airco's tussen zitten)
+    'Apparaten': 'Devices', 'Je apparaten': 'Your devices', 'Apparaat': 'Device', 'Apparaat sluiten': 'Close device',
+    'Tik op de naam van een apparaat om het in te stellen.': 'Tap the name of a device to set it up.',
+    'Knipper laat een lamp aan en uit gaan zodat je hem vindt. Aan en Uit zetten hem aan of uit. Met het kleurvakje kies je zelf een kleur. Het kruisje haalt een apparaat weg; je zet het terug onder Apparaten toevoegen.': 'Blink makes a lamp go on and off so you can find it. On and Off switch it on or off. Use the colour box to pick a colour yourself. The cross removes a device; you can put it back under Add devices.',
+    'Apparaten toevoegen': 'Add devices', 'Nieuwe apparaten zoeken': 'Find new devices', 'Verwijderde apparaten': 'Removed devices',
+    'Terugzetten zet het apparaat weer in je lijst. Definitief verwijderen haalt het hier weg; het komt dan ook niet terug bij nieuwe apparaten zoeken.': 'Restore puts the device back in your list. Delete for good removes it here; it will not come back when finding new devices either.',
+    'Kies een apparaat en tik op de kaart om het neer te zetten. Sleep om te verschuiven.': 'Pick a device and tap the map to place it. Drag to move it.',
+    'Kies eerst een apparaat hieronder': 'Pick a device below first', 'Instellingen van dit apparaat': 'Settings for this device',
+    'Zet je apparaten neer: hang je lampen op en zet een airco op zijn plek. Of maak een armatuur met meerdere lampen (rails, hanglamp-balk, staande lamp met spots).': 'Place your devices: put up your lamps and put an air conditioner in its spot. Or create a fixture with several lamps (track, pendant bar, floor lamp with spots).',
+    'Nog geen apparaten. Voeg ze toe onder Apparaten.': 'No devices yet. Add them under Devices.',
+    'Nog geen apparaten in deze kamer. Kies bij Apparaten welke apparaten hier horen.': 'No devices in this room yet. Choose under Devices which devices belong here.',
+    'Nog geen apparaten.': 'No devices yet.', 'Nieuwe apparaten komen hier tot je ze in een kamer zet.': 'New devices appear here until you put them in a room.',
+    '"{n}" verwijderen? Je kunt het later terugzetten onder Apparaten toevoegen.': 'Remove "{n}"? You can restore it later under Add devices.',
+    'Apparaten nog niet op de kaart: {n}. Zet ze neer onder Kamers.': 'Devices not on the map yet: {n}. Place them under Rooms.',
+    '{w} × {h} m · apparaten: {n}': '{w} × {h} m · devices: {n}',
+    '"{r}" verwijderen? De plattegrond is dan weg en de apparaten hier ({n}) gaan naar Zonder kamer.': 'Remove "{r}"? The floor plan will be gone and the devices here ({n}) move to No room.',
+    'Apparaten in meer kamers? Maak een kamer erbij, met een eigen plattegrond.': 'Devices in more rooms? Add a room, with its own floor plan.',
+    'Elke kamer heeft een eigen plattegrond en eigen apparaten. De volgorde hier is ook de volgorde bij Bediening.': 'Each room has its own floor plan and its own devices. The order here is also the order under Control.',
+    'Links of achter iets aanpassen schuift je meubels, tv en apparaten mee, zodat alles op zijn plek blijft.': 'Changing the left or back side moves your furniture, TV and devices along, so everything stays in place.',
+    // airco
+    'Uiterlijk': 'Look', 'Hangende airco, wit': 'Wall unit, white', 'Hangende airco, zwart': 'Wall unit, black', 'Mobiele airco, wit': 'Portable unit, white', 'Mobiele airco, zwart': 'Portable unit, black',
+    'Een hangende airco gaat vanzelf tegen de dichtstbijzijnde muur.': 'A wall unit snaps to the nearest wall by itself.',
+    'Bediening van de airco volgt later.': 'Air conditioner controls will follow later.',
+    'Bediening van de airco (aan of uit, temperatuur) volgt later. Nu zet je hem alleen op de kaart.': 'Air conditioner controls (on or off, temperature) will follow later. For now you only place it on the map.',
+    'Een airco kan niet in een armatuur.': 'An air conditioner cannot go in a fixture.', '{n}: bediening van de airco volgt later.': '{n}: air conditioner controls will follow later.',
+    ' (nog neerzetten)': ' (not placed yet)',
     // Lampen-hub op de server
     'Lampen-hub': 'Lamp hub',
     'Bewaar je kamer, lampen, groepen, scènes en instellingen in een bestand, bijvoorbeeld als reserve of om over te zetten.': 'Save your room, lamps, groups, scenes and settings to a file, for example as a spare copy or to move them.',
