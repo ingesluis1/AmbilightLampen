@@ -110,6 +110,8 @@ label.s span{float:right;opacity:.8}
 .hsc .sw i{flex:1;border:2px solid var(--ink)}
 .scard .x{position:absolute;top:2px;right:4px;font-size:12px;opacity:.7}
 .lrow{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:2px dashed var(--parch-dk)}
+/* Met kamers: apparaten inspringen tot voorbij het kamerblokje, zodat ze er niet onder staan */
+.lhead~.lrow,.lhead~.hint{margin-left:28px}
 .lrow:last-child{border-bottom:0}
 .lrow .name{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lrow .btn{padding:6px 9px;font-size:14px}
