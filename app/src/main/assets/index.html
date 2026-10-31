@@ -1634,10 +1634,11 @@ function houseDevs(){const devs=SRV?lamps.filter(isDev):[],box=$('houseDevs');$(
 const AV={skin:['#f6d3b3','#e9b48a','#c68a5e','#8d5a3b','#5a3a26'],hairColor:['#2a1a12','#5a3a1e','#a0622a','#d8a24a','#efe2bd','#c0392b','#7a4ab0','#3a7ad0','#8a8a92'],
   eyes:['#6a4a2a','#4a7ab0','#3a9a6a','#7a8a9a','#2a2a3a'],
   shirt:['#c0392b','#e07a2a','#e8b84a','#4e8a3c','#3a7ad0','#7a4ab0','#d86aa0','#f2f2f2','#3a3a44'],pants:['#2c3e6a','#3a3a44','#6a4a2a','#8a8a92'],
-  hair:[['kort','Kort'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
+  hair:[['kort','Kort'],['kortm','Kort (stoer)'],['stekel','Stekels'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
   extra:[['geen','Niets'],['bril','Bril'],['pet','Pet'],['muts','Muts'],['heks','Heksenhoed'],['zonnehoed','Zonnehoed'],['oren','Kattenoren'],['baard','Baard'],['strik','Strik']],
+  face:[['zacht','Zacht'],['stoer','Stoer']],
   outfit:[['shirt','Shirt'],['jas','Jas'],['rok','Rok'],['tuinbroek','Tuinbroek'],['jurk','Jurk']]};
-const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0',outfit:'shirt'};
+const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0',outfit:'shirt',face:'zacht'};
 /* Pixelpoppetje in Stardew-achtige stijl (eigen tekening): groot hoofd, grote ogen met glimlicht, drie tinten per kleur,
    donkere omlijning en (sticker) een witte rand. Raster 26 x 36; c = canvas. */
 function avShade(hex,f){const n=parseInt(hex.slice(1),16),ch=[n>>16,(n>>8)&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(f<0?v*(1+f):v+(255-v)*f))));return '#'+ch.map(v=>v.toString(16).padStart(2,'0')).join('')}
@@ -1677,16 +1678,20 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=
     legs(P,Pd)}
   // hoofd
   // rond hoofd: boven smaller, wangen op het breedst, naar onder toe een kin
-  rect(7,3,14,3,S);rect(6,4,15,4,S);rect(5,5,16,11,S);rect(6,12,15,12,S);rect(7,13,14,13,S);rect(8,14,13,14,S);
+  rect(7,3,14,3,S);rect(6,4,15,4,S);rect(5,5,16,11,S);rect(6,12,15,12,S);rect(7,13,14,13,S);rect(8,14,13,14,S);if(a.face==='stoer'){rect(6,13,15,13,S);rect(7,14,14,14,S);p(15,13,Sd);rect(7,14,14,14,Sd)}
   rect(15,8,16,11,Sd);p(15,12,Sd);p(14,13,Sd);rect(8,14,13,14,Sd);rect(10,15,11,15,Sd);
   rect(6,5,8,6,Sl);
   // ogen: wit glimlicht + iris
   // ogen (2x2): boven lichte iris + donkere pupil, onder wit glimlicht + iris; links en rechts gespiegeld, neusbrug ertussen
   const eye=(x,flip)=>{const Ed=avShade(E,-.6),El=avShade(E,.45);p(x,9,flip?Ed:El);p(x+1,9,flip?El:Ed);p(x,10,flip?E:'#ffffff');p(x+1,10,flip?'#ffffff':E)};
-  eye(8,false);eye(12,true);rect(8,8,9,8,avShade(H,-.55));rect(12,8,13,8,avShade(H,-.55));
-  p(7,11,'#f2a0a0');p(14,11,'#e89090');p(10,12,Sd);p(11,12,avShade(S,-.3));                          // blosjes en mond
+  eye(8,false);eye(12,true);
+  if(a.face==='stoer'){rect(7,7,9,7,avShade(H,-.4));rect(12,7,14,7,avShade(H,-.4))}else{rect(8,8,9,8,avShade(H,-.55));rect(12,8,13,8,avShade(H,-.55))}
+  if(a.face!=='stoer'){p(7,11,'#f2a0a0');p(14,11,'#e89090')}p(10,12,Sd);p(11,12,avShade(S,-.3));      // blosjes en mond
   // haar
-  if(a.hair!=='kaal'&&a.hair!=='afro'){rect(8,0,13,0,H);rect(6,1,15,1,H);rect(5,2,16,2,H);rect(4,3,17,6,H);p(4,3,null);p(17,3,null);rect(8,1,11,1,Hl);rect(6,2,9,2,Hl);p(7,3,Hl);
+  if(a.hair==='kortm'||a.hair==='stekel'){rect(7,0,14,0,H);rect(5,1,16,1,H);rect(4,2,17,4,H);p(4,2,null);p(17,2,null);rect(5,5,9,5,H);rect(13,5,16,5,H);p(5,6,H);p(16,6,H);
+    rect(4,5,4,8,Hd);rect(17,5,17,8,Hd);rect(7,1,10,1,Hl);p(6,2,Hl);p(12,5,Hd);p(9,5,Hd);
+    if(a.hair==='stekel'&&!['pet','muts','heks','zonnehoed'].includes(a.extra))for(const x of [5,7,9,11,13,15]){p(x,-1,H);p(x+1,-2,H);p(x,0,H);p(x+1,-1,Hl)}}
+  else if(a.hair!=='kaal'&&a.hair!=='afro'){rect(8,0,13,0,H);rect(6,1,15,1,H);rect(5,2,16,2,H);rect(4,3,17,6,H);p(4,3,null);p(17,3,null);rect(8,1,11,1,Hl);rect(6,2,9,2,Hl);p(7,3,Hl);
     for(const x of [5,6,7,9,10,12,14,15,16])p(x,7,H);rect(5,8,6,12,H);rect(15,8,16,12,H);p(6,12,Hd);p(16,9,Hd);p(16,10,Hd);p(16,11,Hd);p(5,13,H);p(16,13,Hd);p(8,6,Hd);p(11,6,Hd);p(13,7,Hd);p(16,7,Hd);p(5,8,Hd);rect(4,5,4,7,Hd);rect(17,5,17,7,Hd)}
   else if(a.hair==='kaal'){rect(8,2,13,2,S);rect(6,3,15,3,S);p(8,3,Sl);p(9,3,Sl);p(7,4,Sl)}
   if(a.hair==='knot'){rect(9,-3,12,-1,H);p(10,-3,Hl);p(10,-2,Hl);p(12,-1,Hd)}
@@ -1730,7 +1735,7 @@ function avEditor(box,start,personId,done){const a={...avDefault,...(start||{})}
   const row=(k,label,vals,isCol)=>{const l=document.createElement('div');l.className='lbl';l.textContent=t(label);const r=document.createElement('div');r.className='swrow';
     for(const v of vals){const b=document.createElement('button');b.dataset.k=k;b.dataset.v=isCol?v:v[0];if(isCol)b.style.background=v;else{b.className='btn';b.textContent=t(v[1])}
       b.onclick=()=>{a[k]=b.dataset.v;redraw()};r.append(b)}opts.append(l,r)};
-  row('skin','Huid',AV.skin,true);row('eyes','Ogen',AV.eyes,true);row('hair','Haar',AV.hair,false);row('hairColor','Haarkleur',AV.hairColor,true);row('outfit','Kleding',AV.outfit,false);row('shirt','Kleur kleding',AV.shirt,true);row('pants','Broek',AV.pants,true);row('extra','Extra',AV.extra,false);
+  row('skin','Huid',AV.skin,true);row('face','Gezicht',AV.face,false);row('eyes','Ogen',AV.eyes,true);row('hair','Haar',AV.hair,false);row('hairColor','Haarkleur',AV.hairColor,true);row('outfit','Kleding',AV.outfit,false);row('shirt','Kleur kleding',AV.shirt,true);row('pants','Broek',AV.pants,true);row('extra','Extra',AV.extra,false);
   const save=document.createElement('button');save.className='btn gold';save.style.cssText='width:100%;margin-top:8px';save.textContent=t('Poppetje opslaan');
   save.onclick=async()=>{const r=await api('/api/people/avatar',{id:personId||'',avatar:a});toast(r.message||'');if(r.people){peopleData=r.people;peopleAt=Date.now()}if(done)done()};
   box.append(save);redraw()}
