@@ -703,6 +703,21 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <div class="row" style="margin-top:10px"><select id="appAdd" class="grow"><option value="">App toevoegen...</option></select></div>
 </section>
 
+<section class="panel srvonly ownonly" id="autoPanel">
+  <h2>Automatisch</h2>
+  <label class="s"><input type="checkbox" id="awEnabled"> Alles uit als ik weg ben</label>
+  <div class="entar" style="margin-top:8px">
+    <label for="awPerson">Wie</label><span><select id="awPerson"></select></span>
+    <label for="awMin">Weg als de telefoon zo lang niet gezien is</label><span><select id="awMin"><option value="10">10 min</option><option value="15">15 min</option><option value="30">30 min</option><option value="60">1 uur</option></select></span>
+  </div>
+  <label class="s" style="margin-top:6px"><input type="checkbox" id="awLamps"> Lampen uit (alle kamers)</label>
+  <label class="s"><input type="checkbox" id="awAirco"> Airco uit</label>
+  <label class="s"><input type="checkbox" id="awEmpty"> Alleen als er verder niemand thuis is</label>
+  <p class="hint" id="awState" style="margin:6px 0 0"></p>
+  <p class="hint" style="margin:4px 0 0">Een telefoon die lang op slot ligt, laat soms even de wifi los; daarom pas na een tijdje. De kattenbak blijft altijd aan.</p>
+  <button class="btn gold" id="awSave" style="width:100%;margin-top:8px">Opslaan</button>
+</section>
+
 <section class="panel srvonly ownonly" id="netPanel">
   <h2>Gezien op je wifi</h2>
   <p style="margin:0 0 8px">Telefoons, laptops en andere apparaten die op je wifi zijn geweest (je lampen en andere apparaten van het huis staan er niet tussen). Koppel een apparaat aan iemand, dan zie je onder Bediening wie er thuis is.</p>
@@ -1752,6 +1767,17 @@ async function peopleAdmin(){if(!S||S.role!=='owner')return;let r;try{r=await ap
     el.querySelector('.btn.red').onclick=async()=>{if(!confirm(t('{n} verwijderen?',{n:p.name})))return;const r=await api('/api/people/save',{id:p.id,delete:true});if(r.people){peopleData=r.people;peopleAt=Date.now()}peopleRender();peopleAdmin()};
     pl.append(el)}}
 setInterval(()=>{if(S&&SRV&&curTab==='home')peopleLoad()},30000);
+/* Automatisch: alles uit als iemand weggaat (instellingen op de hub) */
+async function autoLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/auto')}catch(e){return}
+  const c=r.awayOff||{},ppl=peopleData||[],sel=$('awPerson');sel.innerHTML=ppl.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  if(c.person)sel.value=c.person;$('awEnabled').checked=!!c.enabled;$('awMin').value=String(c.minutes||15);
+  $('awLamps').checked=c.lamps!==false;$('awAirco').checked=!!c.airco;$('awEmpty').checked=c.onlyIfEmpty!==false;
+  const loc=I18N.lang==='en'?'en-GB':'nl-NL',f=ms=>new Date(ms).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+  const pr=ppl.find(p=>p.id===(c.person||sel.value));
+  $('awState').textContent=[pr?(pr.home?t('{n} is nu thuis.',{n:pr.name}):r.personLast?t('{n} is weg sinds {d}.',{n:pr.name,d:f(r.personLast)}):''):'',
+    r.lastRun?t('Laatst automatisch uitgezet: {d} ({w}).',{d:f(r.lastRun),w:r.lastWhat||''}):''].filter(Boolean).join(' ')}
+$('awSave').onclick=async()=>{const r=await api('/api/auto/save',{enabled:$('awEnabled').checked,person:$('awPerson').value,minutes:+$('awMin').value,
+  lamps:$('awLamps').checked,airco:$('awAirco').checked,onlyIfEmpty:$('awEmpty').checked});toast(r.message||'');autoLoad()};
 /* ---------- Toegang (House hub) ---------- */
 let gateTimer=0;
 function accessGate(){if(!document.body.classList.contains('gated')){document.body.classList.add('gated');$('gate').classList.remove('hidden')}gateCheck()}
@@ -2495,7 +2521,7 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();accLoad();peopleLoad(true).then(peopleAdmin)}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(n==='energy')enLoad();
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();accLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(n==='energy')enLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
