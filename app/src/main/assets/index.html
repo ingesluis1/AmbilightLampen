@@ -191,6 +191,7 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .entile i{display:inline-block;width:10px;height:10px;margin-right:5px;border:2px solid var(--ink);vertical-align:0}
 .enchart{position:relative;margin-top:6px;height:170px;touch-action:pan-y}
 .enchart.small{height:110px}
+.enchart.tall{height:200px}
 .enchart svg{display:block;width:100%;height:100%;overflow:visible}
 .enchart .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--cream);font-size:13px;padding:4px 7px;white-space:nowrap;transform:translate(-50%,-100%);z-index:2}
 .enlbl{font-size:13px;margin-top:8px;opacity:.85}
@@ -555,9 +556,12 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 <section class="panel enneeds">
   <div class="row" style="align-items:center"><button class="btn" id="enPrev" aria-label="Dag eerder">&#9664;</button><h2 class="grow" id="enDayTitle" style="margin:0;text-align:center"></h2><button class="btn" id="enNext" aria-label="Dag later">&#9654;</button></div>
   <div class="enlbl">Stroom per kwartier (gemiddeld vermogen)</div>
-  <div class="enchart" id="enDay"></div>
+  <div class="enchart tall" id="enDay"></div>
+  <div class="ennote" id="enDayLegend"></div>
   <div class="enlbl" id="enDayGasLbl">Gas per uur</div>
   <div class="enchart small" id="enDayGas"></div>
+  <div class="enlbl hidden" id="enDaySolarLbl">Opwek per kwartier (zonnepanelen)</div>
+  <div class="enchart small hidden" id="enDaySolar"></div>
   <p class="hint" id="enDaySum" style="margin:6px 0 0"></p>
 </section>
 <section class="panel enneeds">
@@ -1693,19 +1697,25 @@ const nl1=(v,d)=>v==null?'–':v.toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL'
 const enDate=(s,opt)=>new Date(s+'T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',opt||{weekday:'short',day:'numeric',month:'short'});
 function niceStep(x){const p=Math.pow(10,Math.floor(Math.log10(x||1))),m=x/p;return (m<=1?1:m<=2?2:m<=5?5:10)*p}
 /* Staafgrafiek als SVG: waarden (null = geen gegevens), labels voor de as, tooltip per staaf, optioneel een gekozen staaf */
-function enBars(el,vals,o){const W=Math.max(200,el.clientWidth),H=el.clientHeight,padL=38,padB=18,padT=6,w=W-padL,h=H-padB-padT;
-  const max=Math.max(o.min||0,...vals.map(v=>v||0))*1.08||1,step=niceStep(max/3),n=vals.length,bw=w/n,gap=n>60?1:2;
+function enBars(el,vals,o){const W=Math.max(200,el.clientWidth),H=el.clientHeight,padL=42,padB=18,padT=6,w=W-padL,h=H-padB-padT;
+  const neg=o.neg||null,maxP=Math.max(o.min||0,...vals.map(v=>v||0))*1.08||1,maxN=neg?Math.max(0,...neg.map(v=>v||0))*1.08:0;
+  const tot=maxP+maxN,step=niceStep(tot/(neg&&maxN?4:3)),n=vals.length,bw=w/n,gap=n>60?1:2,y0=padT+h*maxP/tot,sc=v=>v/tot*h;
+  const fmt=y=>nl1(y,step<1?(step<0.1?2:1):0);
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title||'')}">`;
-  for(let y=0;y<=max;y+=step){const py=padT+h-y/max*h;s+=`<line x1="${padL}" x2="${W}" y1="${py}" y2="${py}" stroke="rgba(58,28,14,.15)"/><text x="${padL-5}" y="${py+4}" text-anchor="end" font-size="11" fill="var(--text)">${nl1(y,step<1?(step<0.1?2:1):0)}</text>`}
-  vals.forEach((v,i)=>{if(v==null||v<=0)return;const bh=Math.max(1,v/max*h),x=padL+i*bw+gap/2,y=padT+h-bh,bwid=Math.max(1,bw-gap),r=Math.min(3,bwid/2,bh);
-    const sel=o.sel===i;s+=`<path d="M${x},${padT+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+bwid-r}Q${x+bwid},${y} ${x+bwid},${y+r}V${padT+h}Z" fill="${o.color}" opacity="${o.sel!=null&&o.sel>=0&&!sel?.55:1}"/>`;
-    if(sel)s+=`<rect x="${x-1}" y="${y-1}" width="${bwid+2}" height="${bh+1}" fill="none" stroke="var(--ink)" stroke-width="2"/>`});
-  s+=`<line x1="${padL}" x2="${W}" y1="${padT+h}" y2="${padT+h}" stroke="var(--ink)" stroke-width="2"/>`;
+  for(let y=0;y<=maxP;y+=step){const py=y0-sc(y);s+=`<line x1="${padL}" x2="${W}" y1="${py}" y2="${py}" stroke="rgba(58,28,14,.15)"/><text x="${padL-5}" y="${py+4}" text-anchor="end" font-size="11" fill="var(--text)">${fmt(y)}</text>`}
+  for(let y=step;neg&&y<=maxN;y+=step){const py=y0+sc(y);s+=`<line x1="${padL}" x2="${W}" y1="${py}" y2="${py}" stroke="rgba(58,28,14,.15)"/><text x="${padL-5}" y="${py+4}" text-anchor="end" font-size="11" fill="var(--text)">−${fmt(y)}</text>`}
+  const bar=(i,v,col,down,dim)=>{const bh=Math.max(1,sc(v)),x=padL+i*bw+gap/2,bwid=Math.max(1,bw-gap),r=Math.min(3,bwid/2,bh);
+    return down?`<path d="M${x},${y0}V${y0+bh-r}Q${x},${y0+bh} ${x+r},${y0+bh}H${x+bwid-r}Q${x+bwid},${y0+bh} ${x+bwid},${y0+bh-r}V${y0}Z" fill="${col}" opacity="${dim?.55:1}"/>`
+      :`<path d="M${x},${y0}V${y0-bh+r}Q${x},${y0-bh} ${x+r},${y0-bh}H${x+bwid-r}Q${x+bwid},${y0-bh} ${x+bwid},${y0-bh+r}V${y0}Z" fill="${col}" opacity="${dim?.55:1}"/>`};
+  vals.forEach((v,i)=>{if(v==null||v<=0)return;const sel=o.sel===i,dim=o.sel!=null&&o.sel>=0&&!sel;s+=bar(i,v,o.color,false,dim);
+    if(sel){const bh=Math.max(1,sc(v)),x=padL+i*bw+gap/2;s+=`<rect x="${x-1}" y="${y0-bh-1}" width="${Math.max(1,bw-gap)+2}" height="${bh+1}" fill="none" stroke="var(--ink)" stroke-width="2"/>`}});
+  if(neg)neg.forEach((v,i)=>{if(v!=null&&v>0)s+=bar(i,v,o.negColor,true,false)});
+  s+=`<line x1="${padL}" x2="${W}" y1="${y0}" y2="${y0}" stroke="var(--ink)" stroke-width="2"/>`;
   const every=Math.max(1,Math.ceil(n/(w/40)));o.labels.forEach((l,i)=>{if(l&&i%every===0)s+=`<text x="${padL+i*bw+bw/2}" y="${H-3}" text-anchor="middle" font-size="11" fill="var(--text)">${esc(l)}</text>`});
   el.innerHTML=s+'</svg><div class="tip hidden"></div>';
   const tip=el.querySelector('.tip'),at=e=>{const r=el.getBoundingClientRect(),i=Math.floor(((e.clientX-r.left)*W/r.width-padL)/bw);return i>=0&&i<n?i:-1};
-  el.onpointermove=e=>{const i=at(e);if(i<0||vals[i]==null){tip.classList.add('hidden');return}const r=el.getBoundingClientRect(),v=vals[i];
-    tip.textContent=o.tip(i,v);tip.classList.remove('hidden');tip.style.left=Math.min(r.width-60,Math.max(60,(padL+i*bw+bw/2)*r.width/W))+'px';tip.style.top=Math.max(14,(padT+h-(v||0)/max*h)*r.height/H-4)+'px'};
+  el.onpointermove=e=>{const i=at(e);if(i<0||(vals[i]==null&&!(neg&&neg[i]))){tip.classList.add('hidden');return}const r=el.getBoundingClientRect(),v=vals[i]||0;
+    tip.textContent=o.tip(i,vals[i],neg?neg[i]:null);tip.classList.remove('hidden');tip.style.left=Math.min(r.width-70,Math.max(70,(padL+i*bw+bw/2)*r.width/W))+'px';tip.style.top=Math.max(14,(y0-sc(v))*r.height/H-4)+'px'};
   el.onpointerleave=()=>tip.classList.add('hidden');
   el.onclick=e=>{const i=at(e);if(i>=0&&o.pick)o.pick(i)}}
 async function enLoad(){if(!SRV)return;let r;try{[r,enMonths]=await Promise.all([api('/api/energy?days='+(enN==='m12'?30:enN)),api('/api/energy/months?n=12').catch(()=>null)])}catch(e){return}
@@ -1790,12 +1800,19 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   const ds=enData.days,i=ds.findIndex(x=>x.date===d);$('enPrev').disabled=i<=0;$('enNext').disabled=i<0||i>=ds.length-1;
   let r;try{r=await api('/api/energy/day?date='+d)}catch(e){return}if(enDay!==d||!r.ok)return;
   const hhmm=k=>String(Math.floor(k/4)%24).padStart(2,'0')+':'+String(k%4*15).padStart(2,'0'),w=r.kwh.map(v=>v==null?null:v*4000);
-  enBars($('enDay'),w,{color:EN_COL.kwh,min:100,labels:w.map((_,k)=>k%4===0?String(k/4):''),title:t('Stroom per kwartier'),tip:(k,v)=>hhmm(k)+'–'+hhmm(k+1)+': '+nl1(v,0)+' W'});
+  const bw=(r.back||[]).map(v=>v==null?null:v*4000),hasB=bw.some(v=>v>0);
+  enBars($('enDay'),w,{color:EN_COL.kwh,min:100,neg:hasB?bw:null,negColor:EN_COL.back,labels:w.map((_,k)=>k%4===0?String(k/4):''),title:t('Stroom per kwartier'),
+    tip:(k,v,b)=>hhmm(k)+'–'+hhmm(k+1)+': '+t('verbruik {n} W',{n:nl1(v||0,0)})+(b?' · '+t('terug {n} W',{n:nl1(b,0)}):'')});
+  const sw=c=>`<i class="ensw" style="background:${c}"></i>`;
+  $('enDayLegend').innerHTML=sw(EN_COL.kwh)+esc(t('verbruik (omhoog)'))+(hasB?' &nbsp; '+sw(EN_COL.back)+esc(t('teruglevering (omlaag)')):'');
+  const sol=r.solarW||[],hasS=sol.some(v=>v>0);$('enDaySolar').classList.toggle('hidden',!hasS);$('enDaySolarLbl').classList.toggle('hidden',!hasS);
+  if(hasS)enBars($('enDaySolar'),sol,{color:EN_COL.solar,min:100,labels:sol.map((_,k)=>k%4===0?String(k/4):''),title:t('Opwek per kwartier'),tip:(k,v)=>hhmm(k)+'–'+hhmm(k+1)+': '+t('opwek {n} W',{n:nl1(v||0,0)})});
   const g=r.gas||[],hasG=g.some(v=>v!=null);$('enDayGas').classList.toggle('hidden',!hasG);$('enDayGasLbl').classList.toggle('hidden',!hasG);
   if(hasG)enBars($('enDayGas'),g,{color:EN_COL.gas,min:.05,labels:g.map((_,k)=>k%3===0?String(k):''),title:t('Gas per uur'),tip:(k,v)=>String(k).padStart(2,'0')+':00: '+nl1(v,3)+' m³'});
-  const tot=r.kwh.reduce((a,v)=>a+(v||0),0),peak=Math.max(...w.map(v=>v||0)),pk=w.indexOf(peak);
+  const tot=r.kwh.reduce((a,v)=>a+(v||0),0),peak=Math.max(...w.map(v=>v||0)),pk=w.indexOf(peak),totB=(r.back||[]).reduce((a,v)=>a+(v||0),0),totS=sol.reduce((a,v)=>a+(v||0),0)/4000;
   const dd=ds.find(x=>x.date===d)||{},c=enCostDay(dd);
-  $('enDaySum').textContent=t('Totaal {k} kWh. Hoogste kwartier {t}: gemiddeld {w} W.',{k:nl1(tot,2),t:hhmm(pk),w:nl1(peak,0)})+(c!=null?' '+t('Kosten die dag ≈ {e}.',{e:enEUR(c)}):'')}
+  $('enDaySum').textContent=t('Totaal {k} kWh. Hoogste kwartier {t}: gemiddeld {w} W.',{k:nl1(tot,2),t:hhmm(pk),w:nl1(peak,0)})
+    +(totB>0?' '+t('Teruggeleverd {n} kWh.',{n:nl1(totB,2)}):'')+(hasS?' '+t('Opgewekt ongeveer {n} kWh.',{n:nl1(totS,2)}):'')+(c!=null?' '+t('Kosten die dag ≈ {e}.',{e:enEUR(c)}):'')}
 document.querySelectorAll('#enKind .btn').forEach(b=>b.onclick=()=>{enKind=b.dataset.k;try{localStorage.setItem('enKind',enKind)}catch(e){}if(enData)enDays()});
 document.querySelectorAll('#enRange .btn').forEach(b=>b.classList.toggle('on',b.dataset.n===String(enN)));
 document.querySelectorAll('#enRange .btn').forEach(b=>b.onclick=()=>{enN=b.dataset.n==='m12'?'m12':+b.dataset.n;try{localStorage.setItem('enN',String(enN))}catch(e){}document.querySelectorAll('#enRange .btn').forEach(x=>x.classList.toggle('on',x===b));enLoad()});
