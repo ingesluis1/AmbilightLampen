@@ -1037,11 +1037,16 @@ const Room = (() => {
    * Waar je op de kaart op een lamp kunt tikken, in meters ten opzichte van zijn voet: [links, boven, rechts, onder].
    * Dekt de hele getekende lamp (bij een staande lamp of booglamp dus ook de kap), met wat marge.
    */
+  /** Meubel waar een stekker aan hangt (item.plug = id van de stekker), of undefined. */
+  function plugItem(L, l) { return L && (L.items || []).find(it => it.plug === l.id); }
+  /** Breedte en diepte van een meubel in meters, rekening houdend met draaien. */
+  function itemDims(it) { const def = ITEMS[it.type] || { w: 1, d: 1 }, w = it.w || def.w, d = it.d || def.d; return ((it.dir || 90) / 90) % 2 === 0 ? [d, w] : [w, d]; }
+
   function lampBox(l, L) {
     const look = l.look || '';
     if (isAircoLook(look)) { const b = aircoBox(l, L), m = 2; return [(b[0] - m) / PPM, (b[1] - m) / PPM, (b[2] + m) / PPM, (b[3] + m) / PPM]; }
     if (look === 'kattenbak') return [-0.38, -0.4, 0.38, 0.4];
-    if (look === 'stekker') return [-0.22, -0.22, 0.22, 0.22];
+    if (look === 'stekker') { const it = plugItem(L, l); if (it) { const [w, d] = itemDims(it); return [-w / 2, -d / 2, w / 2, d / 2]; } return [-0.22, -0.22, 0.22, 0.22]; }
     let strip = null;
     if (look === 'strip') { const st = stripOf(L, l), a = st.rot * Math.PI / 180, h = st.len * PPM / 2;
       const dx = Math.abs(Math.cos(a)) * h, dy = Math.abs(Math.sin(a)) * h; strip = [-dx - 2, -dy - 2, dx + 2, dy + 2]; }
@@ -1140,6 +1145,11 @@ const Room = (() => {
     if (l.look === 'kattenbak') { const w = Math.round(ITEMS.litterbox.w * PPM), d = Math.round(ITEMS.litterbox.d * PPM);
       g.save(); g.translate(Math.round((l.x + 1) * PPM - w / 2), Math.round((l.y + 1) * PPM - d / 2)); SPRITES.litterbox(g, w, d); g.restore(); return; }
     // Slimme stekker (apparaat): wit blokje met twee pennetjes en een lampje (groen = aan)
+    if (l.look === 'stekker' && plugItem(L, l)) {
+      // Aan een meubel: klein stekkertje rechtsboven op het meubel
+      const it = plugItem(L, l), [w, d] = itemDims(it), x = Math.round((it.x + 1 + w / 2) * PPM) - 4, y = Math.round((it.y + 1 - d / 2) * PPM) + 1;
+      g.fillStyle = '#2a1a2e'; g.fillRect(x - 3, y - 1, 6, 6); g.fillStyle = '#f2efe8'; g.fillRect(x - 2, y, 4, 4);
+      g.fillStyle = '#9a948c'; g.fillRect(x - 1, y + 1, 1, 2); g.fillRect(x + 1, y + 1, 1, 2); return; }
     if (l.look === 'stekker') { const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
       g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(x - 3, y - 2, 8, 8);
       g.fillStyle = '#2a1a2e'; g.fillRect(x - 4, y - 4, 8, 8);
@@ -1404,5 +1414,5 @@ const Room = (() => {
   // Plek in halve banden (0 = onderste band, 0.5 = tussen de onderste twee), of 'above'/'below'/null
   const bandPos = (y, n) => y == null ? null : y > 1.05 ? 'above' : y < -1.05 ? 'below' : Math.min(n - 1, Math.max(0, Math.round(((y + 1) / 2 * n - 0.5) * 2) / 2));
 
-  return { PPM, ITEMS, CATS, catForRoom, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandPos, presetFor, lampBox, wallSnap, AIRCO_LOOKS, isAircoLook, FIXTURES, fixtureSpots, drawFixtures, stripOf, aimOf, tiltOf };
+  return { plugItem, itemDims, PPM, ITEMS, CATS, catForRoom, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandPos, presetFor, lampBox, wallSnap, AIRCO_LOOKS, isAircoLook, FIXTURES, fixtureSpots, drawFixtures, stripOf, aimOf, tiltOf };
 })();
