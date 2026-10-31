@@ -714,7 +714,6 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <label class="s"><input type="checkbox" id="awAirco"> Airco uit</label>
   <label class="s"><input type="checkbox" id="awEmpty"> Alleen als er verder niemand thuis is</label>
   <p class="hint" id="awState" style="margin:6px 0 0"></p>
-  <p class="hint" style="margin:4px 0 0">Een telefoon die lang op slot ligt, laat soms even de wifi los; daarom pas na een tijdje. De kattenbak blijft altijd aan.</p>
   <button class="btn gold" id="awSave" style="width:100%;margin-top:8px">Opslaan</button>
 </section>
 
@@ -1567,10 +1566,11 @@ function airCard(l){const a=airOf(l.id),d=document.createElement('div');d.classN
   return d}
 /* Kattenbak (alleen op de hub; stand uit /api/state als lamp.litter). Status, bezoeken vandaag, gewicht, storingen, schoonmaken. */
 const kbOf=id=>{const x=S&&(S.lamps||[]).find(q=>q.id===id);return x&&x.litter};
-const KB_STATUS={standby:'Klaar',sleep:'Slaapt',uv:'UV-lamp aan',cat_in:'Kat erin',cleaning:'Bezig met schoonmaken',clean:'Bezig met schoonmaken'};
+const KB_STATUS={standby:'Klaar',sleep:'Slaapt',uv:'Bezig met steriliseren',cat_in:'Kat erin',cat_near:'Kat in de buurt',cat_out:'Kat net weg',cleaning:'Bezig met schoonmaken',clean:'Bezig met schoonmaken',smooth:'Zand egaliseren',clear_sand:'Zand bijvullen'};
 const KB_FAULT={vol:'Afvalbak vol',bak:'Bak eruit',motor:'Motorstoring',sensor:'Sensorstoring',filter:'Filter vervangen'};
 const kbStatus=a=>a.cleaning?t('Bezig met schoonmaken'):t(KB_STATUS[a.status]||a.status||'?');
-function kbSet(id,b){const a=kbOf(id);if(a)Object.assign(a,b.clean?{cleaning:true}:b);airAll();api('/api/kattenbak',{id,...b}).then(r=>{if(!r.ok&&r.message)toast(r.message);else if(b.clean)toast(t('Kattenbak gaat schoonmaken'))})}
+const KB_DONE={clean:'Kattenbak gaat schoonmaken',pour:'Kattenbak vult zand bij',smooth:'Kattenbak egaliseert het zand',filterReset:'Teller van het geurfilter staat weer op 30 dagen'};
+function kbSet(id,b){const a=kbOf(id);if(a)Object.assign(a,b.clean?{cleaning:true}:b.pour||b.smooth||b.filterReset?{}:b);airAll();api('/api/kattenbak',{id,...b}).then(r=>{if(!r.ok&&r.message)toast(r.message);else{const k=Object.keys(KB_DONE).find(k=>b[k]);if(k)toast(t(KB_DONE[k]));else if(b.uv)toast(t('Kattenbak steriliseert'))}})}
 function kbCard(l){const a=kbOf(l.id),d=document.createElement('div');d.className='aircard';
   if(!a){d.innerHTML=`<div class="hint">${esc(t('De kattenbak bedien je op de House hub.'))}</div>`;return d}
   if(!a.known){d.innerHTML=`<b>${esc(l.name)}</b><div class="hint">${esc(t(a.online?'Even geduld, de stand wordt opgehaald...':'De kattenbak is niet bereikbaar.'))}</div>`;return d}
@@ -1580,11 +1580,17 @@ function kbCard(l){const a=kbOf(l.id),d=document.createElement('div');d.classNam
     ${f.length?`<div class="hint" style="color:#a02a1a;font-weight:700">⚠ ${esc(f.join(' · '))}</div>`:''}
     <div class="lbl">${esc(t('Vandaag'))}</div><div><b>${a.visits??0}×</b> ${esc(t('gebruikt'))}${a.seconds?' · '+esc(min(a.seconds)):''}${a.weight?' · '+esc(t('kat {kg} kg',{kg:nl1(a.weight/1000,1)})):''}</div>
     <button class="btn gold" data-clean="1" style="width:100%;margin-top:10px"${a.cleaning?' disabled':''}>${esc(t('Nu schoonmaken'))}</button>
-    <div class="row" style="margin-top:8px"><button class="btn grow${a.autoClean?' on':''}" data-auto="1">${esc(t('Automatisch schoonmaken'))}</button><button class="btn grow${a.light?' on':''}" data-light="1">${esc(t('Lampje'))}</button></div>
-    ${a.autoClean?`<div class="lbl">${esc(t('Schoonmaken na een bezoek, na'))}</div><div class="seg">${[30,60,120,300].map(s=>`<button class="btn${a.delay===s?' on':''}" data-delay="${s}">${esc(s<60?t('{s} s',{s}):t('{m} min',{m:s/60}))}</button>`).join('')}</div>`:''}`;
+    <div class="row" style="margin-top:8px"><button class="btn grow" data-pour="1">${esc(t('Zand bijvullen'))}</button><button class="btn grow" data-smooth="1">${esc(t('Zand egaliseren'))}</button><button class="btn grow${a.uv?' on':''}" data-uv="1">${esc(t('Steriliseren'))}</button></div>
+    <div class="row" style="margin-top:8px"><button class="btn grow${a.autoClean?' on':''}" data-auto="1">${esc(t('Automatisch schoonmaken'))}</button><button class="btn grow${a.light?' on':''}" data-light="1">${esc(t('Lampje afvalbak'))}</button><button class="btn grow${a.childLock?' on':''}" data-lock="1">${esc(t('Kinderslot'))}</button></div>
+    ${a.autoClean?`<div class="lbl">${esc(t('Schoonmaken na een bezoek, na'))}</div><div class="seg">${[30,60,120,300].map(s=>`<button class="btn${a.delay===s?' on':''}" data-delay="${s}">${esc(s<60?t('{s} s',{s}):t('{m} min',{m:s/60}))}</button>`).join('')}</div>`:''}
+    ${a.filterDays!=null?`<div class="lbl">${esc(t('Geurfilter'))}</div><div class="row" style="align-items:center"><span class="grow">${esc(t('nog {n} dagen',{n:a.filterDays}))}</span><button class="btn" data-freset="1">${esc(t('Nieuw filter erin'))}</button></div>`:''}
+    <div class="hint" style="margin-top:8px">${esc(t('Vaste tijden schoonmaken: {a} · steriliseren: {b} · niet storen: {c}. Die tijden stel je in de ZEDAR-app in.',{a:t(a.schedClean?'aan':'uit'),b:t(a.schedUv?'aan':'uit'),c:t(a.dnd?'aan':'uit')}))}</div>`;
   d.querySelector('[data-clean]').onclick=()=>kbSet(l.id,{clean:true});
   d.querySelector('[data-auto]').onclick=()=>kbSet(l.id,{autoClean:!a.autoClean});
   d.querySelector('[data-light]').onclick=()=>kbSet(l.id,{light:!a.light});
+  d.querySelector('[data-pour]').onclick=()=>kbSet(l.id,{pour:true});d.querySelector('[data-smooth]').onclick=()=>kbSet(l.id,{smooth:true});
+  d.querySelector('[data-uv]').onclick=()=>kbSet(l.id,{uv:!a.uv});d.querySelector('[data-lock]').onclick=()=>kbSet(l.id,{childLock:!a.childLock});
+  const fr=d.querySelector('[data-freset]');if(fr)fr.onclick=()=>{if(fr.dataset.sure){kbSet(l.id,{filterReset:true});fr.remove()}else{fr.dataset.sure=1;fr.textContent=t('Zeker? Tik nog een keer')}};
   d.querySelectorAll('[data-delay]').forEach(b=>b.onclick=()=>kbSet(l.id,{delay:+b.dataset.delay}));
   if(SRV){const h=document.createElement('div');h.className='kbhist';
     h.innerHTML=`<div class="lbl">${esc(t('Gewicht per bezoek (kg)'))}</div><div class="enchart small kbw"></div>
@@ -1598,7 +1604,7 @@ async function kbHist(id,h){let c=kbLogs[id];if(!c||Date.now()-c.at>60000){try{c
   if(!v.length){h.querySelector('.kbw').classList.add('hidden');h.querySelector('.kbv').classList.add('hidden');h.querySelectorAll('.lbl').forEach(x=>x.classList.add('hidden'));
     list.innerHTML=`<p class="hint" style="margin:6px 0 0">${esc(t('Nog geen bezoeken opgeslagen. Vanaf nu houdt de hub elk bezoek bij, met gewicht en duur.'))}</p>`;return}
   const loc=I18N.lang==='en'?'en-GB':'nl-NL',dkey=ms=>{const x=new Date(ms);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
-  const days=[...Array(14)].map((_,i)=>enAddDay(enToday(),i-13)),cnt=days.map(dd=>v.filter(x=>dkey(x.t)===dd).length);
+  const days=[...Array(14)].map((_,i)=>enAddDay(enToday(),i-13)),cnt=days.map(dd=>v.filter(x=>x.src!=='weging'&&dkey(x.t)===dd).length);
   enBars(h.querySelector('.kbv'),cnt,{color:'#3f6fa8',min:2,labels:days.map(dd=>new Date(dd+'T12:00:00').toLocaleDateString(loc,{day:'numeric',month:'numeric'})),title:t('Bezoeken per dag'),
     tip:(i,n)=>new Date(days[i]+'T12:00:00').toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short'})+': '+n+'×'});
   // Gewicht per kat: elke kat een eigen lijn (de hub wijst bezoeken met gewicht toe aan de dichtstbijzijnde kat)
@@ -1607,7 +1613,7 @@ async function kbHist(id,h){let c=kbLogs[id];if(!c||Date.now()-c.at>60000){try{c
   if(wl.length)kbDots(h.querySelector('.kbw'),cats.length?cats:[{name:t('Kat'),color:KAT_COL[0],pts:wl.slice().reverse()}],loc);
   else h.querySelector('.kbw').innerHTML=`<p class="hint" style="margin:0">${esc(t('Nog geen gewicht gemeten. Vanaf nu bewaart de hub het gewicht bij elk bezoek.'))}</p>`;
   const dur=s=>s>=60?Math.floor(s/60)+' min '+(s%60)+' s':s+' s';
-  list.innerHTML=`<div class="lbl">${esc(t('Laatste bezoeken'))}</div>`+v.slice(0,8).map(x=>`<div class="kbrow">${esc(new Date(x.t).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}<span>${x.cat?esc(x.cat+' · '):''}${x.weight>0?esc(nl1(x.weight/1000,2)+' kg · '):''}${esc(dur(x.seconds||0))}</span></div>`).join('')}
+  list.innerHTML=`<div class="lbl">${esc(t('Laatste bezoeken'))}</div>`+v.slice(0,8).map(x=>`<div class="kbrow">${esc(new Date(x.t).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}<span>${x.cat?esc(x.cat+' · '):''}${x.weight>0?esc(nl1(x.weight/1000,2)+' kg'+(x.src==='weging'?'':' · ')):''}${x.src==='weging'?' · '+esc(t('alleen gewogen')):esc(dur(x.seconds||0))}</span></div>`).join('')}
 /* Gewicht als punten met lijn, een lijn per kat, op een tijd-as; as van net onder het laagste tot net boven het hoogste
    gewicht (kleine verschillen blijven zichtbaar). Legenda erboven, tooltip bij het dichtstbijzijnde punt. */
 const KAT_COL=['#8a5bb0','#b8731f','#3f6fa8','#4e8a3c'];
@@ -1751,12 +1757,14 @@ async function peopleAdmin(){if(!S||S.role!=='owner')return;let r;try{r=await ap
     const vendor=d.mac.startsWith('a4:38:cc')?'Nintendo':d.random?t('telefoon of laptop (privé-adres)'):'';
     el.innerHTML=`<div class="row" style="margin:0;align-items:center"><b class="grow">${d.home?'<i class="dotg"></i>':''}</b><span class="badge"></span></div>
       <div class="meta">${esc([d.ip,vendor,d.mac,t('laatst {d}',{d:new Date(d.last).toLocaleString(loc,{weekday:'short',hour:'2-digit',minute:'2-digit'})})].filter(Boolean).join(' · '))}</div>
-      <div class="row"><select class="grow"><option value="">${esc(t('Dit is…'))}</option>${ppl.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}<option value="+">${esc(t('+ Nieuw persoon'))}</option></select><button class="btn" data-h="1">${esc(t('Verbergen'))}</button></div>`;
+      <div class="row"><select class="grow"><option value="">${esc(t('Dit is…'))}</option>${ppl.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}<option value="+">${esc(t('+ Nieuw persoon'))}</option></select><button class="btn" data-h="1">${esc(t('Verbergen'))}</button></div>
+      ${d.person?`<div class="row"><button class="btn grow${d.counts?' on':''}" data-c="1">${esc(t(d.counts?'Telt mee voor thuis':'Telt niet mee voor thuis'))}</button></div>`:''}`;
     el.querySelector('b').append(document.createTextNode(d.name||t('Naamloos apparaat')));el.querySelector('.badge').textContent=d.person||t('niet gekoppeld');
     const sel=el.querySelector('select');if(d.person){const p=ppl.find(x=>x.name===d.person);if(p)sel.value=p.id}
     sel.onchange=async()=>{let id=sel.value;if(!id)return;let name='';if(id==='+'){name=(prompt(t('Naam van deze persoon'))||'').trim();if(!name){sel.value='';return}id=''}
       const r=await api('/api/people/save',{id,name,addMac:d.mac});if(r.people){peopleData=r.people;peopleAt=Date.now()}peopleRender();peopleAdmin()};
     el.querySelector('[data-h]').onclick=async()=>{await api('/api/net/hide',{mac:d.mac,hide:true});peopleAdmin()};
+    const cb=el.querySelector('[data-c]');if(cb)cb.onclick=async()=>{await api('/api/net/presence',{mac:d.mac,count:!d.counts});peopleLoad(true).then(()=>{peopleAdmin();autoLoad()})};
     list.append(el)}
   const pl=$('peopleList');pl.innerHTML='';
   for(const p of ppl){const el=document.createElement('details');el.className='netrow';
@@ -1803,8 +1811,10 @@ function accRender(list){const box=$('accList'),loc=I18N.lang==='en'?'en-GB':'nl
     const ua=/iPhone|iPad/.test(d.ua)?'iPhone/iPad':/Android/.test(d.ua)?'Android':/Windows/.test(d.ua)?'Windows':/Mac OS/.test(d.ua)?'Mac':'';
     el.innerHTML=`<div class="row" style="margin:0;align-items:center"><b class="grow"></b><span class="badge">${esc(t(ACC_ROLE[d.role]||d.role))}</span></div>
       <div class="meta">${esc([d.me?t('dit apparaat'):'',ua,d.ip,seen?t('laatst {d}',{d:seen}):''].filter(Boolean).join(' · '))}</div>
+      <div class="row" style="align-items:center"><span>${esc(t('Hoort bij'))}</span><select class="grow" data-p="1"><option value="">${esc(t('niemand'))}</option>${(peopleData||[]).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></div>
       <div class="row">${d.me?'':(d.role!=='guest'?`<button class="btn" data-r="guest">${esc(t('Gast'))}</button>`:'')+(d.role!=='owner'?`<button class="btn" data-r="owner">${esc(t('Hoofdgebruiker'))}</button>`:'')+(d.role==='pending'?`<button class="btn" data-r="denied">${esc(t('Weigeren'))}</button>`:'')+`<button class="btn red" data-r="delete">${esc(t('Verwijderen'))}</button>`}</div>`;
     el.querySelector('b').textContent=d.name;
+    const ps=el.querySelector('[data-p]');ps.value=d.person||'';ps.onchange=async()=>{const r=await api('/api/people/link',{device:d.id,person:ps.value});toast(r.message||'');if(r.devices)accRender(r.devices)};
     el.querySelectorAll('[data-r]').forEach(b=>b.onclick=async()=>{const r=await api('/api/access/set',{id:d.id,role:b.dataset.r});toast(r.message||'');if(r.devices)accRender(r.devices);poll()});
     box.append(el)}}
 /* Opnieuw tekenen alleen als er iets veranderd is (anders verspringen knoppen onder je vinger) */
@@ -2521,7 +2531,7 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();accLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(n==='energy')enLoad();
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(n==='energy')enLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
