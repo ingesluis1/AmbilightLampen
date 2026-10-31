@@ -1648,13 +1648,13 @@ function kbCard(l){const a=kbOf(l.id),d=document.createElement('div');d.classNam
 /* Slimme stekker (alleen op de hub; stand uit /api/state als lamp.plug). Aan/uit, verbruik nu en per dag, wasmachine-stand,
    en voor de hoofdgebruiker: wat de hub mag (mode) en wat hij doet na een stroomstoring. */
 const stOf=id=>{const x=S&&(S.lamps||[]).find(q=>q.id===id);return x&&x.plug};
-const ST_MODE=[['vrij','Vrij aan en uit'],['meten','Alleen meten'],['standby','Alleen uit in stand-by'],['wasmachine','Wasmachine']];
+const ST_MODE=[['vrij','Vrij aan en uit'],['meten','Alleen meten'],['standby','Alleen uit in stand-by'],['wasmachine','Wasmachine'],['vaatwasser','Vaatwasser']];
 const ST_OUT=[['off','Uit'],['on','Aan'],['memory','Zoals hij was']];
 const stW=w=>w==null?'–':(w>=100?Math.round(w):nl1(w,1))+' W';
 const stKwh=k=>nl1(k||0,k>=10?1:2)+' kWh';
 function stPrice(day){try{if(!enData||!enHasT())return null;const P=enTP(day);return P.stroom!=null?P.stroom:null}catch(e){return null}}
 function stLine(p){const loc=I18N.lang==='en'?'en-GB':'nl-NL',hm=ms=>new Date(ms).toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'});
-  const run=p.mode==='wasmachine'?(p.running?t('bezig sinds {t}',{t:hm(p.runningSince)}):p.lastDone&&Date.now()-p.lastDone<12*3600e3?t('klaar om {t}',{t:hm(p.lastDone)}):''):'';
+  const run=(p.mode==='wasmachine'||p.mode==='vaatwasser')?(p.running?t('bezig sinds {t}',{t:hm(p.runningSince)}):p.lastDone&&Date.now()-p.lastDone<12*3600e3?t('klaar om {t}',{t:hm(p.lastDone)}):''):'';
   return [t(p.on?'aan':'uit'),p.on?stW(p.watt):'',run,t('{k} vandaag',{k:stKwh(p.today)})].filter(Boolean).join(' · ')+((p.faults||[]).length?' · ⚠':'')}
 function stSet(id,b){const p=stOf(id);api('/api/stekker',{id,...b}).then(r=>{if(!r.ok&&r.message)toast(r.message);else{if(p)Object.assign(p,b);airAll()}})}
 function stCard(l){const p=stOf(l.id),d=document.createElement('div');d.className='aircard';
@@ -1664,7 +1664,7 @@ function stCard(l){const p=stOf(l.id),d=document.createElement('div');d.classNam
   d.innerHTML=`<div class="top"><b class="grow">${esc(l.name)}</b><span class="in" style="font-size:16px">${esc(p.on?stW(p.watt):t('uit'))}</span></div>
     ${p.online?'':`<div class="hint">${esc(t('De stekker is nu niet bereikbaar.'))}</div>`}
     ${(p.faults||[]).length?`<div class="hint" style="color:#a02a1a;font-weight:700">⚠ ${esc(t('Storing: {f}',{f:p.faults.join(', ')}))}</div>`:''}
-    <div class="lbl">${esc(t('Vandaag'))}</div><div><b>${esc(stKwh(p.today))}</b>${pr!=null?' · ≈ '+esc(enEUR(p.today*pr)):''}${p.mode==='wasmachine'?' · '+esc(stLine(p).split(' · ').filter(x=>/bezig|klaar|running|done/.test(x)).join('')||t('niet bezig')):''}</div>
+    <div class="lbl">${esc(t('Vandaag'))}</div><div><b>${esc(stKwh(p.today))}</b>${pr!=null?' · ≈ '+esc(enEUR(p.today*pr)):''}${(p.mode==='wasmachine'||p.mode==='vaatwasser')?' · '+esc(stLine(p).split(' · ').filter(x=>/bezig|klaar|running|done/.test(x)).join('')||t('niet bezig')):''}</div>
     <button class="btn${p.on?' on':''}" data-on="1" style="width:100%;margin-top:10px">${esc(t(p.on?'Uitzetten':'Aanzetten'))}</button>
     ${own?`<div class="lbl">${esc(t('Wat mag de hub'))}</div><div class="seg" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${ST_MODE.map(([v,n])=>`<button class="btn${p.mode===v?' on':''}" data-mode="${v}">${esc(t(n))}</button>`).join('')}</div>
       <div class="lbl">${esc(t('Na een stroomstoring'))}</div><div class="seg">${ST_OUT.map(([v,n])=>`<button class="btn${p.afterOutage===v?' on':''}" data-out="${v}">${esc(t(n))}</button>`).join('')}</div>`:''}`;
@@ -1679,7 +1679,7 @@ async function stHist(id,h){let c=stLogs[id];if(!c||Date.now()-c.at>60000){try{c
   enBars(h.querySelector('.stv'),vals,{color:'#3f6fa8',labels:days.map(dd=>new Date(dd+'T12:00:00').toLocaleDateString(loc,{day:'numeric',month:'numeric'})),title:t('Verbruik per dag (kWh)'),
     tip:(i,v)=>{const pr=stPrice(days[i]);return new Date(days[i]+'T12:00:00').toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short'})+': '+stKwh(v)+(pr!=null?' ≈ '+enEUR(v*pr):'')}});
   const runs=(r.runs||[]).slice(-5).reverse(),box=h.querySelector('.struns');
-  box.innerHTML=runs.length?`<div class="lbl">${esc(t('Laatste wasbeurten'))}</div>`+runs.map(x=>{const pr=stPrice(enToday()),min=Math.round((x.end-x.start)/60000);
+  box.innerHTML=runs.length?`<div class="lbl">${esc(t('Laatste beurten'))}</div>`+runs.map(x=>{const pr=stPrice(enToday()),min=Math.round((x.end-x.start)/60000);
     return `<div class="kbrow">${esc(new Date(x.start).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}<span>${esc(t('{m} min',{m:min})+' · '+stKwh(x.kwh)+(pr!=null?' · ≈ '+enEUR(x.kwh*pr):''))}</span></div>`}).join(''):''}
 /* Bezoeken (de hub houdt ze bij): gewicht per bezoek als punten, aantal per dag als staafjes (14 dagen), laatste bezoeken */
 const kbLogs={};
@@ -2433,7 +2433,7 @@ function enDevUI(){const list=enPlugsAll||[],box=$('enDev');$('enDevPanel').clas
     el.innerHTML=`<div class="row" style="margin:0;align-items:center"><i class="ensw" style="background:${EN_PLUG_COL[i%EN_PLUG_COL.length]}"></i><b class="grow"></b><span>${st&&st.on?esc(stW(st.watt)):esc(t('uit'))}</span></div>
       <div class="g"><div>${esc(t('Vandaag'))}<b>${esc(stKwh(kT))}</b>${pr!=null?esc(enEUR(kT*pr)):''}</div><div>${esc(t('7 dagen'))}<b>${esc(stKwh(k7))}</b>${pr!=null?esc(enEUR(k7*pr)):''}</div><div>${esc(enMonName(mk))}<b>${esc(stKwh(kM))}</b>${pr!=null?esc(enEUR(kM*pr)):''}</div>
         <div>${esc(t('Per jaar (zo doorgaand)'))}<b>${esc(nl1(perDay*365,0)+' kWh')}</b>${pr!=null?esc(enEUR0(perDay*365*pr,true)):''}</div><div>${esc(t('Laagste stand'))}<b>${p.minW!=null?esc(stW(p.minW)):'–'}</b>${p.minW!=null&&pr!=null?esc(t('{e} per jaar',{e:enEUR0(p.minW*8.76*pr,true)})):''}</div>
-        ${p.mode==='wasmachine'?`<div>${esc(t('Wasbeurten'))}<b>${runs.length}×</b>${runs.length?esc(t('gem. {k}',{k:stKwh(runs.reduce((a,x)=>a+x.kwh,0)/runs.length)})+eur(runs.reduce((a,x)=>a+x.kwh,0)/runs.length)):''}</div>`:''}</div>`;
+        ${(p.mode==='wasmachine'||p.mode==='vaatwasser')?`<div>${esc(t('Beurten'))}<b>${runs.length}×</b>${runs.length?esc(t('gem. {k}',{k:stKwh(runs.reduce((a,x)=>a+x.kwh,0)/runs.length)})+eur(runs.reduce((a,x)=>a+x.kwh,0)/runs.length)):''}</div>`:''}</div>`;
     el.querySelector('b.grow').textContent=p.name;box.append(el)});
   if(list.every(p=>Object.keys(p.days||{}).length<3))box.insertAdjacentHTML('beforeend',`<p class="hint" style="margin:6px 0 0">${esc(t('Per jaar en de laagste stand worden nauwkeuriger naarmate de stekkers langer meten.'))}</p>`)}
 
