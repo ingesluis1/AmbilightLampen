@@ -202,6 +202,10 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .pxic.arr{width:.85em;height:.75em}
 .pxic{width:.62em;height:.8em;vertical-align:-.05em;shape-rendering:crispEdges}
 .encon{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
+.encon>summary{cursor:pointer;list-style:none}
+.encon>summary::-webkit-details-marker{display:none}
+.encon>summary b::before{content:'▸ ';}
+.encon[open]>summary b::before{content:'▾ ';}
 .encon .encname{font-weight:700;width:auto!important;flex:1;min-width:0}
 .encon .row{flex-wrap:nowrap;gap:8px}
 .encspan{font-size:13px;opacity:.8;margin:4px 0 6px}
@@ -1792,21 +1796,25 @@ const enLong=d=>new Date(d+'T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-
 function enTarUI(){if(!enConDirty)enCon=JSON.parse(JSON.stringify(enPer().filter(P=>P.from||P.stroom!=null||P.gas!=null))).map(P=>(P.from=P.from||enToday(),P));
   $('enTarSum').textContent=enCon.length?t('{n} periode(s)',{n:enCon.length}):t('nog niet ingevuld');if(!enCon.length)$('enTarDet').open=true;
   if(!enConDirty)enConRender()}
+/* Nieuwste bovenaan, elk contract uitklapbaar (dicht: naam, periode en prijzen); open-stand onthouden zolang de pagina open is */
+const enConOpen=new Set();
 function enConRender(){enCon.sort((a,b)=>a.from<b.from?-1:1);const box=$('enCon'),f=v=>v==null?'':String(v).replace('.',',');box.innerHTML='';
-  enCon.forEach((P,i)=>{const next=enCon[i+1],to=next?enLong(enAddDay(next.from,-1)):t('nu');
-    const c=document.createElement('div');c.className='encon';
-    c.innerHTML=`<div class="row" style="align-items:center"><input type="text" class="grow encname" placeholder="${esc(t('Naam, bijvoorbeeld Budget Thuis 2025–2026'))}" value="${esc(P.name||'')}">
+  const list=enCon.map((P,i)=>[P,enCon[i+1]]).reverse();
+  list.forEach(([P,next])=>{const i=enCon.indexOf(P),to=next?enLong(enAddDay(next.from,-1)):t('nu');
+    const c=document.createElement('details');c.className='encon';c.open=enConOpen.has(P);c.ontoggle=()=>{if(c.open)enConOpen.add(P);else enConOpen.delete(P)};
+    const price=(P.stroom!=null?t('stroom')+' € '+nl1(+P.stroom,4):'')+(P.gas!=null?' · '+t('gas')+' € '+nl1(+P.gas,4):'');
+    c.innerHTML=`<summary><b>${esc(P.name||t('Naamloos contract'))}</b><div class="encspan">${esc(enLong(P.from))} t/m ${esc(to)}${price?' · '+esc(price):''}</div></summary>
+      <div class="row" style="align-items:center;margin-top:6px"><input type="text" class="grow encname" placeholder="${esc(t('Naam, bijvoorbeeld Budget Thuis 2025–2026'))}" value="${esc(P.name||'')}">
       <button class="btn red x" title="${esc(t('Verwijderen'))}" aria-label="${esc(t('Verwijderen'))}">✕</button></div>
-      <div class="encspan">${esc(enLong(P.from))} t/m ${esc(to)}</div>
-      <div class="entar"><label>${esc(t('Begint op'))}</label><span><input type="date" class="encfrom" value="${P.from}"></span>
+      <div class="entar" style="margin-top:6px"><label>${esc(t('Begint op'))}</label><span><input type="date" class="encfrom" value="${P.from}"></span>
       ${enConFields.map(([k,l,ph])=>`<label>${esc(t(l))}</label><span>€ <input type="text" inputmode="decimal" data-k="${k}" placeholder="${esc(t(ph))}" value="${f(P[k])}"></span>`).join('')}</div>`;
     c.querySelector('.encname').oninput=e=>{P.name=e.target.value;enConDirty=true};
     c.querySelector('.encfrom').onchange=e=>{if(e.target.value){P.from=e.target.value;enConDirty=true;enConRender()}};
     c.querySelectorAll('[data-k]').forEach(inp=>inp.oninput=()=>{P[inp.dataset.k]=inp.value;enConDirty=true});
-    c.querySelector('.x').onclick=()=>{enCon.splice(i,1);enConDirty=true;enConRender()};
+    c.querySelector('.x').onclick=()=>{enCon.splice(i,1);enConOpen.delete(P);enConDirty=true;enConRender()};
     box.append(c)})}
-$('enConAdd').onclick=()=>{const last=enCon[enCon.length-1]||{};enCon.push({...JSON.parse(JSON.stringify(last)),name:'',from:enToday()});enConDirty=true;enConRender();
-  $('enCon').lastElementChild.scrollIntoView({block:'center'})};
+$('enConAdd').onclick=()=>{const last=enCon[enCon.length-1]||{},P={...JSON.parse(JSON.stringify(last)),name:'',from:enToday()};enCon.push(P);enConOpen.add(P);enConDirty=true;enConRender();
+  $('enCon').firstElementChild.scrollIntoView({block:'center'})};
 $('enTarSave').onclick=async()=>{const r=await api('/api/energy/tariffs',{periods:enCon});toast(r.message||'');
   if(r.ok&&enData){enConDirty=false;enData.tariffs=r.tariffs;enDays();enDayLoad()}};
 function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d=>enDate(d.date,{day:'numeric',month:'numeric'}));
