@@ -15,7 +15,7 @@ object Stekker {
 
     fun state(id: String): JSONObject? {
         val c = Airco.conns[id] ?: return null
-        if (SystemClock.elapsedRealtime() - c.dpsAt > 30_000) c.refresh()
+        fresh(c)
         val d = c.allDps
         return JSONObject().apply {
             put("online", c.online); put("known", d.isNotEmpty())
@@ -30,8 +30,11 @@ object Stekker {
         }
     }
 
+    /** Stekkers melden een ander verbruik niet altijd zelf: elke 10 seconden opnieuw vragen. */
+    private fun fresh(c: TuyaLamp) { if (SystemClock.elapsedRealtime() - c.dpsAt > 10_000) c.refresh() }
+
     /** Vermogen nu in watt, of null als onbekend. */
-    fun watt(id: String): Double? = (Airco.conns[id]?.allDps?.get("19") as? Number)?.toDouble()?.div(10)
+    fun watt(id: String): Double? { val c = Airco.conns[id] ?: return null; fresh(c); return (c.allDps["19"] as? Number)?.toDouble()?.div(10) }
     fun isOn(id: String): Boolean? = Airco.conns[id]?.allDps?.get("1")?.let { it == true }
 
     /** Opdracht: on (aan/uit), afterOutage (off/on/memory), led (relay/pos/none/on). Geeft een foutmelding of null. */
