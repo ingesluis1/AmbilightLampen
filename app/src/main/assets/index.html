@@ -168,7 +168,7 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 /* Energie: tegels en staafgrafieken (een reeks per grafiek, geen tweede as) */
 /* Energie: cijfers en kleine tekst in een gewoon lettertype (het pixellettertype is lastig bij 3/8/9 en €); koppen en knoppen blijven pixel */
 #page-energy{--ensans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-#page-energy .hint,#page-energy p,#page-energy .enlbl,#page-energy .entable,#page-energy .enchart,#page-energy .entar label,#page-energy .entar span,#page-energy .entar input,#page-energy .ennote{font-family:var(--ensans);font-variant-numeric:tabular-nums}
+#page-energy .hint,#page-energy p,#page-energy .enlbl,#page-energy .entable,#page-energy .enchart,#page-energy .entar label,#page-energy .entar span,#page-energy .entar input,#page-energy .encon,#page-energy .encon input,#page-energy .ennote{font-family:var(--ensans);font-variant-numeric:tabular-nums}
 #page-energy .enchart svg text{font-family:var(--ensans)}
 #page-energy .enchart .tip{font-family:var(--ensans)}
 .entable{width:100%;border-collapse:collapse;background:var(--cream);border:3px solid var(--ink);font-size:15px}
@@ -201,6 +201,11 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .pxic.sun{width:.8em;height:.8em}
 .pxic.arr{width:.85em;height:.75em}
 .pxic{width:.62em;height:.8em;vertical-align:-.05em;shape-rendering:crispEdges}
+.encon{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
+.encon .encname{font-weight:700;width:auto!important;flex:1;min-width:0}
+.encon .row{flex-wrap:nowrap;gap:8px}
+.encspan{font-size:13px;opacity:.8;margin:4px 0 6px}
+.entar input[type=date]{font:inherit;border:3px solid var(--ink);background:var(--cream);padding:5px 6px;width:12.5em;max-width:100%}
 .entar{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center}
 .entar label{font-size:14px}
 .entar span{white-space:nowrap;font-weight:600}
@@ -569,18 +574,11 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
   <p class="hint" id="enDaySum" style="margin:6px 0 0"></p>
 </section>
 <section class="panel enneeds">
-  <details id="enTarDet"><summary><b>Tarieven</b> <span class="hint" id="enTarSum"></span></summary>
-    <p class="hint" style="margin:6px 0 8px">Vul je prijzen in, inclusief btw. Ze staan in je contract of op de site van je leverancier. Dan zie je hierboven ongeveer wat het kost.</p>
-    <div class="entar">
-      <label for="tStroom">Stroom per kWh (normaal)</label><span>€ <input type="text" inputmode="decimal" id="tStroom" placeholder="0,25"></span>
-      <label for="tStroomDal">Stroom per kWh, daltarief (als je dat hebt)</label><span>€ <input type="text" inputmode="decimal" id="tStroomDal" placeholder="zelfde"></span>
-      <label for="tTerug">Teruglevering per kWh</label><span>€ <input type="text" inputmode="decimal" id="tTerug" placeholder="0,05"></span>
-      <label for="tGas">Gas per m³</label><span>€ <input type="text" inputmode="decimal" id="tGas" placeholder="1,30"></span>
-      <label for="tVast">Vaste kosten per maand (vastrecht en netbeheer, min de vermindering energiebelasting)</label><span>€ <input type="text" inputmode="decimal" id="tVast" placeholder="20,00"></span>
-      <label for="tKorting">Korting per jaar (bijvoorbeeld welkomstkorting)</label><span>€ <input type="text" inputmode="decimal" id="tKorting" placeholder="0"></span>
-    </div>
-    <div class="ennote" id="enTarHist"></div>
-    <button class="btn gold" id="enTarSave" style="margin-top:8px;width:100%">Tarieven opslaan</button>
+  <details id="enTarDet"><summary><b>Contracten</b> <span class="hint" id="enTarSum"></span></summary>
+    <p class="hint" style="margin:6px 0 8px">Per contract of periode je prijzen, inclusief btw. Ze staan in je contract of op de site van je leverancier. Een nieuwe periode begint bijvoorbeeld bij een nieuw contract, of op 1 januari als de energiebelasting verandert. De kosten hierboven rekenen per dag met de periode die toen gold.</p>
+    <div id="enCon"></div>
+    <button class="btn" id="enConAdd" style="margin-top:8px;width:100%">+ Nieuw contract of nieuwe periode</button>
+    <button class="btn gold" id="enTarSave" style="margin-top:8px;width:100%">Contracten opslaan</button>
   </details>
 </section>
 </div>
@@ -1786,13 +1784,31 @@ function enCostGas(x){if(x.gas==null)return null;let c=null;for(const [P,f] of e
 function enBackValue(x){if(x.back==null)return null;let c=null;for(const [P,f,,sal] of enParts(x)){const pr=sal?P.stroom:P.terug;if(pr!=null)c=(c||0)+x.back*f*pr}return c}
 function enFixed(x){let c=0;for(const [P,,days] of enParts(x))c+=((P.vast||0)-(P.korting||0)/12)*12/365*days;return c}
 function enCostDay(x){const a=enCostStroom(x),b=enCostGas(x);if(a==null&&b==null)return null;return (a||0)+(b||0)+enFixed(x)}
-function enTarUI(){const T=enT(),f=v=>v==null?'':String(v).replace('.',',');
-  for(const [id,k] of [['tStroom','stroom'],['tStroomDal','stroomDal'],['tTerug','terug'],['tGas','gas'],['tVast','vast'],['tKorting','korting']])if(document.activeElement!==$(id))$(id).value=f(T[k]);
-  const ps=enPer().filter(P=>P.from),d=s=>new Date(s+'T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{day:'numeric',month:'short',year:'numeric'});
-  $('enTarHist').innerHTML=ps.length>1?esc(t('De velden hierboven gelden vanaf {d}. Eerder:',{d:d(ps[ps.length-1].from)}))+'<br>'+ps.slice(0,-1).map((P,i)=>esc(t('vanaf {d}',{d:d(P.from)})+': '+t('stroom')+' € '+nl1(P.stroom,4)+' · '+t('gas')+' € '+nl1(P.gas,4)+(P.korting?' · '+t('korting')+' € '+nl1(P.korting,0)+'/'+t('jaar'):''))).join('<br>'):'';
-  $('enTarSum').textContent=enHasT()?t('ingevuld'):t('nog niet ingevuld');if(!enHasT())$('enTarDet').open=true}
-$('enTarSave').onclick=async()=>{const r=await api('/api/energy/tariffs',{stroom:$('tStroom').value,stroomDal:$('tStroomDal').value,terug:$('tTerug').value,gas:$('tGas').value,vast:$('tVast').value,korting:$('tKorting').value});
-  toast(r.message||'');if(r.ok&&enData){enData.tariffs=r.tariffs;enDays();enDayLoad()}};
+/* Contracten: een kaartje per periode (naam, van-tot, prijzen). Bewerken gebeurt in een kopie; opslaan stuurt alle periodes. */
+let enCon=null,enConDirty=false;
+const enConFields=[['stroom','Stroom per kWh (normaal)','0,25'],['stroomDal','Stroom per kWh, daltarief (als je dat hebt)','zelfde'],['terug','Teruglevering per kWh','0,05'],
+  ['gas','Gas per m³','1,30'],['vast','Vaste kosten per maand (vastrecht en netbeheer, min de vermindering energiebelasting)','20,00'],['korting','Korting per jaar (bijvoorbeeld welkomstkorting)','0']];
+const enLong=d=>new Date(d+'T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{day:'numeric',month:'short',year:'numeric'});
+function enTarUI(){if(!enConDirty)enCon=JSON.parse(JSON.stringify(enPer().filter(P=>P.from||P.stroom!=null||P.gas!=null))).map(P=>(P.from=P.from||enToday(),P));
+  $('enTarSum').textContent=enCon.length?t('{n} periode(s)',{n:enCon.length}):t('nog niet ingevuld');if(!enCon.length)$('enTarDet').open=true;
+  if(!enConDirty)enConRender()}
+function enConRender(){enCon.sort((a,b)=>a.from<b.from?-1:1);const box=$('enCon'),f=v=>v==null?'':String(v).replace('.',',');box.innerHTML='';
+  enCon.forEach((P,i)=>{const next=enCon[i+1],to=next?enLong(enAddDay(next.from,-1)):t('nu');
+    const c=document.createElement('div');c.className='encon';
+    c.innerHTML=`<div class="row" style="align-items:center"><input type="text" class="grow encname" placeholder="${esc(t('Naam, bijvoorbeeld Budget Thuis 2025–2026'))}" value="${esc(P.name||'')}">
+      <button class="btn red x" title="${esc(t('Verwijderen'))}" aria-label="${esc(t('Verwijderen'))}">✕</button></div>
+      <div class="encspan">${esc(enLong(P.from))} t/m ${esc(to)}</div>
+      <div class="entar"><label>${esc(t('Begint op'))}</label><span><input type="date" class="encfrom" value="${P.from}"></span>
+      ${enConFields.map(([k,l,ph])=>`<label>${esc(t(l))}</label><span>€ <input type="text" inputmode="decimal" data-k="${k}" placeholder="${esc(t(ph))}" value="${f(P[k])}"></span>`).join('')}</div>`;
+    c.querySelector('.encname').oninput=e=>{P.name=e.target.value;enConDirty=true};
+    c.querySelector('.encfrom').onchange=e=>{if(e.target.value){P.from=e.target.value;enConDirty=true;enConRender()}};
+    c.querySelectorAll('[data-k]').forEach(inp=>inp.oninput=()=>{P[inp.dataset.k]=inp.value;enConDirty=true});
+    c.querySelector('.x').onclick=()=>{enCon.splice(i,1);enConDirty=true;enConRender()};
+    box.append(c)})}
+$('enConAdd').onclick=()=>{const last=enCon[enCon.length-1]||{};enCon.push({...JSON.parse(JSON.stringify(last)),name:'',from:enToday()});enConDirty=true;enConRender();
+  $('enCon').lastElementChild.scrollIntoView({block:'center'})};
+$('enTarSave').onclick=async()=>{const r=await api('/api/energy/tariffs',{periods:enCon});toast(r.message||'');
+  if(r.ok&&enData){enConDirty=false;enData.tariffs=r.tariffs;enDays();enDayLoad()}};
 function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d=>enDate(d.date,{day:'numeric',month:'numeric'}));
   $('enStamp').textContent=t('Uit Enelogic, bijgewerkt t/m {d}. Je netbeheerder stuurt de standen één keer per dag.',{d:enDate(r.last,{weekday:'long',day:'numeric',month:'long'})});
   const sum=(k,list)=>list.reduce((a,d)=>a+(d[k]||0),0),month=ds.filter(d=>d.date.slice(0,7)===r.last.slice(0,7)),anyBack=ds.some(d=>d.back>0);
