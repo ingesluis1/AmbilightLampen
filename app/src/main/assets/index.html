@@ -1676,7 +1676,9 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=
     rect(9,16,12,16,Sl);p(10,17,Sl);p(11,17,Sl);                                                     // halsopening
     legs(P,Pd)}
   // hoofd
-  rect(5,4,16,14,S);p(5,4,null);p(16,4,null);p(5,14,null);p(16,14,null);rect(15,8,16,13,Sd);rect(7,14,15,14,Sd);rect(10,15,11,15,Sd);
+  // rond hoofd: boven smaller, wangen op het breedst, naar onder toe een kin
+  rect(7,3,14,3,S);rect(6,4,15,4,S);rect(5,5,16,11,S);rect(6,12,15,12,S);rect(7,13,14,13,S);rect(8,14,13,14,S);
+  rect(15,8,16,11,Sd);p(15,12,Sd);p(14,13,Sd);rect(8,14,13,14,Sd);rect(10,15,11,15,Sd);
   rect(6,5,8,6,Sl);
   // ogen: wit glimlicht + iris
   // ogen (2x2): boven lichte iris + donkere pupil, onder wit glimlicht + iris; links en rechts gespiegeld, neusbrug ertussen
@@ -1684,20 +1686,20 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=
   eye(8,false);eye(12,true);rect(8,8,9,8,avShade(H,-.55));rect(12,8,13,8,avShade(H,-.55));
   p(7,11,'#f2a0a0');p(14,11,'#e89090');p(10,12,Sd);p(11,12,avShade(S,-.3));                          // blosjes en mond
   // haar
-  if(a.hair!=='kaal'&&a.hair!=='afro'){rect(5,2,16,6,H);rect(4,3,17,5,H);rect(7,2,13,2,Hl);rect(8,3,11,3,Hl);
+  if(a.hair!=='kaal'&&a.hair!=='afro'){rect(8,0,13,0,H);rect(6,1,15,1,H);rect(5,2,16,2,H);rect(4,3,17,6,H);p(4,3,null);p(17,3,null);rect(8,1,11,1,Hl);rect(6,2,9,2,Hl);p(7,3,Hl);
     for(const x of [5,6,7,9,10,12,14,15,16])p(x,7,H);rect(5,8,6,12,H);rect(15,8,16,12,H);p(6,12,Hd);p(16,9,Hd);p(16,10,Hd);p(16,11,Hd);p(5,13,H);p(16,13,Hd);p(8,6,Hd);p(11,6,Hd);p(13,7,Hd);p(16,7,Hd);p(5,8,Hd);rect(4,5,4,7,Hd);rect(17,5,17,7,Hd)}
-  else if(a.hair==='kaal'){p(8,4,Sl);p(9,4,Sl)}
-  if(a.hair==='knot'){rect(8,0,13,1,H);p(9,0,Hl);p(10,0,Hl);p(13,1,Hd)}
+  else if(a.hair==='kaal'){rect(8,2,13,2,S);rect(6,3,15,3,S);p(8,3,Sl);p(9,3,Sl);p(7,4,Sl)}
+  if(a.hair==='knot'){rect(9,-3,12,-1,H);p(10,-3,Hl);p(10,-2,Hl);p(12,-1,Hd)}
   if(a.hair==='krul'){for(const [x,y] of [[3,4],[3,6],[18,4],[18,6],[6,1],[9,1],[12,1],[15,1],[4,8],[17,8]])p(x,y,H);for(const [x,y] of [[6,3],[10,4],[14,3],[12,5]])p(x,y,Hd)}
   // extra's
   if(a.extra==='bril'){for(const x0 of [6,12]){rect(x0,8,x0+3,8,'#3a2a2a');rect(x0,11,x0+3,11,'#3a2a2a');p(x0,9,'#3a2a2a');p(x0,10,'#3a2a2a');p(x0+3,9,'#3a2a2a');p(x0+3,10,'#3a2a2a')}p(10,9,'#3a2a2a');p(11,9,'#3a2a2a')}
-  if(a.extra==='pet'){rect(4,1,17,5,'#c0392b');rect(6,1,15,1,'#e05a4a');rect(4,6,18,6,'#8e2a1f');p(10,3,'#f2f2f2');p(11,3,'#f2f2f2')}
+  if(a.extra==='pet'){rect(7,0,14,0,'#c0392b');rect(5,1,16,1,'#c0392b');rect(4,2,17,5,'#c0392b');rect(7,0,11,1,'#e05a4a');rect(4,6,18,6,'#8e2a1f');p(19,6,'#8e2a1f');p(10,3,'#f2f2f2');p(11,3,'#f2f2f2')}
   if(a.extra==='oren'){for(const [bx,d] of [[5,1],[16,-1]]){p(bx,0,H);p(bx,1,H);p(bx+d,1,H);p(bx,2,H);p(bx+d,2,H);p(bx+2*d,2,H);p(bx+d,2,'#f2a0b0')}}
   if(a.extra==='baard'){rect(6,11,15,15,H);rect(7,15,14,16,H);rect(13,12,15,15,Hd);p(10,12,avShade(S,-.3));p(11,12,avShade(S,-.3))}
-  if(a.extra==='muts'){rect(4,1,17,5,'#3a6aa0');rect(4,5,17,6,'#2a4a7a');for(const x of [6,9,12,15])p(x,6,'#5a8ac0');rect(9,0,12,0,'#e8e8f0')}
+  if(a.extra==='muts'){rect(7,0,14,0,'#3a6aa0');rect(5,1,16,1,'#3a6aa0');rect(4,2,17,5,'#3a6aa0');rect(4,5,17,6,'#2a4a7a');for(const x of [6,9,12,15])p(x,6,'#5a8ac0');rect(9,0,12,0,'#e8e8f0')}
   if(a.extra==='heks'){rect(3,5,18,6,'#4a2a6a');rect(5,3,16,4,'#5a3a7a');rect(7,1,14,2,'#5a3a7a');rect(9,-1,12,0,'#5a3a7a');p(12,-2,'#5a3a7a');p(13,-3,'#5a3a7a');rect(5,4,16,4,'#e8b84a');p(14,3,'#e8b84a')}
   if(a.extra==='zonnehoed'){rect(1,4,20,5,'#e8c06a');rect(2,6,19,6,'#c89a3a');rect(5,1,16,3,'#e8c06a');rect(6,0,15,0,'#f2d68a');rect(5,3,16,3,'#c0392b')}
-  if(a.extra==='hoofddoek'){const C='#d8a0b0',Cd=avShade('#d8a0b0',-.25);rect(4,1,17,8,C);rect(3,4,4,15,C);rect(17,4,18,15,C);rect(4,13,17,16,C);rect(17,6,18,15,Cd);rect(6,15,15,16,Cd);
+  if(a.extra==='hoofddoek'){const C='#d8a0b0',Cd=avShade('#d8a0b0',-.25);rect(7,0,14,0,C);rect(5,1,16,1,C);rect(4,2,17,8,C);rect(3,4,4,15,C);rect(17,4,18,15,C);rect(4,13,17,16,C);rect(17,6,18,15,Cd);rect(6,15,15,16,Cd);
     rect(6,7,15,14,S);p(6,7,C);p(15,7,C);rect(15,9,15,13,Sd);rect(7,14,14,14,Sd);eye(8,false);eye(12,true);p(7,11,'#f2a0a0');p(14,11,'#e89090');p(10,12,Sd);p(11,12,avShade(S,-.3))}
   if(a.extra==='strik'){rect(13,1,17,3,'#e05a8a');p(15,2,'#a0305a');p(13,1,'#f28ab0')}
   // omlijning: lege vakjes naast een getekend vakje worden donker (8 buren), daarna een witte stickerrand
