@@ -202,6 +202,11 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .pxic.arr{width:.85em;height:.75em}
 .pxic{width:.62em;height:.8em;vertical-align:-.05em;shape-rendering:crispEdges}
 .encon{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
+.hdev{background:var(--cream);border:3px solid var(--ink);margin-top:8px}
+.hdev>summary{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;list-style:none}
+.hdev>summary::-webkit-details-marker{display:none}
+.hdev>summary small{display:block;font-size:13px;opacity:.8}
+.hdev .hdevbody .aircard{margin:0 8px 8px;border-width:2px}
 .encon>summary{cursor:pointer;list-style:none}
 .encon>summary::-webkit-details-marker{display:none}
 .encon>summary b::before{content:'▸ ';}
@@ -258,6 +263,7 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
   <div class="house" id="houseCards"></div>
   <div class="row" style="margin-top:12px"><button class="btn gold grow" id="houseOff">Hele huis uit</button><button class="btn grow" id="houseOn">Alles aan</button></div>
   <div class="hint" id="houseHint"></div>
+  <div id="houseDevWrap" class="hidden"><h2 style="margin-top:14px">Apparaten</h2><div id="houseDevs"></div></div>
 </section>
 
 <section class="panel" id="homeMapPanel">
@@ -1472,11 +1478,26 @@ function kbCard(l){const a=kbOf(l.id),d=document.createElement('div');d.classNam
   d.querySelector('[data-light]').onclick=()=>kbSet(l.id,{light:!a.light});
   d.querySelectorAll('[data-delay]').forEach(b=>b.onclick=()=>kbSet(l.id,{delay:+b.dataset.delay}));
   return d}
+function devSummary(l){if(isKat(l)){const k=kbOf(l.id);return k&&k.known?kbStatus(k)+' · '+t('{n}× vandaag',{n:k.visits??0})+((k.faults||[]).length?' · ⚠ '+(k.faults||[]).map(x=>t(KB_FAULT[x]||x)).join(', '):''):''}
+  const a=airOf(l.id);return a&&a.known?t(a.on?'aan':'uit')+(a.inside!=null?' · '+t('binnen {n} °C',{n:a.inside}):''):''}
+const houseDevOpen=new Set();
+function houseDevs(){const devs=SRV?lamps.filter(isDev):[],box=$('houseDevs');$('houseDevWrap').classList.toggle('hidden',!devs.length);
+  const key=devs.map(l=>l.id+l.name+l.look+lampRoom(l)).join();
+  if(box.dataset.k!==key){box.dataset.k=key;box.innerHTML='';
+    for(const l of devs){const d=document.createElement('details');d.className='hdev';d.dataset.id=l.id;d.open=houseDevOpen.has(l.id);
+      d.ontoggle=()=>{if(d.open)houseDevOpen.add(l.id);else houseDevOpen.delete(l.id)};
+      const sm=document.createElement('summary');sm.append(devIcon(l,24));const tx=document.createElement('span');tx.className='grow';tx.innerHTML=`<b></b><small></small>`;sm.append(tx);d.append(sm);
+      const body=document.createElement('div');body.className='hdevbody';d.append(body);box.append(d)}}
+  for(const d of box.children){const l=lamps.find(x=>x.id===d.dataset.id);if(!l)continue;const rm=roomById(lampRoom(l));
+    d.querySelector('b').textContent=l.name;d.querySelector('small').textContent=[rm?rm.name:t('zonder kamer'),devSummary(l)].filter(Boolean).join(' · ');
+    airFill(d.querySelector('.hdevbody'),[l])}}
 /* Opnieuw tekenen alleen als er iets veranderd is (anders verspringen knoppen onder je vinger) */
 function airFill(box,list){const key=JSON.stringify(list.map(l=>[l.id,l.name,airOf(l.id),kbOf(l.id)]))+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;
   box.innerHTML='';for(const l of list)box.append(isKat(l)?kbCard(l):airCard(l))}
 function airAll(){if(!S)return;const sel=lamps.find(l=>l.id===selLamp);airFill($('airDetail'),isDev(sel)?[sel]:[]);
   const sl=airSheetId&&lamps.find(x=>x.id===airSheetId);airFill($('airSheetBody'),sl?[sl]:[]);$('airSheetTitle').textContent=t(isKat(sl)?'Kattenbak':'Airco');
+  // Huis-overzicht: alle apparaten (ook zonder kamer), elk uitklapbaar met de stand in de kop
+  houseDevs();
   const kb=isHouse()?[]:lampsIn(homeRoomId()).filter(isKat);airFill($('kbHome'),kb);$('kbFold').classList.toggle('hidden',!kb.length);
   const k1=kb.length===1&&kbOf(kb[0].id);$('kbSum').textContent=t('Kattenbak')+(k1&&k1.known?' · '+kbStatus(k1)+' · '+t('{n}× vandaag',{n:k1.visits??0})+((k1.faults||[]).length?' · ⚠':''):'');
   const here=isHouse()?[]:lampsIn(homeRoomId()).filter(isAir);airFill($('airHome'),here);$('airFold').classList.toggle('hidden',!here.length);
