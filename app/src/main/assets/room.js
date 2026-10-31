@@ -58,6 +58,7 @@ const Room = (() => {
     washer:   { name: 'Wasmachine', w: 0.6, d: 0.6, cat: 'bath' },
     dryer:    { name: 'Droger',     w: 0.6, d: 0.6, cat: 'bath' },
     towelrail:{ name: 'Handdoekrek', w: 0.6, d: 0.25, cat: 'bath' },
+    litterbox:{ name: 'Elektrische kattenbak', w: 0.6, d: 0.65, cat: 'bath' },
     // Muuronderdelen: springen naar de dichtstbijzijnde muur (wall), plaatje van voren (thumbD)
     door:     { name: 'Deur',       w: 0.9, d: 0.3, wall: true, thumbD: 1.0, cat: 'doors' },
     window:   { name: 'Raam',       w: 1.2, d: 0.3, wall: true, thumbD: 0.8, cat: 'doors' },
@@ -804,6 +805,18 @@ const Room = (() => {
       g.fillStyle = '#6aa8d0'; g.fillRect(ix + 1, iy + ih - 2, iw - 2, 1);
       g.fillStyle = '#7a848e'; g.fillRect(1, Math.floor(d / 2) - 1, 2, 2); g.fillStyle = '#c8d0d8'; g.fillRect(2, Math.floor(d / 2) - 1, 2, 1);
       g.fillStyle = '#5a646e'; g.fillRect(ix + 2, Math.floor(d / 2), 1, 1);
+    },
+    // Elektrische kattenbak van bovenaf: ronde koepel op een voet, ingang aan de voorkant met grit, lampje bovenop
+    litterbox(g, w, d) {
+      shadow(g, w, d);
+      box(g, 0, 0, w, d, '#cfc8bc', '#4a4440');
+      const cx = w / 2, cy = d / 2 - 0.5, r = Math.max(3, Math.min(w, d) / 2 - 1);
+      disc(g, cx, cy, r, r, '#f2efe8', '#6a6460');
+      g.fillStyle = '#dcd8d0'; g.fillRect(Math.round(cx - r / 2), Math.round(cy - r + 1), Math.max(1, Math.round(r / 2)), 1);
+      const ow = Math.max(3, Math.round(r * 1.2)), ox = Math.round(cx - ow / 2), oy = Math.round(cy + r * 0.1);
+      g.fillStyle = '#3a3440'; g.fillRect(ox, oy, ow, Math.max(2, d - oy - 1));
+      g.fillStyle = '#c8b48a'; g.fillRect(ox + 1, d - 2, Math.max(1, ow - 2), 1);
+      g.fillStyle = '#5ac06a'; g.fillRect(Math.round(cx), Math.round(cy - r * 0.55), 1, 1);
     },
     washer(g, w, d) { laundry(g, w, d, false); },
     dryer(g, w, d) { laundry(g, w, d, true); },

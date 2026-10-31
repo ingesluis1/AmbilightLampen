@@ -36,7 +36,8 @@ body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 /* Kamer ingezoomd: de kaart past niet meer en wordt verschuifbaar (met twee vingers of de schuifbalken) */
 #roomMapSlot.zoomed{display:flex;overflow:auto;max-height:72vh}
 #roomMapSlot.zoomed>.mapwrap{margin:auto;flex-shrink:0}
-#lampSheet{background:var(--parch);border:4px solid var(--ink);padding:10px;margin-top:8px}
+#lampSheet,#airSheet{background:var(--parch);border:4px solid var(--ink);padding:10px;margin-top:8px}
+#airSheet .aircard{margin-top:6px}
 .swatches{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .swatches button{width:34px;height:34px;border:3px solid var(--ink);padding:0;cursor:pointer}
 .swatches button.on{box-shadow:0 0 0 3px var(--gold)}
@@ -149,12 +150,32 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 .confirm{background:#f3c3b3;border:3px solid var(--ink);padding:8px 10px;margin-top:8px;font-size:15px}
 .lhead{display:flex;align-items:center;gap:6px;margin-top:14px;padding-bottom:3px;border-bottom:3px solid var(--ink);font-weight:700}
 .lhead:first-child{margin-top:4px}
+.lhead.fold{cursor:pointer;user-select:none}
+.lhead .fchev{width:14px;display:inline-block}
 .lrow select.lroom{width:auto;flex:1 1 0!important;min-width:0;max-width:150px;padding:5px 4px;font-size:14px}
 /* Met keuzemenu Kamer: naam op een eigen regel, knoppen eronder */
 .lrow.rm .name{flex:1 1 100%!important}
 /* Airco (een apparaat, geen lamp): alleen naam, kamer, plek en uiterlijk; lampinstellingen verdwijnen */
 .isair .lightonly{display:none!important}
 .aironly{display:none}
+body.srv .tabbar{grid-template-columns:repeat(5,1fr);gap:3px}
+body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
+/* Vijf tabbladen op een smalle telefoon: kort woord voor Instellingen */
+.tabbar .short{display:none}
+@media (max-width:460px){body.srv .tabbar .long{display:none}body.srv .tabbar .short{display:inline}}
+/* Energie: tegels en staafgrafieken (een reeks per grafiek, geen tweede as) */
+.entiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.entile{background:var(--cream);border:3px solid var(--ink);padding:8px 10px}
+.entile .k{font-size:13px;opacity:.8}
+.entile .v{font-size:24px;font-weight:700;line-height:1.15}
+.entile .u{font-size:14px;font-weight:600}
+.entile .s{font-size:13px;opacity:.8;margin-top:2px}
+.entile i{display:inline-block;width:10px;height:10px;margin-right:5px;border:2px solid var(--ink);vertical-align:0}
+.enchart{position:relative;margin-top:6px;height:170px;touch-action:pan-y}
+.enchart.small{height:110px}
+.enchart svg{display:block;width:100%;height:100%;overflow:visible}
+.enchart .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--cream);font-size:13px;padding:4px 7px;white-space:nowrap;transform:translate(-50%,-100%);z-index:2}
+.enlbl{font-size:13px;margin-top:8px;opacity:.85}
 .aircard{border:3px solid var(--ink);background:var(--cream);padding:8px;margin-top:10px}
 .aircard .top{display:flex;align-items:center;gap:8px}
 .aircard .in{font-size:22px;font-weight:bold}
@@ -488,6 +509,34 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 </div>
 
 <!-- Tabblad: Instellingen -->
+<!-- Energie (alleen op de hub): verbruik uit Enelogic -->
+<div class="page hidden" id="page-energy">
+<section class="panel">
+  <h2>Energie</h2>
+  <p class="hint" id="enStamp" style="margin:0 0 8px"></p>
+  <div class="entiles" id="enTiles"></div>
+  <div class="hint hidden" id="enSetup">Koppel eerst Enelogic onder Instellingen, Energie (Enelogic).</div>
+</section>
+<section class="panel enneeds">
+  <div class="row" style="align-items:center"><h2 class="grow" style="margin:0">Stroom per dag</h2>
+    <div class="seg" id="enRange"><button class="btn" data-n="7">7 d</button><button class="btn on" data-n="30">30 d</button><button class="btn" data-n="90">90 d</button></div></div>
+  <div class="enchart" id="enDays"></div>
+  <p class="hint" style="margin:4px 0 0">Tik op een dag voor het verloop per kwartier.</p>
+</section>
+<section class="panel enneeds" id="enGasPanel">
+  <h2>Gas per dag</h2>
+  <div class="enchart" id="enGas"></div>
+</section>
+<section class="panel enneeds">
+  <div class="row" style="align-items:center"><button class="btn" id="enPrev" aria-label="Dag eerder">&#9664;</button><h2 class="grow" id="enDayTitle" style="margin:0;text-align:center"></h2><button class="btn" id="enNext" aria-label="Dag later">&#9654;</button></div>
+  <div class="enlbl">Stroom per kwartier (gemiddeld vermogen)</div>
+  <div class="enchart" id="enDay"></div>
+  <div class="enlbl" id="enDayGasLbl">Gas per uur</div>
+  <div class="enchart small" id="enDayGas"></div>
+  <p class="hint" id="enDaySum" style="margin:6px 0 0"></p>
+</section>
+</div>
+
 <div class="page hidden" id="page-settings">
 <section class="panel tvonly">
   <h2>Instellingen</h2>
@@ -618,6 +667,7 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
   <div class="fhint">Tik op een lamp: aan of uit. Houd vast: kleur en effect.</div>
   <div id="fullMapSlot"></div>
   <div class="zoomrow"><button class="btn" id="zoomOut" aria-label="Uitzoomen">&#128269;&minus;</button><button class="btn" id="zoomIn" aria-label="Inzoomen">&#128269;+</button></div>
+  <div id="airSheet" class="hidden"><div class="row"><b class="grow">Airco</b><button class="btn gold" id="airSheetDone">Klaar</button></div><div id="airSheetBody"></div></div>
   <div id="lampSheet" class="hidden">
     <div class="row"><b class="grow" id="sheetName"></b><button class="btn" id="sheetOff">Uit</button><button class="btn gold" id="sheetDone">Klaar</button></div>
     <div class="swatches" id="sheetCols"></div>
@@ -632,7 +682,8 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
   <button class="btn" data-tab="home"><span class="ic">▶</span>Bediening</button>
   <button class="btn" data-tab="room"><span class="ic">▦</span>Kamers</button>
   <button class="btn" data-tab="lamps"><span class="ic">✺</span><span data-dev>Lampen</span></button>
-  <button class="btn" data-tab="settings"><span class="ic">⚙</span>Instellingen</button>
+  <button class="btn srvonly" data-tab="energy"><span class="ic">&#991;</span>Energie</button>
+  <button class="btn" data-tab="settings"><span class="ic">⚙</span><span class="long">Instellingen</span><span class="short">Opties</span></button>
 </nav>
 <div id="toast"></div>
 
@@ -858,14 +909,20 @@ function draw(){
     return}
   if(ro)return;
   if(tool==='item'&&L.items[selItem]){const it=L.items[selItem],def=Room.ITEMS[it.type],rot=((it.dir||90)/90)%2===0;
-    const w=(rot?(it.d||def.d):(it.w||def.w))*k,d=(rot?(it.w||def.w):(it.d||def.d))*k,[x,y]=sc(it.x,it.y);g.strokeRect(x-w/2-3,y-d/2-3,w+6,d+6)}
+    // Deur of raam: het kader volgt de muur waar hij tegenaan staat (zelfde vlak als itemAt), ook op de achtermuur (van voren, erboven)
+    if(def&&def.wall){const s=Room.wallSnap(L,it.x,it.y),half=(it.w||def.w)/2,[x,y]=sc(s.x,s.y);
+      if(s.wall==='n')g.strokeRect(x-half*k-3,y-1.1*k,2*half*k+6,1.4*k);
+      else if(s.wall==='s')g.strokeRect(x-half*k-3,y-.35*k,2*half*k+6,.7*k);
+      else g.strokeRect(x-.35*k,y-half*k-3,.7*k,2*half*k+6)}
+    else{const w=(rot?(it.d||def.d):(it.w||def.w))*k,d=(rot?(it.w||def.w):(it.d||def.d))*k,[x,y]=sc(it.x,it.y);g.strokeRect(x-w/2-3,y-d/2-3,w+6,d+6)}}
   if(tool==='tv'&&LD.tv){const t=L.tv,rot=(t.dir/90)%2===0,w=(rot?.45:t.w+.4)*k,d=(rot?t.w+.4:.45)*k,[x,y]=sc(t.x,t.y);g.strokeRect(x-w/2-3,y-d/2-3,w+6,d+6)}
   if(tool==='lamp'&&lampMode==='fx'){const f=fxSel();if(f){const pts=Room.fixtureSpots(f).map(q=>sc(q[1],q[2]));pts.push(sc(f.x,f.y));
     const xs=pts.map(q=>q[0]),ys=pts.map(q=>q[1]),up=f.type==='pole'?1.6:f.type==='bar'?1.1:.45;
     g.strokeRect(Math.min(...xs)-k*.45,Math.min(...ys)-k*up,Math.max(...xs)-Math.min(...xs)+k*.9,Math.max(...ys)-Math.min(...ys)+k*(up+.45))}}
   g.setLineDash([]);
   for(const l of lamps){ if(l.x<0)continue; const [x,y]=sc(l.x,l.y);
-    if(l.id===selLamp){g.strokeStyle='#ffe08a';g.strokeRect(x-k*.3,y-k*.3,k*.6,k*.6)}
+    // Gekozen lamp: vierkant om de voet; een airco: kader om het hele apparaat (tegen de muur gedraaid zoals getekend)
+    if(l.id===selLamp){g.strokeStyle='#ffe08a';if(isAir(l)){const b=Room.lampBox(l,L);g.strokeRect(x+b[0]*k,y+b[1]*k,(b[2]-b[0])*k,(b[3]-b[1])*k)}else g.strokeRect(x-k*.3,y-k*.3,k*.6,k*.6)}
     if((tool==='lamp'&&!fxOf(l.id))||(l.id===selLamp&&!fxOf(l.id))){g.font='600 '+Math.max(11,k*.22)+'px "Pixelify Sans",monospace';g.textAlign='center';
       const t=l.name.slice(0,14),tw=g.measureText(t).width+8;g.fillStyle='rgba(29,17,36,.85)';g.fillRect(x-tw/2,y+k*.32,tw,k*.3+4);g.fillStyle='#fff3d6';g.fillText(t,x,y+k*.32+k*.24)}
   }
@@ -983,7 +1040,7 @@ function lampHit(mx,my){let best=null,bd=1e9;
     if(mx<x0||mx>x1||my<y0||my>y1)continue;const d=Math.hypot((x0+x1)/2-mx,(y0+y1)/2-my);if(d<bd){bd=d;best=l}}
   return best}
 cv.addEventListener('pointerdown',e=>{if(!fullOpen||!view)return;const [mx,my]=pos(e);const l=lampHit(mx,my);if(!l)return;
-  e.preventDefault();if(isAir(l)){toast(t('{n}: bedien de airco onder Bediening, onder de kaart.',{n:l.name}));return}const p={id:l.id,long:false,x:e.clientX,y:e.clientY};press=p;
+  e.preventDefault();if(isAir(l)){openAirSheet(l.id);return}const p={id:l.id,long:false,x:e.clientX,y:e.clientY};press=p;
   p.timer=setTimeout(()=>{if(press!==p)return;p.long=true;if(navigator.vibrate)navigator.vibrate(20);openSheet(p.id)},450)});
 cv.addEventListener('pointermove',e=>{if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>12){clearTimeout(press.timer);press=null}});
 cv.addEventListener('pointerup',()=>{if(!fullOpen||!press)return;clearTimeout(press.timer);const p=press;press=null;if(p.long)return;
@@ -991,7 +1048,7 @@ cv.addEventListener('pointerup',()=>{if(!fullOpen||!press)return;clearTimeout(pr
 cv.addEventListener('pointercancel',()=>{if(press){clearTimeout(press.timer);press=null}});
 cv.addEventListener('contextmenu',e=>{if(fullOpen)e.preventDefault()});
 cv.addEventListener('click',()=>{if(curTab==='home'&&!fullOpen)openFull()});
-function openSheet(id){const l=lamps.find(x=>x.id===id);if(!l)return;const ll=S&&S.liveLamps&&S.liveLamps[id],lv=live[id];
+function openSheet(id){const l=lamps.find(x=>x.id===id);if(!l)return;closeAirSheet();const ll=S&&S.liveLamps&&S.liveLamps[id],lv=live[id];
   const shown=lv&&/^#[0-9a-f]{6}$/i.test(lv.color||'')&&lv.color!=='#555555'?lv.color:SHEET_WHITES[1][0];
   sheet={id,colour:ll?ll.colour:shown,bright:ll&&ll.bright>0?ll.bright:1,effect:ll?ll.effect:'none'};
   $('sheetName').textContent=l.name;
@@ -1018,7 +1075,12 @@ function sheetUI(){if(!sheet)return;$('lampSheet').querySelectorAll('#sheetCols 
   $('sheetCustom').value=sheet.colour;$('sheetBri').value=sheet.bright;$('v_sheetBri').textContent=Math.round(sheet.bright*100)+'%';
   $('sheetFx').value=sheet.effect||'none'}
 function sheetSend(){if(!sheet)return;clearTimeout(sheetTimer);const s=sheet;sheetTimer=setTimeout(()=>liveSend({id:s.id,colour:s.colour,bright:s.bright,effect:s.effect}),120)}
-function closeSheet(){sheet=null;$('lampSheet').classList.add('hidden');if(fullOpen)setTimeout(draw,0)}
+function closeSheet(){sheet=null;$('lampSheet').classList.add('hidden');closeAirSheet();if(fullOpen)setTimeout(draw,0)}
+/* Airco op de kaart aangetikt: zelfde bediening als onder Bediening, in een vak onder de kaart */
+let airSheetId=null;
+function openAirSheet(id){closeSheet();airSheetId=id;$('airSheet').classList.remove('hidden');$('airSheetBody').dataset.k='';airAll()}
+function closeAirSheet(){airSheetId=null;$('airSheet').classList.add('hidden')}
+$('airSheetDone').onclick=()=>{closeAirSheet();if(fullOpen)setTimeout(draw,0)};
 $('sheetBri').oninput=e=>{if(!sheet)return;sheet.bright=+e.target.value;sheetUI();sheetSend()};
 $('sheetFx').onchange=e=>{if(!sheet)return;sheet.effect=e.target.value;sheetUI();sheetSend()};
 $('sheetOff').onclick=()=>{if(!sheet)return;liveSend({id:sheet.id,on:false});closeSheet()};
@@ -1080,12 +1142,15 @@ function lampList(){
     const parts=multi()?[...roomsList().map(r=>[r.id,r.name,r.color]),['',t('Zonder kamer'),'#6d5a4c']]:[[roomsList()[0].id]];
     for(const [rid,rname,rcol] of parts){const ls=lampsIn(rid);
      if(multi()){if(!ls.length&&!rid)continue;
-      const h=document.createElement('div');h.className='lhead';h.innerHTML=`<span class="rdot" style="background:${esc(rcol)}"></span><span class="grow"></span>`;
+      const open=roomFoldOpen(rid),h=document.createElement('div');h.className='lhead'+(rid?' fold':'');h.dataset.room=rid;
+      h.innerHTML=`<span class="fchev">${rid?(open?'▾':'▸'):''}</span><span class="rdot" style="background:${esc(rcol)}"></span><span class="grow"></span>`;
       h.querySelector('.grow').textContent=rname+(ls.length?' ('+ls.length+')':'');box.append(h);
-      if(!ls.length){const p=document.createElement('div');p.className='hint';p.style.margin='4px 0 6px';p.textContent=dv('Nog geen lampen.');box.append(p)}
+      if(rid){h.setAttribute('role','button');h.tabIndex=0;h.setAttribute('aria-expanded',String(open));h.onclick=()=>{const o=!roomFoldOpen(rid);setRoomFold(rid,o);h.setAttribute('aria-expanded',String(o))}}
+      if(!ls.length){const p=document.createElement('div');p.className='hint'+(open?'':' hidden');p.dataset.room=rid;p.style.margin='4px 0 6px';p.textContent=dv('Nog geen lampen.');box.append(p)}
       if(!rid){const p=document.createElement('div');p.className='hint';p.style.margin='4px 0 0';p.textContent=dv('Nieuwe lampen komen hier tot je ze in een kamer zet.');box.append(p)}}
     for(const l of ls){
       const r=document.createElement('div');r.className='lrow';r.dataset.id=l.id;const air=isAir(l);
+      if(multi()){r.dataset.room=rid;if(!roomFoldOpen(rid))r.classList.add('hidden')}
       // Airco: eigen plaatje, geen knipper, aan/uit of kleur (bediening volgt later)
       r.innerHTML=air?`<span class="name"><span class="chev"></span><span class="nm"></span></span><span data-a="anchor"></span><button class="btn red x" data-a="del" title="${t('Verwijderen')}" aria-label="${t('Verwijderen')}">\u2715</button>`
         :`<span class="name"><span class="chev"></span><span class="nm"></span></span><button class="btn" data-a="blink">${t('Knipper')}</button><button class="btn" data-a="power"></button><input type="color" value="#ffb050"><button class="btn red x" data-a="del" title="${t('Verwijderen')}" aria-label="${t('Verwijderen')}">\u2715</button>`;
@@ -1122,7 +1187,14 @@ function moveLamp(l,to){const from=lampRoom(l);if(from===to)return;
   l.room=to;l.x=-1;l.y=-1;changed();lampList();chips();
   toast(to?t('{n} staat nu in {r}. Zet hem op de kaart onder Kamers.',{n:l.name,r:roomById(to).name}):t('{n} staat nu zonder kamer.',{n:l.name}))}
 $('testAll').onclick=async()=>toast((await api('/api/test',{})).message);
-function selectLamp(id){selLamp=id;chips();showLamp();draw()}
+/* Apparaten-tab: per kamer in- en uitklappen. Standaard dicht (behalve Zonder kamer); onthouden per telefoon. */
+let lampOpen;try{lampOpen=new Set(JSON.parse(localStorage.getItem('lampOpen')||'[]'))}catch(e){lampOpen=new Set()}
+const roomFoldOpen=rid=>!rid||lampOpen.has(rid);
+function setRoomFold(rid,open){if(open)lampOpen.add(rid);else lampOpen.delete(rid);try{localStorage.setItem('lampOpen',JSON.stringify([...lampOpen]))}catch(e){}
+  document.querySelectorAll('#lampList [data-room]').forEach(el=>{if(el.dataset.room!==rid)return;
+    if(el.classList.contains('lhead'))el.querySelector('.fchev').textContent=open?'▾':'▸';else el.classList.toggle('hidden',!open)});
+  const l=lamps.find(x=>x.id===selLamp);if(!open&&l&&lampRoom(l)===rid)closeLamp()}
+function selectLamp(id){const l=lamps.find(x=>x.id===id);if(l&&multi()&&!roomFoldOpen(lampRoom(l)))setRoomFold(lampRoom(l),true);selLamp=id;chips();showLamp();draw()}
 function follows(l){
   if(isAir(l))return '';
   // De sync gaat over de tv-kamer: plek ten opzichte van de tv in die kamer
@@ -1311,6 +1383,7 @@ function airCard(l){const a=airOf(l.id),d=document.createElement('div');d.classN
 function airFill(box,list){const key=JSON.stringify(list.map(l=>[l.id,l.name,airOf(l.id)]))+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;
   box.innerHTML='';for(const l of list)box.append(airCard(l))}
 function airAll(){if(!S)return;const sel=lamps.find(l=>l.id===selLamp);airFill($('airDetail'),isAir(sel)?[sel]:[]);
+  const sl=airSheetId&&lamps.find(x=>x.id===airSheetId);airFill($('airSheetBody'),sl?[sl]:[]);
   const here=isHouse()?[]:lampsIn(homeRoomId()).filter(isAir);airFill($('airHome'),here);$('airFold').classList.toggle('hidden',!here.length);
   // In de kop: aan/uit en de temperatuur binnen, zodat je hem ook dichtgeklapt ziet
   const a=here.length===1&&airOf(here[0].id);
@@ -1564,6 +1637,58 @@ $('offBtn').onclick=async()=>{const rid=homeRoomId(),on=hasRooms()?!roomAnyOn(ri
   toast((await api('/api/lamps/power',withRoom({on},rid))).message);setTimeout(()=>{offBusy=false;$('offBtn').disabled=false;poll()},on?500:3500)};
 $('pairBtn').onclick=async()=>{const r=await api('/api/pair/request',{host:$('tvHost').value.trim()});toast(r.message);if(r.ok){$('pinRow').classList.remove('hidden');$('pin').focus()}};
 $('grantBtn').onclick=async()=>{const r=await api('/api/pair/grant',{pin:$('pin').value});toast(r.message);if(r.ok)poll()};
+/* Energie-pagina (hub): verbruik per dag en per kwartier uit /api/energy. Kleuren: stroom amber, gas blauw
+   (gevalideerd tegen de creme achtergrond, ook voor kleurenblinden); tekst blijft in de gewone inktkleur. */
+const EN_COL={kwh:'#b8731f',gas:'#3f6fa8'};
+let enN=30,enData=null,enDay=null;
+const nl1=(v,d)=>v==null?'–':v.toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL',{minimumFractionDigits:d,maximumFractionDigits:d});
+const enDate=(s,opt)=>new Date(s+'T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',opt||{weekday:'short',day:'numeric',month:'short'});
+function niceStep(x){const p=Math.pow(10,Math.floor(Math.log10(x||1))),m=x/p;return (m<=1?1:m<=2?2:m<=5?5:10)*p}
+/* Staafgrafiek als SVG: waarden (null = geen gegevens), labels voor de as, tooltip per staaf, optioneel een gekozen staaf */
+function enBars(el,vals,o){const W=Math.max(200,el.clientWidth),H=el.clientHeight,padL=38,padB=18,padT=6,w=W-padL,h=H-padB-padT;
+  const max=Math.max(o.min||0,...vals.map(v=>v||0))*1.08||1,step=niceStep(max/3),n=vals.length,bw=w/n,gap=n>60?1:2;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title||'')}">`;
+  for(let y=0;y<=max;y+=step){const py=padT+h-y/max*h;s+=`<line x1="${padL}" x2="${W}" y1="${py}" y2="${py}" stroke="rgba(58,28,14,.15)"/><text x="${padL-5}" y="${py+4}" text-anchor="end" font-size="11" fill="var(--text)">${nl1(y,step<1?(step<0.1?2:1):0)}</text>`}
+  vals.forEach((v,i)=>{if(v==null||v<=0)return;const bh=Math.max(1,v/max*h),x=padL+i*bw+gap/2,y=padT+h-bh,bwid=Math.max(1,bw-gap),r=Math.min(3,bwid/2,bh);
+    const sel=o.sel===i;s+=`<path d="M${x},${padT+h}V${y+r}Q${x},${y} ${x+r},${y}H${x+bwid-r}Q${x+bwid},${y} ${x+bwid},${y+r}V${padT+h}Z" fill="${o.color}" opacity="${o.sel!=null&&o.sel>=0&&!sel?.55:1}"/>`;
+    if(sel)s+=`<rect x="${x-1}" y="${y-1}" width="${bwid+2}" height="${bh+1}" fill="none" stroke="var(--ink)" stroke-width="2"/>`});
+  s+=`<line x1="${padL}" x2="${W}" y1="${padT+h}" y2="${padT+h}" stroke="var(--ink)" stroke-width="2"/>`;
+  const every=Math.max(1,Math.ceil(n/(w/40)));o.labels.forEach((l,i)=>{if(l&&i%every===0)s+=`<text x="${padL+i*bw+bw/2}" y="${H-3}" text-anchor="middle" font-size="11" fill="var(--text)">${esc(l)}</text>`});
+  el.innerHTML=s+'</svg><div class="tip hidden"></div>';
+  const tip=el.querySelector('.tip'),at=e=>{const r=el.getBoundingClientRect(),i=Math.floor(((e.clientX-r.left)*W/r.width-padL)/bw);return i>=0&&i<n?i:-1};
+  el.onpointermove=e=>{const i=at(e);if(i<0||vals[i]==null){tip.classList.add('hidden');return}const r=el.getBoundingClientRect(),v=vals[i];
+    tip.textContent=o.tip(i,v);tip.classList.remove('hidden');tip.style.left=Math.min(r.width-60,Math.max(60,(padL+i*bw+bw/2)*r.width/W))+'px';tip.style.top=Math.max(14,(padT+h-(v||0)/max*h)*r.height/H-4)+'px'};
+  el.onpointerleave=()=>tip.classList.add('hidden');
+  el.onclick=e=>{const i=at(e);if(i>=0&&o.pick)o.pick(i)}}
+async function enLoad(){if(!SRV)return;let r;try{r=await api('/api/energy?days='+enN)}catch(e){return}
+  const ok=!!(r&&r.ok);$('enSetup').classList.toggle('hidden',ok||!(r&&r.setup));document.querySelectorAll('.enneeds').forEach(x=>x.classList.toggle('hidden',!ok));
+  if(!ok){$('enTiles').innerHTML='';$('enStamp').textContent=r&&!r.setup?t('Fout: {e}',{e:r.message}):'';return}
+  enData=r;if(!enDay||!r.days.some(d=>d.date===enDay))enDay=r.last;enDays();enDayLoad()}
+function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d=>enDate(d.date,{day:'numeric',month:'numeric'}));
+  $('enStamp').textContent=t('Uit Enelogic, bijgewerkt t/m {d}. Je netbeheerder stuurt de standen één keer per dag.',{d:enDate(r.last,{weekday:'long',day:'numeric',month:'long'})});
+  const sum=(k,list)=>list.reduce((a,d)=>a+(d[k]||0),0),month=ds.filter(d=>d.date.slice(0,7)===r.last.slice(0,7)),anyBack=ds.some(d=>d.back>0);
+  const tile=(k,v,u,s,col)=>`<div class="entile"><div class="k">${col?`<i style="background:${col}"></i>`:''}${esc(k)}</div><div class="v">${v} <span class="u">${u}</span></div>${s?`<div class="s">${s}</div>`:''}</div>`;
+  $('enTiles').innerHTML=tile(t('Stroom {d}',{d:enDate(r.last)}),nl1(last.kwh,1),'kWh',last.back>0?esc(t('{n} kWh teruggeleverd',{n:nl1(last.back,1)})):'',EN_COL.kwh)
+    +(r.gas?tile(t('Gas {d}',{d:enDate(r.last)}),nl1(last.gas,2),'m³','',EN_COL.gas):'')
+    +tile(t('Stroom deze maand'),nl1(sum('kwh',month),0),'kWh',anyBack?esc(t('{n} kWh teruggeleverd',{n:nl1(sum('back',month),0)})):'')
+    +(r.gas?tile(t('Gas deze maand'),nl1(sum('gas',month),1),'m³',''):'');
+  const sel=ds.findIndex(d=>d.date===enDay),pick=i=>{enDay=ds[i].date;enDays();enDayLoad()};
+  enBars($('enDays'),ds.map(d=>d.kwh??null),{color:EN_COL.kwh,labels:lbl,sel,pick,title:t('Stroom per dag'),tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+' kWh'+(ds[i].back>0?' · '+t('terug {n}',{n:nl1(ds[i].back,2)}):'')});
+  $('enGasPanel').classList.toggle('hidden',!r.gas);
+  if(r.gas)enBars($('enGas'),ds.map(d=>d.gas??null),{color:EN_COL.gas,labels:lbl,sel,pick,title:t('Gas per dag'),tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+' m³'})}
+async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textContent=enDate(d,{weekday:'long',day:'numeric',month:'long'});
+  const ds=enData.days,i=ds.findIndex(x=>x.date===d);$('enPrev').disabled=i<=0;$('enNext').disabled=i<0||i>=ds.length-1;
+  let r;try{r=await api('/api/energy/day?date='+d)}catch(e){return}if(enDay!==d||!r.ok)return;
+  const hhmm=k=>String(Math.floor(k/4)%24).padStart(2,'0')+':'+String(k%4*15).padStart(2,'0'),w=r.kwh.map(v=>v==null?null:v*4000);
+  enBars($('enDay'),w,{color:EN_COL.kwh,min:100,labels:w.map((_,k)=>k%4===0?String(k/4):''),title:t('Stroom per kwartier'),tip:(k,v)=>hhmm(k)+'–'+hhmm(k+1)+': '+nl1(v,0)+' W'});
+  const g=r.gas||[],hasG=g.some(v=>v!=null);$('enDayGas').classList.toggle('hidden',!hasG);$('enDayGasLbl').classList.toggle('hidden',!hasG);
+  if(hasG)enBars($('enDayGas'),g,{color:EN_COL.gas,min:.05,labels:g.map((_,k)=>k%3===0?String(k):''),title:t('Gas per uur'),tip:(k,v)=>String(k).padStart(2,'0')+':00: '+nl1(v,3)+' m³'});
+  const tot=r.kwh.reduce((a,v)=>a+(v||0),0),peak=Math.max(...w.map(v=>v||0)),pk=w.indexOf(peak);
+  $('enDaySum').textContent=t('Totaal {k} kWh. Hoogste kwartier {t}: gemiddeld {w} W.',{k:nl1(tot,2),t:hhmm(pk),w:nl1(peak,0)})}
+document.querySelectorAll('#enRange .btn').forEach(b=>b.onclick=()=>{enN=+b.dataset.n;document.querySelectorAll('#enRange .btn').forEach(x=>x.classList.toggle('on',x===b));enLoad()});
+$('enPrev').onclick=()=>{const ds=enData.days,i=ds.findIndex(x=>x.date===enDay);if(i>0){enDay=ds[i-1].date;enDays();enDayLoad()}};
+$('enNext').onclick=()=>{const ds=enData.days,i=ds.findIndex(x=>x.date===enDay);if(i<ds.length-1){enDay=ds[i+1].date;enDays();enDayLoad()}};
+window.addEventListener('resize',()=>{if(curTab==='energy'&&enData){enDays();enDayLoad()}});
 /* Enelogic: ingevulde sleutels komen nooit terug; de velden tonen alleen "al ingevuld" */
 function eneUI(s){if(!s)return;const ph=(id,base,set)=>{$(id).placeholder=t(base)+(set?' · '+t('al ingevuld'):'')};
   ph('eneAppId','App-id',s.appid);ph('eneAppSecret','App-secret',s.appsecret);ph('eneApiKey','API-sleutel',s.apikey);
@@ -1847,11 +1972,11 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings')eneLoad();
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings')eneLoad();if(n==='energy')enLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
-$('roomLampSettings').onclick=()=>{showTab('lamps');showLamp();setTimeout(()=>{const r=[...$('lampList').children].find(r=>r.dataset.id===selLamp);(r||$('lampDetailPanel')).scrollIntoView({block:'start'})},50)};
+$('roomLampSettings').onclick=()=>{showTab('lamps');selectLamp(selLamp);setTimeout(()=>{const r=[...$('lampList').children].find(r=>r.dataset.id===selLamp);(r||$('lampDetailPanel')).scrollIntoView({block:'start'})},50)};
 (async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang);hostMode(s)}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';try{homeView=localStorage.getItem('homeRoom')||''}catch(e){}showTab(tb);load()})();
 const fast=()=>S&&(S.sync||S.activeScene||(S.rooms||[]).some(r=>r.scene));
 setInterval(()=>{if(fast())poll()},500);
