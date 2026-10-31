@@ -1673,9 +1673,11 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=20,Hh=
     rect(6,12,7,19,W2);p(6,12,Sl);p(7,12,Sl);legs(P,Pd)}
   else if(O==='jas'){torso(T,Td,0);arms(T,Td);rect(6,12,7,19,W2);p(7,14,W2d);p(5,12,Tl);p(8,12,Td);legs(P,Pd)}
   else{torso(T,Td,1);arms(T,Td);legs(P,Pd)}
+  // nek: het lijf een rij omlaag, zodat er tussen kin en schouders een nek past
+  for(let y=Hh-1;y>oy+11;y--)G[y]=G[y-1].slice();G[oy+11]=Array(W).fill(null);
   // hoofd: 12 breed met haar, gezicht 8 breed (x 3..10), rond met kin; nek
   rect(4,2,9,2,S);rect(3,3,10,8,S);rect(4,9,9,9,S);rect(5,10,8,10,S);if(man){rect(3,9,10,9,S);rect(4,10,9,10,S)}
-  rect(9,5,10,8,Sd);p(9,9,Sd);rect(5,10,8,10,Sd);rect(6,11,7,11,Sd);p(4,3,Sl);p(5,3,Sl);
+  rect(9,5,10,8,Sd);p(9,9,Sd);rect(5,10,8,10,Sd);rect(6,11,7,12,S);p(7,11,Sd);p(7,12,Sd);p(4,3,Sl);p(5,3,Sl);
   // ogen 2x2 aan weerskanten (2 pixels ertussen): boven donker, onder iris en wit glimlicht aan de buitenkant; geen mond
   const Ed=avShade(E,-.5),L='#3a2228';
   // langwerpige ogen (2 breed, 3 hoog): wimperlijn, dan lichtgrijs + donkere iris, onderaan wit + iris
