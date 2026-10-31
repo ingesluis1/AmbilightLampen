@@ -231,6 +231,10 @@ body.guest .tabbar .btn:not([data-tab=home]){display:none!important}
 body.guest .tabbar{grid-template-columns:1fr!important}
 body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneSaveRow{display:none!important}
 .accrow{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
+.mgrp{border-bottom:2px solid rgba(0,0,0,.15)}.mgrp>div{padding:0 0 10px}
+.apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
+.devrow{background:var(--cream);border:3px solid var(--ink);padding:6px 8px;margin-top:6px}.devrow .meta{font-size:12px;opacity:.75;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;word-break:break-all}.devrow .row{flex-wrap:wrap;gap:6px;margin-top:6px}
+.devrow .dn{border:0;border-bottom:2px dashed rgba(0,0,0,.3);background:transparent;padding:2px 0;font-weight:700}.tag{font-size:10px;border:2px solid var(--ink);padding:0 4px;opacity:.7}
 .accrow .meta{font-size:13px;opacity:.75;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
 .accrow .row{flex-wrap:wrap;gap:6px;margin-top:6px}
 .hdev{background:var(--cream);border:3px solid var(--ink);margin-top:8px}
@@ -599,7 +603,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <h2>Energie</h2>
   <p class="hint" id="enStamp" style="margin:0 0 8px"></p>
   <div class="entiles" id="enTiles"></div>
-  <div class="hint hidden" id="enSetup">Koppel eerst Enelogic onder Instellingen, Energie (Enelogic).</div>
+  <div class="hint hidden" id="enSetup">Koppel eerst Enelogic onder Instellingen, API-sleutels.</div>
 </section>
 <section class="panel enneeds">
   <h2 style="margin:0" id="enPerTitle">Per dag</h2>
@@ -715,32 +719,17 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <button class="btn gold" id="awSave" style="width:100%;margin-top:8px">Opslaan</button>
 </section>
 
-<section class="panel srvonly ownonly" id="netPanel">
-  <h2>Gezien op je wifi</h2>
-  <p style="margin:0 0 8px">Telefoons, laptops en andere apparaten die op je wifi zijn geweest (je lampen en andere apparaten van het huis staan er niet tussen). Koppel een apparaat aan iemand, dan zie je onder Bediening wie er thuis is.</p>
-  <div id="netList"></div>
-  <h2 style="margin-top:14px">Mensen</h2>
-  <div id="peopleList"></div>
+<section class="panel srvonly ownonly" id="mensenPanel">
+  <h2>Mensen</h2>
+  <p style="margin:0 0 8px">Per persoon: e-mailadres (om via hub.stacklines.nl in te loggen), apparaten op de wifi en apparaten die de hub gebruiken. Een gast ziet alleen Bediening; een hoofdgebruiker kan alles.</p>
+  <div id="mensenList"></div>
+  <div class="row" style="margin-top:10px;align-items:center"><input type="text" id="mensenNew" class="grow" placeholder="Naam van een nieuw persoon" maxlength="30" autocomplete="off"><button class="btn gold" id="mensenAdd">+ Persoon</button></div>
 </section>
 
-<section class="panel srvonly ownonly" id="accPanel">
-  <h2>Toegang</h2>
-  <p style="margin:0 0 8px">Apparaten die de House hub willen gebruiken. Een gast ziet alleen Bediening; een hoofdgebruiker kan alles.</p>
-  <div id="accList"></div>
-  <div class="lbl" style="margin-top:12px">Via hub.stacklines.nl</div>
-  <p class="hint" style="margin:0 0 6px">Wie daar met dit e-mailadres inlogt, is meteen binnen, op elk apparaat.</p>
-  <div id="accEmails"></div>
-  <div class="row" style="margin-top:8px;align-items:center"><input type="email" id="accNewMail" class="grow" placeholder="E-mailadres" autocomplete="off"><select id="accNewRole" style="width:auto"><option value="guest">Gast</option><option value="owner">Hoofdgebruiker</option></select></div>
-  <button class="btn gold" id="accAddMail" style="width:100%;margin-top:6px">Toevoegen</button>
-  <details style="margin-top:10px"><summary style="cursor:pointer"><b>Koppeling met Cloudflare</b> <span class="hint" id="cfState"></span></summary>
-    <p class="hint" style="margin:6px 0">Hiermee zet de hub de adressen hierboven ook in Cloudflare, zodat ze echt binnen kunnen. Maak op <b>dash.cloudflare.com</b> bij Mijn profiel, API-tokens een eigen token met het recht <i>Account · Access: Apps and Policies · Edit</i> en plak het hier. Het blijft op de server.</p>
-    <input type="password" id="cfToken" placeholder="Cloudflare API-token" autocomplete="off">
-    <div class="row" style="margin-top:6px"><button class="btn gold grow" id="cfSave">Opslaan en bijwerken</button><button class="btn" id="cfClear">Wissen</button></div>
-  </details>
-</section>
-
-<section class="panel srvonly" id="enePanel">
-  <h2>Energie (Enelogic)</h2>
+<section class="panel srvonly ownonly" id="apiPanel">
+  <h2>API-sleutels</h2>
+  <p class="hint" style="margin:0 0 6px">Koppelingen met andere diensten. De sleutels blijven op de server.</p>
+  <details class="apigrp" id="enePanel"><summary><b>Energie (Enelogic)</b> <span class="hint" id="eneSum"></span></summary>
   <p style="margin:0 0 8px">Verbruik van je slimme meter via Enelogic. Vul de API-sleutel van je Enelogic-account in. Hij blijft op de server.</p>
   <input type="password" id="eneApiKey" placeholder="API-sleutel" autocomplete="new-password">
   <details style="margin-top:8px"><summary>Lukt het niet met alleen de sleutel?</summary>
@@ -751,14 +740,19 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   </details>
   <div class="row" style="margin-top:8px"><button class="btn gold grow" id="eneSave">Opslaan en testen</button><button class="btn" id="eneTest">Testen</button><button class="btn red" id="eneClear">Wissen</button></div>
   <div class="hint" id="eneState"></div>
-</section>
-
-<section class="panel srvonly" id="gwPanel">
-  <h2>Zonnepanelen (Growatt)</h2>
+  </details>
+  <details class="apigrp" id="gwPanel"><summary><b>Zonnepanelen (Growatt)</b> <span class="hint" id="gwSum"></span></summary>
   <p style="margin:0 0 8px">Opwek van je zonnepanelen via Growatt. Maak op <b>server.growatt.com</b> bij je account een API-token aan en vul het hier in. Het blijft op de server.</p>
   <input type="password" id="gwToken" placeholder="Growatt API-token" autocomplete="new-password">
   <div class="row" style="margin-top:8px"><button class="btn gold grow" id="gwSave">Opslaan en testen</button><button class="btn" id="gwTest">Testen</button><button class="btn red" id="gwClear">Wissen</button></div>
   <div class="hint" id="gwState"></div>
+  </details>
+  <details class="apigrp" id="cfPanel"><summary><b>Cloudflare (inloggen via hub.stacklines.nl)</b> <span class="hint" id="cfState"></span></summary>
+
+    <p class="hint" style="margin:6px 0">Hiermee zet de hub de e-mailadressen ook in Cloudflare, zodat ze echt binnen kunnen. Maak op <b>dash.cloudflare.com</b> bij Mijn profiel, API-tokens een eigen token met het recht <i>Account · Access: Apps and Policies · Edit</i> en plak het hier. Het blijft op de server.</p>
+    <input type="password" id="cfToken" placeholder="Cloudflare API-token" autocomplete="off">
+    <div class="row" style="margin-top:6px"><button class="btn gold grow" id="cfSave">Opslaan en bijwerken</button><button class="btn" id="cfClear">Wissen</button></div>
+    </details>
 </section>
 
 <section class="panel">
@@ -1766,37 +1760,77 @@ function avEditor(box,start,personId,done){const a={...avDefault,...(start||{})}
   const save=document.createElement('button');save.className='btn gold';save.style.cssText='width:100%;margin-top:8px';save.textContent=t('Poppetje opslaan');
   save.onclick=async()=>{const r=await api('/api/people/avatar',{id:personId||'',avatar:a});toast(r.message||'');if(r.people){peopleData=r.people;peopleAt=Date.now()}if(done)done()};
   box.append(save);redraw()}
-/* Hoofdgebruiker: gezien op de wifi (koppelen aan iemand, verbergen) en de mensen (naam, poppetje, verwijderen) */
-async function peopleAdmin(){if(!S||S.role!=='owner')return;let r;try{r=await api('/api/net/devices')}catch(e){return}netData=r.devices||[];
-  const loc=I18N.lang==='en'?'en-GB':'nl-NL',box=$('netList'),ppl=peopleData||[];
-  // Uitklapbaar per persoon, plus "Niet gekoppeld"; wat open stond blijft open na opnieuw tekenen
-  const wasOpen=new Set([...box.querySelectorAll('details[open]')].map(x=>x.dataset.g));box.innerHTML=netData.length?'':`<p class="hint">${esc(t('Nog niets gezien.'))}</p>`;
-  const groups=new Map();for(const d of netData){const g=d.person||'';if(!groups.has(g))groups.set(g,[]);groups.get(g).push(d)}
-  const order=[...ppl.map(p=>p.name).filter(n=>groups.has(n)),...(groups.has('')?['']:[])];const lists={};
-  for(const g of order){const ds=groups.get(g),dt=document.createElement('details');dt.className='netgrp';dt.dataset.g=g;if(wasOpen.has(g))dt.open=true;
-    const nh=ds.filter(d=>d.home).length;dt.innerHTML=`<summary style="cursor:pointer;padding:6px 0"><b></b> <span class="hint">${esc(t('{n} apparaten',{n:ds.length})+(nh?' · '+t('{n} nu op de wifi',{n:nh}):''))}</span></summary><div></div>`;
-    dt.querySelector('b').textContent=g||t('Niet gekoppeld');lists[g]=dt.querySelector('div');box.append(dt)}
-  for(const d of netData){const list=lists[d.person||''],el=document.createElement('div');el.className='netrow';
+/* Hoofdgebruiker: blok Mensen. Per persoon (uitklapbaar) naam, rol, e-mailadressen, wifi-apparaten en hub-apparaten,
+   poppetje; daaronder "Niet gekoppeld" (wifi-apparaten, toegangsverzoeken, losse e-mailadressen). */
+let mensenData=null;
+async function peopleAdmin(){if(!S||S.role!=='owner')return;let r;try{r=await api('/api/people/admin')}catch(e){return}mensenRender(r)}
+function mensenRender(r){mensenData=r;const box=$('mensenList'),loc=I18N.lang==='en'?'en-GB':'nl-NL',ppl=r.people||[],fr=r.free||{};
+  $('cfState').textContent=r.cf?'· '+(r.cfResult||t('ingevuld')):'· '+t('nog niet ingevuld');
+  const wasOpen=new Set([...box.querySelectorAll('details[open]')].map(x=>x.dataset.g));box.innerHTML='';
+  const when=ms=>ms?new Date(ms).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+  const after=async(p,msg)=>{const x=await p;if(x&&x.message&&(msg||!x.ok))toast(x.message);if(x&&x.people)mensenRender(x);peopleLoad(true)};
+  const sel=(cur,blank)=>`<select class="grow" data-p="1"><option value="">${esc(t(blank))}</option>${ppl.map(p=>`<option value="${esc(p.id)}"${p.id===cur?' selected':''}>${esc(p.name)}</option>`).join('')}</select>`;
+  // Een wifi-apparaat: naam aanpasbaar, telt mee voor thuis, koppelen
+  const wifiRow=(d,linked)=>{const el=document.createElement('div');el.className='devrow';
     const vendor=d.mac.startsWith('a4:38:cc')?'Nintendo':d.random?t('telefoon of laptop (privé-adres)'):'';
-    el.innerHTML=`<div class="row" style="margin:0;align-items:center"><b class="grow">${d.home?'<i class="dotg"></i>':''}</b><span class="badge"></span></div>
-      <div class="meta">${esc([d.ip,vendor,d.mac,t('laatst {d}',{d:new Date(d.last).toLocaleString(loc,{weekday:'short',hour:'2-digit',minute:'2-digit'})})].filter(Boolean).join(' · '))}</div>
-      <div class="row"><select class="grow"><option value="">${esc(t('Dit is…'))}</option>${ppl.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}<option value="+">${esc(t('+ Nieuw persoon'))}</option></select><button class="btn" data-h="1">${esc(t('Verbergen'))}</button></div>
-      ${d.person?`<div class="row"><button class="btn grow${d.counts?' on':''}" data-c="1">${esc(t(d.counts?'Telt mee voor thuis':'Telt niet mee voor thuis'))}</button></div>`:''}`;
-    el.querySelector('b').append(document.createTextNode(d.name||t('Naamloos apparaat')));el.querySelector('.badge').textContent=d.person||t('niet gekoppeld');
-    const sel=el.querySelector('select');if(d.person){const p=ppl.find(x=>x.name===d.person);if(p)sel.value=p.id}
-    sel.onchange=async()=>{let id=sel.value;if(!id)return;let name='';if(id==='+'){name=(prompt(t('Naam van deze persoon'))||'').trim();if(!name){sel.value='';return}id=''}
-      const r=await api('/api/people/save',{id,name,addMac:d.mac});if(r.people){peopleData=r.people;peopleAt=Date.now()}peopleRender();peopleAdmin()};
-    el.querySelector('[data-h]').onclick=async()=>{await api('/api/net/hide',{mac:d.mac,hide:true});peopleAdmin()};
-    const cb=el.querySelector('[data-c]');if(cb)cb.onclick=async()=>{await api('/api/net/presence',{mac:d.mac,count:!d.counts});peopleLoad(true).then(()=>{peopleAdmin();autoLoad()})};
-    list.append(el)}
-  const pl=$('peopleList');pl.innerHTML='';
-  for(const p of ppl){const el=document.createElement('details');el.className='netrow';
-    el.innerHTML=`<summary style="display:flex;align-items:center;gap:10px;cursor:pointer"></summary><div class="ped"></div><button class="btn red" style="margin-top:8px">${esc(t('Persoon verwijderen'))}</button>`;
-    const sm=el.querySelector('summary');sm.append(drawAvatar(document.createElement('canvas'),p.avatar));sm.querySelector('canvas').style.cssText='width:20px;height:36px;image-rendering:pixelated';
-    const nm=document.createElement('b');nm.textContent=p.name+(p.home?' · '+t('thuis'):'');sm.append(nm);
-    el.ontoggle=()=>{if(el.open&&!el.dataset.ed){el.dataset.ed='1';avEditor(el.querySelector('.ped'),p.avatar,p.id,()=>{peopleRender();peopleAdmin()})}};
-    el.querySelector('.btn.red').onclick=async()=>{if(!confirm(t('{n} verwijderen?',{n:p.name})))return;const r=await api('/api/people/save',{id:p.id,delete:true});if(r.people){peopleData=r.people;peopleAt=Date.now()}peopleRender();peopleAdmin()};
-    pl.append(el)}}
+    el.innerHTML=`<div class="row" style="margin:0;align-items:center">${d.home?'<i class="dotg"></i>':''}<input class="dn grow" maxlength="40"><span class="tag">wifi</span></div>
+      <div class="meta">${esc([d.ip,vendor,d.mac,t('laatst {d}',{d:when(d.last)})].filter(Boolean).join(' · '))}</div>
+      <div class="row">${linked?`<button class="btn${d.counts?' on':''}" data-c="1">${esc(t(d.counts?'Telt mee voor thuis':'Telt niet mee voor thuis'))}</button><button class="btn" data-u="1">${esc(t('Loskoppelen'))}</button>`
+        :`${sel('','Dit is…')}<button class="btn" data-h="1">${esc(t('Verbergen'))}</button>`}</div>`;
+    const dn=el.querySelector('.dn');dn.value=d.name||'';dn.placeholder=t('Naamloos apparaat');dn.onchange=()=>after(api('/api/net/label',{mac:d.mac,name:dn.value.trim()}));
+    const c=el.querySelector('[data-c]');if(c)c.onclick=()=>after(api('/api/net/presence',{mac:d.mac,count:!d.counts}).then(()=>api('/api/people/admin')));
+    const u=el.querySelector('[data-u]');if(u)u.onclick=()=>after(api('/api/people/save',{id:d.personId,removeMac:d.mac}).then(()=>api('/api/people/admin')));
+    const h=el.querySelector('[data-h]');if(h)h.onclick=()=>after(api('/api/net/hide',{mac:d.mac,hide:true}).then(()=>api('/api/people/admin')));
+    const ps=el.querySelector('[data-p]');if(ps)ps.onchange=()=>{if(ps.value)after(api('/api/people/save',{id:ps.value,addMac:d.mac}).then(()=>api('/api/people/admin')))};
+    return el};
+  // Een apparaat dat de hub gebruikt (cookie): naam aanpasbaar, koppelen = goedkeuren met de rol van die persoon
+  const hubRow=(d,linked)=>{const el=document.createElement('div');el.className='devrow';
+    const ua=/iPhone|iPad/.test(d.ua)?'iPhone/iPad':/Android/.test(d.ua)?'Android':/Windows/.test(d.ua)?'Windows':/Mac OS/.test(d.ua)?'Mac':'';
+    el.innerHTML=`<div class="row" style="margin:0;align-items:center"><input class="dn grow" maxlength="40"><span class="tag">hub</span>${linked?'':`<span class="badge">${esc(t(ACC_ROLE[d.role]||d.role))}</span>`}</div>
+      <div class="meta">${esc([d.me?t('dit apparaat'):'',ua,d.email,d.ip,d.lastSeen?t('laatst {d}',{d:when(d.lastSeen)}):''].filter(Boolean).join(' · '))}</div>
+      <div class="row">${linked?(d.me?'':`<button class="btn" data-u="1">${esc(t('Loskoppelen'))}</button><button class="btn red" data-x="1">${esc(t('Verwijderen'))}</button>`)
+        :`${sel('','Hoort bij… (= goedkeuren)')}${d.role!=='denied'?`<button class="btn" data-d="1">${esc(t('Weigeren'))}</button>`:''}<button class="btn red" data-x="1">${esc(t('Verwijderen'))}</button>`}</div>`;
+    const dn=el.querySelector('.dn');dn.value=d.name||'';dn.onchange=()=>after(api('/api/access/set',{id:d.id,name:dn.value.trim()}).then(()=>api('/api/people/admin')));
+    const ps=el.querySelector('[data-p]');if(ps)ps.onchange=()=>{if(ps.value)after(api('/api/people/link',{device:d.id,person:ps.value}).then(()=>api('/api/people/admin')),true)};
+    const u=el.querySelector('[data-u]');if(u)u.onclick=()=>after(api('/api/people/link',{device:d.id,person:''}).then(()=>api('/api/people/admin')));
+    const dd=el.querySelector('[data-d]');if(dd)dd.onclick=()=>after(api('/api/access/set',{id:d.id,role:'denied'}).then(()=>api('/api/people/admin')));
+    const x=el.querySelector('[data-x]');if(x)x.onclick=()=>after(api('/api/access/set',{id:d.id,role:'delete'}).then(()=>api('/api/people/admin')));
+    return el};
+  const group=(key,summary)=>{const dt=document.createElement('details');dt.className='netgrp mgrp';dt.dataset.g=key;if(wasOpen.has(key))dt.open=true;
+    const sm=document.createElement('summary');sm.style.cssText='cursor:pointer;display:flex;align-items:center;gap:8px;padding:6px 0';summary(sm);dt.append(sm);const body=document.createElement('div');dt.append(body);box.append(dt);return body};
+  for(const p of ppl){
+    const body=group(p.id,sm=>{sm.append(drawAvatar(document.createElement('canvas'),p.avatar));sm.querySelector('canvas').style.cssText='width:20px;height:36px;image-rendering:pixelated';
+      const b=document.createElement('b');b.textContent=p.name;sm.append(b);const st=document.createElement('span');st.className='hint';st.textContent=p.home?t('thuis'):'';sm.append(st);
+      const bd=document.createElement('span');bd.className='badge';bd.style.marginLeft='auto';bd.textContent=t(ACC_ROLE[p.role]||p.role);sm.append(bd)});
+    body.innerHTML=`<div class="lbl">${esc(t('Naam'))}</div><input type="text" class="pn" maxlength="30">
+      <div class="lbl">${esc(t('Mag'))}</div><div class="seg"><button class="btn${p.role==='guest'?' on':''}" data-r="guest">${esc(t('Gast'))}</button><button class="btn${p.role==='owner'?' on':''}" data-r="owner">${esc(t('Hoofdgebruiker'))}</button></div>
+      <div class="lbl">${esc(t('E-mail (inloggen via hub.stacklines.nl)'))}</div><div class="pm"></div>
+      <div class="row" style="align-items:center"><input type="email" class="grow pe" placeholder="${esc(t('E-mailadres'))}" autocomplete="off"><button class="btn" data-ae="1">${esc(t('Toevoegen'))}</button></div>
+      <div class="lbl">${esc(t('Apparaten'))}</div><div class="pd"></div>
+      <details class="pav" style="margin-top:8px"><summary style="cursor:pointer">${esc(t('Poppetje aanpassen'))}</summary><div class="ped"></div></details>
+      <button class="btn red" data-del="1" style="margin-top:8px">${esc(t('Persoon verwijderen'))}</button>`;
+    const pn=body.querySelector('.pn');pn.value=p.name;pn.onchange=()=>{const v=pn.value.trim();if(v)after(api('/api/people/save',{id:p.id,name:v}).then(()=>api('/api/people/admin')))};
+    body.querySelectorAll('[data-r]').forEach(b=>b.onclick=()=>after(api('/api/people/role',{id:p.id,role:b.dataset.r}),true));
+    const pm=body.querySelector('.pm');if(!p.emails.length)pm.innerHTML=`<p class="hint" style="margin:0">${esc(t('Geen: alleen thuis via de wifi.'))}</p>`;
+    for(const e of p.emails){const row=document.createElement('div');row.className='row';row.style.cssText='align-items:center;margin-top:4px';row.innerHTML=`<span class="grow" style="word-break:break-all"></span><button class="btn">✕</button>`;
+      row.querySelector('span').textContent=e;row.querySelector('button').setAttribute('aria-label',t('Weghalen'));row.querySelector('button').onclick=()=>after(api('/api/people/email',{id:p.id,email:e,add:false}),true);pm.append(row)}
+    const pe=body.querySelector('.pe');body.querySelector('[data-ae]').onclick=()=>{const v=pe.value.trim();if(v)after(api('/api/people/email',{id:p.id,email:v,add:true}),true)};
+    const pd=body.querySelector('.pd');if(!p.wifi.length&&!p.hub.length)pd.innerHTML=`<p class="hint" style="margin:0">${esc(t('Nog geen apparaten. Koppel ze onder Niet gekoppeld.'))}</p>`;
+    for(const d of p.hub)pd.append(hubRow(d,true));for(const d of p.wifi)pd.append(wifiRow(d,true));
+    const pav=body.querySelector('.pav');pav.ontoggle=()=>{if(pav.open&&!pav.dataset.ed){pav.dataset.ed='1';avEditor(pav.querySelector('.ped'),p.avatar,p.id,()=>{peopleLoad(true);peopleAdmin()})}};
+    body.querySelector('[data-del]').onclick=async()=>{if(!confirm(t('{n} verwijderen?',{n:p.name})))return;after(api('/api/people/save',{id:p.id,delete:true}).then(()=>api('/api/people/admin')))}}
+  // Niet gekoppeld
+  const fw=fr.wifi||[],fh=fr.hub||[],fe=fr.emails||[],req=fh.filter(d=>d.role==='pending').length;
+  if(fw.length||fh.length||fe.length){const body=group('',sm=>{const b=document.createElement('b');b.textContent=t('Niet gekoppeld');sm.append(b);const h=document.createElement('span');h.className='hint';
+      h.textContent=[t('{n} apparaten',{n:fw.length+fh.length}),req?t('{n} vraagt toegang',{n:req}):''].filter(Boolean).join(' · ');sm.append(h)});
+    for(const d of fh)body.append(hubRow(d,false));
+    for(const e of fe){const el=document.createElement('div');el.className='devrow';el.innerHTML=`<div class="row" style="margin:0;align-items:center"><b class="grow" style="word-break:break-all"></b><span class="tag">e-mail</span></div><div class="row">${sel('','Hoort bij…')}<button class="btn red">${esc(t('Weghalen'))}</button></div>`;
+      el.querySelector('b').textContent=e.email;const ps=el.querySelector('[data-p]');ps.onchange=()=>{if(ps.value)after(api('/api/people/email',{id:ps.value,email:e.email,add:true}),true)};
+      el.querySelector('.btn.red').onclick=()=>after(api('/api/people/email',{id:'',email:e.email,add:false}),true);body.append(el)}
+    for(const d of fw)body.append(wifiRow(d,false))}}
+$('mensenAdd').onclick=async()=>{const v=$('mensenNew').value.trim();if(!v)return;await api('/api/people/save',{id:'',name:v});$('mensenNew').value='';peopleLoad(true);peopleAdmin()};
+$('cfSave').onclick=async()=>{const v=$('cfToken').value.trim();if(!v)return;toast(t('Bezig...'));const r=await api('/api/cloudflare/save',{token:v});$('cfToken').value='';toast(r.message||'');peopleAdmin()};
+$('cfClear').onclick=async()=>{const r=await api('/api/cloudflare/clear',{});toast(r.message||'');peopleAdmin()};
 setInterval(()=>{if(S&&SRV&&curTab==='home')peopleLoad()},30000);
 /* Automatisch: alles uit als iemand weggaat (instellingen op de hub) */
 async function autoLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/auto')}catch(e){return}
@@ -1829,33 +1863,9 @@ function roleUI(s){const g=s&&s.role==='guest';document.body.classList.toggle('g
   const n=s&&s.role==='owner'?s.accessPending||0:0;$('accBanner').classList.toggle('hidden',!n);
   if(n)$('accBanner').textContent=t('{n} apparaat vraagt toegang. Tik om te bekijken.',{n})}
 $('houseScene').onclick=()=>{houseSceneOpen=!houseSceneOpen;homeUI();if(houseSceneOpen)setTimeout(()=>$('scenePanel').scrollIntoView({block:'start',behavior:'smooth'}),50)};
-$('accBanner').onclick=()=>{showTab('settings');setTimeout(()=>$('accPanel').scrollIntoView({block:'start'}),50)};
+$('accBanner').onclick=()=>{showTab('settings');setTimeout(()=>$('mensenPanel').scrollIntoView({block:'start'}),50)};
 const ACC_ROLE={owner:'Hoofdgebruiker',guest:'Gast',pending:'Wacht op goedkeuring',denied:'Geweigerd'};
-async function accLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/access/list')}catch(e){return}accRender(r.devices||[]);try{accEmails(await api('/api/access/emails'))}catch(e){}}
-function accEmails(r){const m=r.emails||{},box=$('accEmails'),ks=Object.keys(m);
-  $('cfState').textContent=r.cf?'· '+(r.cfResult||t('ingevuld')):'· '+t('nog niet ingevuld');box.innerHTML=ks.length?'':`<p class="hint" style="margin:0">${esc(t('Nog niemand.'))}</p>`;
-  const pm=r.persons||{};
-  for(const e of ks){const el=document.createElement('div');el.className='accrow';
-    el.innerHTML=`<div class="row" style="margin:0;align-items:center"><b class="grow" style="word-break:break-all"></b><span class="badge">${esc(t(ACC_ROLE[m[e]]||m[e]))}</span></div>
-      <div class="row" style="align-items:center"><span>${esc(t('Hoort bij'))}</span><select class="grow" data-p="1"><option value="">${esc(t('niemand'))}</option>${(peopleData||[]).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select><button class="btn red">${esc(t('Weghalen'))}</button></div>`;
-    el.querySelector('b').textContent=e;const ps=el.querySelector('[data-p]');ps.value=pm[e]||'';
-    ps.onchange=async()=>{const r2=await api('/api/people/linkEmail',{email:e,person:ps.value});toast(r2.message||'');accEmails(r2)};
-    el.querySelector('button.red').onclick=async()=>{const r=await api('/api/access/emails',{email:e,role:''});toast(r.message||'');accEmails(r)};box.append(el)}}
-$('accAddMail').onclick=async()=>{const e=$('accNewMail').value.trim();if(!e)return;const r=await api('/api/access/emails',{email:e,role:$('accNewRole').value});toast(r.message||'');if(r.ok)$('accNewMail').value='';accEmails(r)};
-$('cfSave').onclick=async()=>{const v=$('cfToken').value.trim();if(!v)return;toast(t('Bezig...'));const r=await api('/api/cloudflare/save',{token:v});$('cfToken').value='';toast(r.message||'');accEmails(r)};
-$('cfClear').onclick=async()=>{const r=await api('/api/cloudflare/clear',{});toast(r.message||'');accEmails(r)};
-function accRender(list){const box=$('accList'),loc=I18N.lang==='en'?'en-GB':'nl-NL';box.innerHTML=list.length?'':`<p class="hint">${esc(t('Nog geen apparaten.'))}</p>`;
-  for(const d of list){const el=document.createElement('div');el.className='accrow';
-    const seen=d.lastSeen?new Date(d.lastSeen).toLocaleString(loc,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
-    const ua=/iPhone|iPad/.test(d.ua)?'iPhone/iPad':/Android/.test(d.ua)?'Android':/Windows/.test(d.ua)?'Windows':/Mac OS/.test(d.ua)?'Mac':'';
-    el.innerHTML=`<div class="row" style="margin:0;align-items:center"><b class="grow"></b><span class="badge">${esc(t(ACC_ROLE[d.role]||d.role))}</span></div>
-      <div class="meta">${esc([d.me?t('dit apparaat'):'',ua,d.ip,seen?t('laatst {d}',{d:seen}):''].filter(Boolean).join(' · '))}</div>
-      <div class="row" style="align-items:center"><span>${esc(t('Hoort bij'))}</span><select class="grow" data-p="1"><option value="">${esc(t('niemand'))}</option>${(peopleData||[]).map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select></div>
-      <div class="row">${d.me?'':(d.role!=='guest'?`<button class="btn" data-r="guest">${esc(t('Gast'))}</button>`:'')+(d.role!=='owner'?`<button class="btn" data-r="owner">${esc(t('Hoofdgebruiker'))}</button>`:'')+(d.role==='pending'?`<button class="btn" data-r="denied">${esc(t('Weigeren'))}</button>`:'')+`<button class="btn red" data-r="delete">${esc(t('Verwijderen'))}</button>`}</div>`;
-    el.querySelector('b').textContent=d.name;
-    const ps=el.querySelector('[data-p]');ps.value=d.person||'';ps.onchange=async()=>{const r=await api('/api/people/link',{device:d.id,person:ps.value});toast(r.message||'');if(r.devices)accRender(r.devices)};
-    el.querySelectorAll('[data-r]').forEach(b=>b.onclick=async()=>{const r=await api('/api/access/set',{id:d.id,role:b.dataset.r});toast(r.message||'');if(r.devices)accRender(r.devices);poll()});
-    box.append(el)}}
+async function accLoad(){}
 /* Opnieuw tekenen alleen als er iets veranderd is (anders verspringen knoppen onder je vinger) */
 function airFill(box,list){const key=JSON.stringify(list.map(l=>[l.id,l.name,airOf(l.id),kbOf(l.id)]))+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;
   box.innerHTML='';for(const l of list)box.append(isKat(l)?kbCard(l):airCard(l))}
