@@ -1655,10 +1655,15 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=20,Hh=
   if(a.hair==='staart'){rect(12,4,13,11,H);p(13,6,Hd);p(13,7,Hd);p(13,8,Hd);p(12,4,Hl)}
   if(a.hair==='afro'&&!hat)for(let y=-2;y<=9;y++)for(let x=-1;x<=14;x++){const dx=(x-6.5)/7.5,dy=(y-3.5)/6;if(dx*dx+dy*dy<=1)p(x,y,((x*7+y*3)%5===0)?Hd:((x+y)%6===0?Hl:H))}
   // lijf: armen, kleding, benen
-  const arms=(col,cold)=>{rect(1,12,2,18,col);rect(11,12,12,18,col);rect(12,13,12,18,cold);rect(1,19,2,19,S);rect(11,19,12,19,S);p(12,19,Sd)};
-  const legs=(col,cold)=>{rect(3,20,5,25,col);rect(8,20,10,25,col);rect(10,20,10,25,cold);rect(3,26,5,26,B);rect(8,26,10,26,B);p(5,26,Bd);p(10,26,Bd)};
+  // armen: afgeronde schouder, los van het lijf (donker lijntje aan de binnenkant), handen
+  const arms=(col,cold)=>{p(2,13,col);p(11,13,col);rect(1,14,2,18,col);rect(11,14,12,18,col);rect(2,15,2,18,cold);rect(11,15,11,18,cold);rect(12,14,12,18,cold);
+    rect(1,19,2,19,S);rect(11,19,12,19,S);p(12,19,Sd);p(2,19,Sd)};
+  // heupen, twee benen, schoenen iets breder dan de benen
+  const legs=(col,cold)=>{rect(3,20,10,20,col);rect(3,21,5,25,col);rect(8,21,10,25,col);rect(10,20,10,25,cold);p(5,21,cold);
+    rect(2,26,5,26,B);rect(8,26,11,26,B);p(2,26,Bd);p(11,26,Bd)};
   const O=a.outfit||'shirt';
-  const torso=(col,cold,coll)=>{rect(3,12,10,19,col);rect(2,12,11,12,col);rect(9,13,10,19,cold);rect(4,13,4,17,avShade(col,.3));if(coll)rect(6,12,7,12,Sl)};
+  // lijf: schouders, borst, en een smallere taille (zo komen de armen los)
+  const torso=(col,cold,coll)=>{rect(3,12,10,16,col);rect(4,17,9,19,col);rect(9,13,10,16,cold);rect(8,17,9,19,cold);rect(4,13,4,16,avShade(col,.3));if(coll){rect(6,12,7,12,Sl);p(6,13,Sl)}};
   if(O==='jurk'){torso(T,Td,1);arms(T,Td);rect(3,19,10,19,avShade(T,-.45));for(let y=20;y<=23;y++){const w=(y-20)>>1;rect(3-w,y,10+w,y,T);rect(9,y,10+w,y,Td)}rect(4,20,4,22,Tl);
     rect(4,24,5,25,S);rect(8,24,9,25,S);rect(4,26,5,26,B);rect(8,26,9,26,B)}
   else if(O==='rok'){torso(T,Td,1);arms(T,Td);for(let y=20;y<=22;y++){const w=(y-20)>>1;rect(3-w,y,10+w,y,P);rect(9,y,10+w,y,Pd)}rect(3,20,10,20,avShade(P,-.45));
@@ -1674,19 +1679,21 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=20,Hh=
   rect(9,5,10,8,Sd);p(9,9,Sd);rect(5,10,8,10,Sd);rect(6,11,7,11,Sd);p(4,3,Sl);p(5,3,Sl);
   // ogen 2x2 aan weerskanten (2 pixels ertussen): boven donker, onder iris en wit glimlicht aan de buitenkant; geen mond
   const Ed=avShade(E,-.5),L='#3a2228';
-  rect(4,6,5,6,L);p(4,7,'#ffffff');p(5,7,E);rect(8,6,9,6,L);p(8,7,E);p(9,7,'#ffffff');
-  if(!man){p(3,6,L);p(10,6,L);p(4,8,'#f2a0a0');p(9,8,'#ec9a9a')}else{p(5,7,Ed);p(8,7,Ed)}
+  // langwerpige ogen (2 breed, 3 hoog): wimperlijn, dan lichtgrijs + donkere iris, onderaan wit + iris
+  rect(4,6,5,6,L);p(4,7,'#cfc6cc');p(5,7,Ed);p(4,8,'#ffffff');p(5,8,E);
+  rect(8,6,9,6,L);p(9,7,'#cfc6cc');p(8,7,Ed);p(9,8,'#ffffff');p(8,8,E);
+  if(!man){p(3,6,L);p(10,6,L);p(4,9,'#f2a0a0');p(9,9,'#ec9a9a')}
   // haar
   {const m=AV_HAIR[a.hair==='stekel'?'warrig':a.hair];if(m)m[1].forEach((r,i)=>{for(let j=0;j<r.length;j++){const ch=r[j];if(ch!=='.')p(j,m[0]+i,ch==='H'?H:ch==='d'?Hd:Hl)}})}
   if(a.hair==='kaal'){rect(4,1,9,1,S);rect(3,2,10,2,S);p(4,2,Sl);p(5,2,Sl)}
   // extra's
-  if(a.extra==='bril'){const F='#3a2a2a';for(const x0 of [3,7]){rect(x0,5,x0+3,5,F);rect(x0,8,x0+3,8,F);p(x0,6,F);p(x0,7,F);p(x0+3,6,F);p(x0+3,7,F)}}
+  if(a.extra==='bril'){const F='#3a2a2a';for(const x0 of [3,7]){rect(x0,5,x0+3,5,F);rect(x0,9,x0+3,9,F);p(x0,6,F);p(x0,7,F);p(x0,8,F);p(x0+3,6,F);p(x0+3,7,F);p(x0+3,8,F)}}
   if(a.extra==='pet'){rect(4,-1,9,-1,'#c0392b');rect(3,0,10,0,'#c0392b');rect(2,1,11,3,'#c0392b');rect(4,-1,6,0,'#e05a4a');rect(2,4,13,4,'#8e2a1f');p(6,1,'#f2f2f2');p(7,1,'#f2f2f2')}
   if(a.extra==='muts'){rect(4,-1,9,-1,'#3a6aa0');rect(3,0,10,0,'#3a6aa0');rect(2,1,11,3,'#3a6aa0');rect(2,4,11,4,'#2a4a7a');for(const x of [3,6,9])p(x,4,'#5a8ac0');rect(5,-2,8,-2,'#e8e8f0')}
   if(a.extra==='heks'){rect(0,3,13,4,'#4a2a6a');rect(2,1,11,2,'#5a3a7a');rect(4,-1,9,0,'#5a3a7a');rect(5,-3,8,-2,'#5a3a7a');p(8,-4,'#5a3a7a');p(9,-5,'#5a3a7a');rect(2,2,11,2,'#e8b84a')}
   if(a.extra==='zonnehoed'){rect(-1,2,14,3,'#e8c06a');rect(0,4,13,4,'#c89a3a');rect(3,-1,10,1,'#e8c06a');rect(4,-2,9,-2,'#f2d68a');rect(3,1,10,1,'#c0392b')}
   if(a.extra==='oren'){for(const [bx,d] of [[3,1],[10,-1]]){p(bx,-2,H);p(bx,-1,H);p(bx+d,-1,H);p(bx,0,H);p(bx+d,0,H);p(bx+d,-1,'#f2a0b0')}}
-  if(a.extra==='baard'){rect(3,8,10,10,H);rect(4,11,9,11,H);rect(9,8,10,10,Hd);p(4,7,'#ffffff');p(9,7,'#ffffff')}
+  if(a.extra==='baard'){rect(3,9,10,10,H);rect(4,11,9,11,H);rect(9,9,10,10,Hd);p(3,8,H);p(10,8,Hd)}
   if(a.extra==='sjaal'){rect(3,11,10,12,'#b02a2a');rect(4,13,5,17,'#b02a2a');p(5,17,'#7a1a1a');rect(8,11,10,11,'#8a1f1f');p(4,14,'#d04a4a')}
   if(a.extra==='strik'){rect(8,-1,11,0,'#e05a8a');p(9,-1,'#a0305a');p(10,0,'#f28ab0')}
   // omlijning in een donkere tint van het deel ernaast; daarna een witte stickerrand
