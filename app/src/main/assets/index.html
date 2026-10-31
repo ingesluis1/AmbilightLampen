@@ -176,6 +176,10 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .enchart svg{display:block;width:100%;height:100%;overflow:visible}
 .enchart .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--cream);font-size:13px;padding:4px 7px;white-space:nowrap;transform:translate(-50%,-100%);z-index:2}
 .enlbl{font-size:13px;margin-top:8px;opacity:.85}
+.entar{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center}
+.entar label{font-size:14px}
+.entar span{white-space:nowrap;font-weight:600}
+.entar input{width:92px!important;text-align:right}
 .aircard{border:3px solid var(--ink);background:var(--cream);padding:8px;margin-top:10px}
 .aircard .top{display:flex;align-items:center;gap:8px}
 .aircard .in{font-size:22px;font-weight:bold}
@@ -534,6 +538,19 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
   <div class="enlbl" id="enDayGasLbl">Gas per uur</div>
   <div class="enchart small" id="enDayGas"></div>
   <p class="hint" id="enDaySum" style="margin:6px 0 0"></p>
+</section>
+<section class="panel enneeds">
+  <details id="enTarDet"><summary><b>Tarieven</b> <span class="hint" id="enTarSum"></span></summary>
+    <p class="hint" style="margin:6px 0 8px">Vul je prijzen in, inclusief btw. Ze staan in je contract of op de site van je leverancier. Dan zie je hierboven ongeveer wat het kost.</p>
+    <div class="entar">
+      <label for="tStroom">Stroom per kWh (normaal)</label><span>€ <input type="text" inputmode="decimal" id="tStroom" placeholder="0,25"></span>
+      <label for="tStroomDal">Stroom per kWh, daltarief (als je dat hebt)</label><span>€ <input type="text" inputmode="decimal" id="tStroomDal" placeholder="zelfde"></span>
+      <label for="tTerug">Teruglevering per kWh</label><span>€ <input type="text" inputmode="decimal" id="tTerug" placeholder="0,05"></span>
+      <label for="tGas">Gas per m³</label><span>€ <input type="text" inputmode="decimal" id="tGas" placeholder="1,30"></span>
+      <label for="tVast">Vaste kosten per maand (vastrecht en netbeheer, min de vermindering energiebelasting)</label><span>€ <input type="text" inputmode="decimal" id="tVast" placeholder="20,00"></span>
+    </div>
+    <button class="btn gold" id="enTarSave" style="margin-top:8px;width:100%">Tarieven opslaan</button>
+  </details>
 </section>
 </div>
 
@@ -1664,6 +1681,20 @@ async function enLoad(){if(!SRV)return;let r;try{r=await api('/api/energy?days='
   const ok=!!(r&&r.ok);$('enSetup').classList.toggle('hidden',ok||!(r&&r.setup));document.querySelectorAll('.enneeds').forEach(x=>x.classList.toggle('hidden',!ok));
   if(!ok){$('enTiles').innerHTML='';$('enStamp').textContent=r&&!r.setup?t('Fout: {e}',{e:r.message}):'';return}
   enData=r;if(!enDay||!r.days.some(d=>d.date===enDay))enDay=r.last;enDays();enDayLoad()}
+/* Prijsindicatie uit de tarieven (euro's incl. btw). Dal-kWh tegen het daltarief als dat is ingevuld. */
+const enEUR=v=>v==null?'–':v.toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL',{style:'currency',currency:'EUR'});
+const enT=()=>(enData&&enData.tariffs)||{};
+const enHasT=()=>{const T=enT();return T.stroom!=null||T.gas!=null};
+function enCostStroom(d){const T=enT();if(T.stroom==null||d.kwh==null)return null;const low=T.stroomDal!=null&&d.kwhLow!=null?d.kwhLow:0;
+  let c=(d.kwh-low)*T.stroom+(low?low*T.stroomDal:0);if(T.terug!=null&&d.back)c-=d.back*T.terug;return c}
+function enCostGas(d){const T=enT();return T.gas==null||d.gas==null?null:d.gas*T.gas}
+const enFixedDay=()=>(enT().vast||0)*12/365;
+function enCostDay(d){const a=enCostStroom(d),b=enCostGas(d);if(a==null&&b==null)return null;return (a||0)+(b||0)+enFixedDay()}
+function enTarUI(){const T=enT(),f=v=>v==null?'':String(v).replace('.',',');
+  for(const [id,k] of [['tStroom','stroom'],['tStroomDal','stroomDal'],['tTerug','terug'],['tGas','gas'],['tVast','vast']])if(document.activeElement!==$(id))$(id).value=f(T[k]);
+  $('enTarSum').textContent=enHasT()?t('ingevuld'):t('nog niet ingevuld');if(!enHasT())$('enTarDet').open=true}
+$('enTarSave').onclick=async()=>{const r=await api('/api/energy/tariffs',{stroom:$('tStroom').value,stroomDal:$('tStroomDal').value,terug:$('tTerug').value,gas:$('tGas').value,vast:$('tVast').value});
+  toast(r.message||'');if(r.ok&&enData){enData.tariffs=r.tariffs;enDays();enDayLoad()}};
 function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d=>enDate(d.date,{day:'numeric',month:'numeric'}));
   $('enStamp').textContent=t('Uit Enelogic, bijgewerkt t/m {d}. Je netbeheerder stuurt de standen één keer per dag.',{d:enDate(r.last,{weekday:'long',day:'numeric',month:'long'})});
   const sum=(k,list)=>list.reduce((a,d)=>a+(d[k]||0),0),month=ds.filter(d=>d.date.slice(0,7)===r.last.slice(0,7)),anyBack=ds.some(d=>d.back>0);
@@ -1671,11 +1702,14 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   $('enTiles').innerHTML=tile(t('Stroom {d}',{d:enDate(r.last)}),nl1(last.kwh,1),'kWh',last.back>0?esc(t('{n} kWh teruggeleverd',{n:nl1(last.back,1)})):'',EN_COL.kwh)
     +(r.gas?tile(t('Gas {d}',{d:enDate(r.last)}),nl1(last.gas,2),'m³','',EN_COL.gas):'')
     +tile(t('Stroom deze maand'),nl1(sum('kwh',month),0),'kWh',anyBack?esc(t('{n} kWh teruggeleverd',{n:nl1(sum('back',month),0)})):'')
-    +(r.gas?tile(t('Gas deze maand'),nl1(sum('gas',month),1),'m³',''):'');
+    +(r.gas?tile(t('Gas deze maand'),nl1(sum('gas',month),1),'m³',''):'')
+    +(enHasT()?tile(t('Kosten {d}',{d:enDate(r.last)}),'≈ '+enEUR(enCostDay(last)),'',esc(t('incl. vaste kosten per dag'))):'')
+    +(enHasT()?tile(t('Kosten deze maand'),'≈ '+enEUR(month.reduce((a,d)=>a+(enCostDay(d)||0),0)),'',esc(t('over {n} dagen met gegevens',{n:month.filter(d=>d.kwh!=null).length}))):'');
+  enTarUI();
   const sel=ds.findIndex(d=>d.date===enDay),pick=i=>{enDay=ds[i].date;enDays();enDayLoad()};
-  enBars($('enDays'),ds.map(d=>d.kwh??null),{color:EN_COL.kwh,labels:lbl,sel,pick,title:t('Stroom per dag'),tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+' kWh'+(ds[i].back>0?' · '+t('terug {n}',{n:nl1(ds[i].back,2)}):'')});
+  enBars($('enDays'),ds.map(d=>d.kwh??null),{color:EN_COL.kwh,labels:lbl,sel,pick,title:t('Stroom per dag'),tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+' kWh'+(ds[i].back>0?' · '+t('terug {n}',{n:nl1(ds[i].back,2)}):'')+(enCostStroom(ds[i])!=null?' · ≈ '+enEUR(enCostStroom(ds[i])):'')});
   $('enGasPanel').classList.toggle('hidden',!r.gas);
-  if(r.gas)enBars($('enGas'),ds.map(d=>d.gas??null),{color:EN_COL.gas,labels:lbl,sel,pick,title:t('Gas per dag'),tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+' m³'})}
+  if(r.gas)enBars($('enGas'),ds.map(d=>d.gas??null),{color:EN_COL.gas,labels:lbl,sel,pick,title:t('Gas per dag'),tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+' m³'+(enCostGas(ds[i])!=null?' · ≈ '+enEUR(enCostGas(ds[i])):'')})}
 async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textContent=enDate(d,{weekday:'long',day:'numeric',month:'long'});
   const ds=enData.days,i=ds.findIndex(x=>x.date===d);$('enPrev').disabled=i<=0;$('enNext').disabled=i<0||i>=ds.length-1;
   let r;try{r=await api('/api/energy/day?date='+d)}catch(e){return}if(enDay!==d||!r.ok)return;
@@ -1684,7 +1718,8 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   const g=r.gas||[],hasG=g.some(v=>v!=null);$('enDayGas').classList.toggle('hidden',!hasG);$('enDayGasLbl').classList.toggle('hidden',!hasG);
   if(hasG)enBars($('enDayGas'),g,{color:EN_COL.gas,min:.05,labels:g.map((_,k)=>k%3===0?String(k):''),title:t('Gas per uur'),tip:(k,v)=>String(k).padStart(2,'0')+':00: '+nl1(v,3)+' m³'});
   const tot=r.kwh.reduce((a,v)=>a+(v||0),0),peak=Math.max(...w.map(v=>v||0)),pk=w.indexOf(peak);
-  $('enDaySum').textContent=t('Totaal {k} kWh. Hoogste kwartier {t}: gemiddeld {w} W.',{k:nl1(tot,2),t:hhmm(pk),w:nl1(peak,0)})}
+  const dd=ds.find(x=>x.date===d)||{},c=enCostDay(dd);
+  $('enDaySum').textContent=t('Totaal {k} kWh. Hoogste kwartier {t}: gemiddeld {w} W.',{k:nl1(tot,2),t:hhmm(pk),w:nl1(peak,0)})+(c!=null?' '+t('Kosten die dag ≈ {e}.',{e:enEUR(c)}):'')}
 document.querySelectorAll('#enRange .btn').forEach(b=>b.onclick=()=>{enN=+b.dataset.n;document.querySelectorAll('#enRange .btn').forEach(x=>x.classList.toggle('on',x===b));enLoad()});
 $('enPrev').onclick=()=>{const ds=enData.days,i=ds.findIndex(x=>x.date===enDay);if(i>0){enDay=ds[i-1].date;enDays();enDayLoad()}};
 $('enNext').onclick=()=>{const ds=enData.days,i=ds.findIndex(x=>x.date===enDay);if(i<ds.length-1){enDay=ds[i+1].date;enDays();enDayLoad()}};
