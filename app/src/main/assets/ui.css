@@ -25,7 +25,7 @@ html,body{margin:0;background:var(--void);color:var(--text);font:16px/1.35 "Pixe
 .btn:disabled{opacity:.5}
 .btn:focus{outline:none}
 .btn.focus,.btn:focus-visible{background:var(--gold);outline:3px solid var(--cream);outline-offset:2px}
-input[type=text],input[type=number],select{font:inherit;background:var(--cream);color:var(--text);border:3px solid var(--ink);padding:7px 9px;width:100%;border-radius:0}
+input[type=text],input[type=number],input[type=password],input[type=email],select{font:inherit;background:var(--cream);color:var(--text);border:3px solid var(--ink);padding:7px 9px;width:100%;border-radius:0}
 input[type=range]{width:100%;accent-color:var(--wood-dk)}
 input[type=checkbox]{accent-color:var(--wood-dk);width:18px;height:18px;vertical-align:-3px}
 input[type=file]{font:inherit;max-width:100%}

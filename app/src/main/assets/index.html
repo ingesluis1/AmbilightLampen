@@ -560,6 +560,20 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
   <div class="row" style="margin-top:10px"><select id="appAdd" class="grow"><option value="">App toevoegen...</option></select></div>
 </section>
 
+<section class="panel srvonly" id="enePanel">
+  <h2>Energie (Enelogic)</h2>
+  <p style="margin:0 0 8px">Verbruik van je slimme meter via Enelogic. Vul de API-sleutel van je Enelogic-account in. Hij blijft op de server.</p>
+  <input type="password" id="eneApiKey" placeholder="API-sleutel" autocomplete="new-password">
+  <details style="margin-top:8px"><summary>Lukt het niet met alleen de sleutel?</summary>
+    <p class="hint" style="margin:6px 0">Maak dan op <b>enelogic.com/nl/developers</b> een app aan (redirect-URL mag <i>https://enelogic.com</i> zijn) en vul ook deze in.</p>
+    <input type="text" id="eneAppId" placeholder="App-id" autocomplete="off" autocapitalize="off">
+    <input type="password" id="eneAppSecret" placeholder="App-secret" autocomplete="new-password" style="margin-top:6px">
+    <input type="email" id="eneEmail" placeholder="E-mailadres van je Enelogic-account" autocomplete="off" autocapitalize="off" style="margin-top:6px">
+  </details>
+  <div class="row" style="margin-top:8px"><button class="btn gold grow" id="eneSave">Opslaan en testen</button><button class="btn" id="eneTest">Testen</button><button class="btn red" id="eneClear">Wissen</button></div>
+  <div class="hint" id="eneState"></div>
+</section>
+
 <section class="panel">
   <h2>Bewaren en terugzetten</h2>
   <p class="tvonly" style="margin:0 0 8px">Bewaar je kamer, lampen, groepen, kalibraties, scènes en instellingen in een bestand, bijvoorbeeld voor het opnieuw installeren van de app.</p>
@@ -1550,6 +1564,19 @@ $('offBtn').onclick=async()=>{const rid=homeRoomId(),on=hasRooms()?!roomAnyOn(ri
   toast((await api('/api/lamps/power',withRoom({on},rid))).message);setTimeout(()=>{offBusy=false;$('offBtn').disabled=false;poll()},on?500:3500)};
 $('pairBtn').onclick=async()=>{const r=await api('/api/pair/request',{host:$('tvHost').value.trim()});toast(r.message);if(r.ok){$('pinRow').classList.remove('hidden');$('pin').focus()}};
 $('grantBtn').onclick=async()=>{const r=await api('/api/pair/grant',{pin:$('pin').value});toast(r.message);if(r.ok)poll()};
+/* Enelogic: ingevulde sleutels komen nooit terug; de velden tonen alleen "al ingevuld" */
+function eneUI(s){if(!s)return;const ph=(id,base,set)=>{$(id).placeholder=t(base)+(set?' · '+t('al ingevuld'):'')};
+  ph('eneAppId','App-id',s.appid);ph('eneAppSecret','App-secret',s.appsecret);ph('eneApiKey','API-sleutel',s.apikey);
+  if(document.activeElement!==$('eneEmail')&&!$('eneEmail').value)$('eneEmail').value=s.email||'';
+  const r=s.test;let txt=s.configured?t('Ingevuld.'):t('Nog niet (helemaal) ingevuld.');
+  if(r)txt=r.ok?t('Verbonden. Meetpunten: {p}',{p:(r.points||[]).map(p=>p.label+(p.dayMax?' ('+t('t/m {d}',{d:p.dayMax.slice(0,10)})+')':'')).join(', ')||t('geen')}):t('Fout: {e}',{e:r.error});
+  $('eneState').textContent=txt;$('eneClear').classList.toggle('hidden',!s.configured&&!s.email)}
+async function eneLoad(){if(!SRV)return;try{eneUI(await api('/api/enelogic'))}catch(e){}}
+async function eneDo(path,body,btn){const b=$(btn),old=b.textContent;b.disabled=true;b.textContent=t('Bezig...');
+  try{const r=await api(path,body||{});toast(r.message||'');eneUI(r);if(r.ok)['eneAppId','eneAppSecret','eneApiKey'].forEach(i=>$(i).value='')}finally{b.disabled=false;b.textContent=old}}
+$('eneSave').onclick=()=>eneDo('/api/enelogic/save',{appid:$('eneAppId').value,appsecret:$('eneAppSecret').value,email:$('eneEmail').value,apikey:$('eneApiKey').value},'eneSave');
+$('eneTest').onclick=()=>eneDo('/api/enelogic/test',{},'eneTest');
+$('eneClear').onclick=()=>{if(confirm(t('Enelogic-gegevens van de server wissen?'))){$('eneEmail').value='';eneDo('/api/enelogic/clear',{},'eneClear')}};
 $('cloudSave').onclick=async()=>{const b=$('cloudSave');b.disabled=true;b.textContent=t('Zoeken...');
   const r=await api('/api/cloud',{id:$('cloudId').value,secret:$('cloudSecret').value,region:$('cloudRegion').value});
   b.disabled=false;b.textContent=t('Opslaan en zoeken');toast(r.message);if(r.ok){$('cloudId').value='';$('cloudSecret').value='';cloudShown=false;load()}};
@@ -1820,7 +1847,7 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings')eneLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
