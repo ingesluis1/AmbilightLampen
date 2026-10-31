@@ -1041,6 +1041,7 @@ const Room = (() => {
     const look = l.look || '';
     if (isAircoLook(look)) { const b = aircoBox(l, L), m = 2; return [(b[0] - m) / PPM, (b[1] - m) / PPM, (b[2] + m) / PPM, (b[3] + m) / PPM]; }
     if (look === 'kattenbak') return [-0.38, -0.4, 0.38, 0.4];
+    if (look === 'stekker') return [-0.22, -0.22, 0.22, 0.22];
     let strip = null;
     if (look === 'strip') { const st = stripOf(L, l), a = st.rot * Math.PI / 180, h = st.len * PPM / 2;
       const dx = Math.abs(Math.cos(a)) * h, dy = Math.abs(Math.sin(a)) * h; strip = [-dx - 2, -dy - 2, dx + 2, dy + 2]; }
@@ -1138,6 +1139,13 @@ const Room = (() => {
     // Kattenbak (apparaat): dezelfde tekening als het meubel, gecentreerd op zijn plek
     if (l.look === 'kattenbak') { const w = Math.round(ITEMS.litterbox.w * PPM), d = Math.round(ITEMS.litterbox.d * PPM);
       g.save(); g.translate(Math.round((l.x + 1) * PPM - w / 2), Math.round((l.y + 1) * PPM - d / 2)); SPRITES.litterbox(g, w, d); g.restore(); return; }
+    // Slimme stekker (apparaat): wit blokje met twee pennetjes en een lampje (groen = aan)
+    if (l.look === 'stekker') { const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
+      g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(x - 3, y - 2, 8, 8);
+      g.fillStyle = '#2a1a2e'; g.fillRect(x - 4, y - 4, 8, 8);
+      g.fillStyle = '#f2efe8'; g.fillRect(x - 3, y - 3, 6, 6);
+      g.fillStyle = '#9a948c'; g.fillRect(x - 2, y - 1, 1, 2); g.fillRect(x + 1, y - 1, 1, 2);
+      g.fillStyle = '#5ac06a'; g.fillRect(x - 1, y - 3, 2, 1); return; }
     const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
     const O = '#2a1a2e', SHADE = mixHex('#efe0c0', color, 0.6), SH = 'rgba(30,10,30,.3)';
     const look = l.look || '';

@@ -110,7 +110,7 @@ object TuyaCloud {
             for (d in devices) {
                 val id = d.optString("id"); val key = d.optString("local_key")
                 if (id.isBlank() || key.length != 16) continue
-                if (d.optString("category") !in LIGHTS && d.optString("category") !in Lamp.AIRCO && d.optString("category") !in Lamp.LITTER) { skipped++; continue }
+                if (d.optString("category") !in LIGHTS && d.optString("category") !in Lamp.AIRCO && d.optString("category") !in Lamp.LITTER && d.optString("category") !in Lamp.PLUG) { skipped++; continue }
                 if (id in Store.hidden || id in Store.forgotten) continue
                 val ex = Store.lamps.firstOrNull { it.id == id }
                 if (ex != null) {
@@ -123,6 +123,7 @@ object TuyaCloud {
                         // Airco: standaard-uiterlijk op de kaart (mobiel of aan de muur, wit); kiezen kan in het menu van het apparaat
                         if (kind == "airco") look = if (category == "ydkt") "airco-mobiel-wit" else "airco-wand-wit"
                         if (kind == "kattenbak") look = "kattenbak"
+                        if (kind == "stekker") look = "stekker"
                     }
                     added += name
                 }

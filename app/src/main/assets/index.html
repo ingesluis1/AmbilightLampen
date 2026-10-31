@@ -714,6 +714,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <div class="lbl">Weg als de telefoon zo lang niet gezien is</div><div class="seg" id="awMin"></div>
   <label class="s" style="margin-top:6px"><input type="checkbox" id="awLamps"> Lampen uit (alle kamers)</label>
   <label class="s"><input type="checkbox" id="awAirco"> Airco uit</label>
+  <label class="s"><input type="checkbox" id="awPlugs"> Stekkers uit (alleen die uit mogen)</label>
   <label class="s"><input type="checkbox" id="awEmpty"> Alleen als er verder niemand thuis is</label>
   <p class="hint" id="awState" style="margin:6px 0 0"></p>
   <button class="btn gold" id="awSave" style="width:100%;margin-top:8px">Opslaan</button>
@@ -883,6 +884,7 @@ function devTexts(){document.querySelectorAll('[data-dev]').forEach(e=>{e.textCo
    Op de kaart en in de lijst: naam, kamer, plek en uiterlijk (look airco-...). Bediening volgt later. */
 const isAir=l=>!!l&&l.kind==='airco';
 const isKat=l=>!!l&&l.kind==='kattenbak';
+const isPlug=l=>!!l&&l.kind==='stekker';
 /* Apparaat = geen lamp (airco, kattenbak): geen lampverbinding, niet in sync, scènes of armaturen */
 const isDev=l=>!!l&&!!l.kind&&l.kind!=='light';
 const isLight=l=>!isDev(l);
@@ -892,7 +894,7 @@ function airNorm(l){if(isAir(l)&&!Room.isAircoLook(l.look))l.look=l.category==='
 /* Klein plaatje van een airco (lijst, chips, keuzeknoppen); px = getoonde maat */
 /* Plaatje van een apparaat in zijn eigen uiterlijk: lamp (hanglamp, staande lamp, spot...), airco of kattenbak */
 function devIcon(l,px){if(isAir(l))return airIcon(l.look,16,px);
-  const o={id:'i',look:isKat(l)?'kattenbak':(l.look==='strip'?'':l.look||''),shape:l.shape,height:l.height,x:0,y:0};
+  const o={id:'i',look:isKat(l)?'kattenbak':isPlug(l)?'stekker':(l.look==='strip'?'':l.look||''),shape:l.shape,height:l.height,x:0,y:0};
   let b;try{b=Room.lampBox(o,L||{w:1,h:1})}catch(e){b=[-.3,-.3,.3,.3]}
   // Canvas zo groot als het plaatje (plus een randje), zodat ook een klein apparaat het vakje vult
   const size=Math.max(12,Math.min(28,Math.round(Math.max(b[2]-b[0],b[3]-b[1])*Room.PPM)+2));
@@ -1408,7 +1410,7 @@ function showLamp(){
   const row=l&&[...$('lampList').children].find(r=>r.dataset.id===l.id);if(row&&row.nextSibling!==$('lampDetailPanel'))row.after($('lampDetailPanel'));
   for(const r of $('lampList').children){r.classList.toggle('sel',r.dataset.id===selLamp);const c=r.querySelector('.chev');if(c)c.textContent=r.dataset.id===selLamp?'\u25BE':'\u25B8'}if(!l)return;
   $('lampDetailTitle').textContent=l.name;$('roomLampName').textContent=l.name;
-  $('roomLampSettings').textContent=t(isAir(l)?'Instellingen van deze airco':isKat(l)?'Instellingen van de kattenbak':'Instellingen van deze lamp');
+  $('roomLampSettings').textContent=t(isAir(l)?'Instellingen van deze airco':isKat(l)?'Instellingen van de kattenbak':isPlug(l)?'Instellingen van deze stekker':'Instellingen van deze lamp');
   if(document.activeElement!==$('lampName'))$('lampName').value=l.name;
   const rod=(l.shape||'bulb')==='rod';
   calibUI(l);lowUI(l);matchUI(l);if(rod){$('calibBtn').classList.add('hidden');$('calibState').textContent=''}
@@ -1607,6 +1609,42 @@ function kbCard(l){const a=kbOf(l.id),d=document.createElement('div');d.classNam
       <div class="lbl">${esc(t('Bezoeken per dag'))}</div><div class="enchart small kbv"></div><div class="kblist"></div>`;
     d.append(h);setTimeout(()=>kbHist(l.id,h),0)}
   return d}
+/* Slimme stekker (alleen op de hub; stand uit /api/state als lamp.plug). Aan/uit, verbruik nu en per dag, wasmachine-stand,
+   en voor de hoofdgebruiker: wat de hub mag (mode) en wat hij doet na een stroomstoring. */
+const stOf=id=>{const x=S&&(S.lamps||[]).find(q=>q.id===id);return x&&x.plug};
+const ST_MODE=[['vrij','Vrij aan en uit'],['meten','Alleen meten'],['standby','Alleen uit in stand-by'],['wasmachine','Wasmachine']];
+const ST_OUT=[['off','Uit'],['on','Aan'],['memory','Zoals hij was']];
+const stW=w=>w==null?'–':(w>=100?Math.round(w):nl1(w,1))+' W';
+const stKwh=k=>nl1(k||0,k>=10?1:2)+' kWh';
+function stPrice(day){try{if(!enData||!enHasT())return null;const P=enTP(day);return P.stroom!=null?P.stroom:null}catch(e){return null}}
+function stLine(p){const loc=I18N.lang==='en'?'en-GB':'nl-NL',hm=ms=>new Date(ms).toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'});
+  const run=p.mode==='wasmachine'?(p.running?t('bezig sinds {t}',{t:hm(p.runningSince)}):p.lastDone&&Date.now()-p.lastDone<12*3600e3?t('klaar om {t}',{t:hm(p.lastDone)}):''):'';
+  return [t(p.on?'aan':'uit'),p.on?stW(p.watt):'',run,t('{k} vandaag',{k:stKwh(p.today)})].filter(Boolean).join(' · ')+((p.faults||[]).length?' · ⚠':'')}
+function stSet(id,b){const p=stOf(id);api('/api/stekker',{id,...b}).then(r=>{if(!r.ok&&r.message)toast(r.message);else{if(p)Object.assign(p,b);airAll()}})}
+function stCard(l){const p=stOf(l.id),d=document.createElement('div');d.className='aircard';
+  if(!p){d.innerHTML=`<div class="hint">${esc(t('De stekker bedien je op de House hub.'))}</div>`;return d}
+  if(!p.known){d.innerHTML=`<b>${esc(l.name)}</b><div class="hint">${esc(t(p.online?'Even geduld, de stand wordt opgehaald...':'De stekker is niet bereikbaar.'))}</div>`;return d}
+  const pr=stPrice(enToday()),own=S&&S.role==='owner';
+  d.innerHTML=`<div class="top"><b class="grow">${esc(l.name)}</b><span class="in" style="font-size:16px">${esc(p.on?stW(p.watt):t('uit'))}</span></div>
+    ${p.online?'':`<div class="hint">${esc(t('De stekker is nu niet bereikbaar.'))}</div>`}
+    ${(p.faults||[]).length?`<div class="hint" style="color:#a02a1a;font-weight:700">⚠ ${esc(t('Storing: {f}',{f:p.faults.join(', ')}))}</div>`:''}
+    <div class="lbl">${esc(t('Vandaag'))}</div><div><b>${esc(stKwh(p.today))}</b>${pr!=null?' · ≈ '+esc(enEUR(p.today*pr)):''}${p.mode==='wasmachine'?' · '+esc(stLine(p).split(' · ').filter(x=>/bezig|klaar|running|done/.test(x)).join('')||t('niet bezig')):''}</div>
+    <button class="btn${p.on?' on':''}" data-on="1" style="width:100%;margin-top:10px">${esc(t(p.on?'Uitzetten':'Aanzetten'))}</button>
+    ${own?`<div class="lbl">${esc(t('Wat mag de hub'))}</div><div class="seg" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${ST_MODE.map(([v,n])=>`<button class="btn${p.mode===v?' on':''}" data-mode="${v}">${esc(t(n))}</button>`).join('')}</div>
+      <div class="lbl">${esc(t('Na een stroomstoring'))}</div><div class="seg">${ST_OUT.map(([v,n])=>`<button class="btn${p.afterOutage===v?' on':''}" data-out="${v}">${esc(t(n))}</button>`).join('')}</div>`:''}`;
+  d.querySelector('[data-on]').onclick=()=>stSet(l.id,{on:!p.on});
+  d.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>stSet(l.id,{mode:b.dataset.mode}));
+  d.querySelectorAll('[data-out]').forEach(b=>b.onclick=()=>stSet(l.id,{afterOutage:b.dataset.out}));
+  if(SRV){const h=document.createElement('div');h.innerHTML=`<div class="lbl">${esc(t('Verbruik per dag (kWh)'))}</div><div class="enchart small stv"></div><div class="struns"></div>`;d.append(h);setTimeout(()=>stHist(l.id,h),0)}
+  return d}
+const stLogs={};
+async function stHist(id,h){let c=stLogs[id];if(!c||Date.now()-c.at>60000){try{c=stLogs[id]={at:Date.now(),r:await api('/api/stekker/log?days=31&id='+encodeURIComponent(id))}}catch(e){return}}
+  if(!h.isConnected)return;const r=c.r,loc=I18N.lang==='en'?'en-GB':'nl-NL',days=[...Array(14)].map((_,i)=>enAddDay(enToday(),i-13)),vals=days.map(dd=>+(r.days||{})[dd]||0);
+  enBars(h.querySelector('.stv'),vals,{color:'#3f6fa8',labels:days.map(dd=>new Date(dd+'T12:00:00').toLocaleDateString(loc,{day:'numeric',month:'numeric'})),title:t('Verbruik per dag (kWh)'),
+    tip:(i,v)=>{const pr=stPrice(days[i]);return new Date(days[i]+'T12:00:00').toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short'})+': '+stKwh(v)+(pr!=null?' ≈ '+enEUR(v*pr):'')}});
+  const runs=(r.runs||[]).slice(-5).reverse(),box=h.querySelector('.struns');
+  box.innerHTML=runs.length?`<div class="lbl">${esc(t('Laatste wasbeurten'))}</div>`+runs.map(x=>{const pr=stPrice(enToday()),min=Math.round((x.end-x.start)/60000);
+    return `<div class="kbrow">${esc(new Date(x.start).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}<span>${esc(t('{m} min',{m:min})+' · '+stKwh(x.kwh)+(pr!=null?' · ≈ '+enEUR(x.kwh*pr):''))}</span></div>`}).join(''):''}
 /* Bezoeken (de hub houdt ze bij): gewicht per bezoek als punten, aantal per dag als staafjes (14 dagen), laatste bezoeken */
 const kbLogs={};
 async function kbHist(id,h){let c=kbLogs[id];if(!c||Date.now()-c.at>60000){try{const r=await api('/api/kattenbak/log?days=30&id='+encodeURIComponent(id));c=kbLogs[id]={at:Date.now(),v:r.visits||[],cats:r.cats||[]};kbCats=c.cats}catch(e){return}}
@@ -1648,7 +1686,8 @@ function kbDots(el,series,loc){const W=Math.max(200,el.clientWidth),H=el.clientH
     tp.textContent=b[2]+' · '+new Date(b[3].t).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+': '+nl1(b[3].weight/1000,2)+' kg';
     tp.classList.remove('hidden');tp.style.left=Math.min(r.width-90,Math.max(90,b[0]*r.width/W))+'px';tp.style.top=Math.max(14,b[1]*r.height/H-6)+'px'};
   el.onpointerleave=()=>tp.classList.add('hidden')}
-function devSummary(l){if(isKat(l)){const k=kbOf(l.id);return k&&k.known?kbStatus(k)+' · '+t('{n}× vandaag',{n:k.visits??0})+((k.faults||[]).length?' · ⚠ '+(k.faults||[]).map(x=>t(KB_FAULT[x]||x)).join(', '):''):''}
+function devSummary(l){if(isPlug(l)){const p=stOf(l.id);return p&&p.known?stLine(p):''}
+  if(isKat(l)){const k=kbOf(l.id);return k&&k.known?kbStatus(k)+' · '+t('{n}× vandaag',{n:k.visits??0})+((k.faults||[]).length?' · ⚠ '+(k.faults||[]).map(x=>t(KB_FAULT[x]||x)).join(', '):''):''}
   const a=airOf(l.id);return a&&a.known?t(a.on?'aan':'uit')+(a.inside!=null?' · '+t('binnen {n} °C',{n:a.inside}):''):''}
 const houseDevOpen=new Set();
 function houseDevs(){const devs=SRV?lamps.filter(isDev):[],box=$('houseDevs');$('houseDevWrap').classList.toggle('hidden',!devs.length);
@@ -1840,13 +1879,13 @@ async function autoLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await
     box.querySelectorAll('button').forEach(b=>b.onclick=()=>{box.dataset.v=b.dataset.v;box.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))})};
   seg(sel,ppl.map(p=>[p.id,p.name]),c.person||(ppl[0]&&ppl[0].id));seg(mn,[[10,'10 min'],[15,'15 min'],[30,'30 min'],[60,t('1 uur')]],c.minutes||15);
   $('awEnabled').checked=!!c.enabled;
-  $('awLamps').checked=c.lamps!==false;$('awAirco').checked=!!c.airco;$('awEmpty').checked=c.onlyIfEmpty!==false;
+  $('awLamps').checked=c.lamps!==false;$('awAirco').checked=!!c.airco;$('awPlugs').checked=c.plugs!==false;$('awEmpty').checked=c.onlyIfEmpty!==false;
   const loc=I18N.lang==='en'?'en-GB':'nl-NL',f=ms=>new Date(ms).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   const pr=ppl.find(p=>p.id===sel.dataset.v);
   $('awState').textContent=[pr?(pr.home?t('{n} is nu thuis.',{n:pr.name}):r.personLast?t('{n} is weg sinds {d}.',{n:pr.name,d:f(r.personLast)}):''):'',
     r.lastRun?t('Laatst automatisch uitgezet: {d} ({w}).',{d:f(r.lastRun),w:r.lastWhat||''}):''].filter(Boolean).join(' ')}
 $('awSave').onclick=async()=>{const r=await api('/api/auto/save',{enabled:$('awEnabled').checked,person:$('awPerson').dataset.v,minutes:+$('awMin').dataset.v,
-  lamps:$('awLamps').checked,airco:$('awAirco').checked,onlyIfEmpty:$('awEmpty').checked});toast(r.message||'');autoLoad()};
+  lamps:$('awLamps').checked,airco:$('awAirco').checked,plugs:$('awPlugs').checked,onlyIfEmpty:$('awEmpty').checked});toast(r.message||'');autoLoad()};
 /* ---------- Toegang (House hub) ---------- */
 let gateTimer=0;
 function accessGate(){if(!document.body.classList.contains('gated')){document.body.classList.add('gated');$('gate').classList.remove('hidden')}gateCheck()}
@@ -1867,10 +1906,10 @@ $('accBanner').onclick=()=>{showTab('settings');setTimeout(()=>$('mensenPanel').
 const ACC_ROLE={owner:'Hoofdgebruiker',guest:'Gast',pending:'Wacht op goedkeuring',denied:'Geweigerd'};
 async function accLoad(){}
 /* Opnieuw tekenen alleen als er iets veranderd is (anders verspringen knoppen onder je vinger) */
-function airFill(box,list){const key=JSON.stringify(list.map(l=>[l.id,l.name,airOf(l.id),kbOf(l.id)]))+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;
-  box.innerHTML='';for(const l of list)box.append(isKat(l)?kbCard(l):airCard(l))}
+function airFill(box,list){const key=JSON.stringify(list.map(l=>[l.id,l.name,airOf(l.id),kbOf(l.id),stOf(l.id)]))+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;
+  box.innerHTML='';for(const l of list)box.append(isKat(l)?kbCard(l):isPlug(l)?stCard(l):airCard(l))}
 function airAll(){if(!S)return;const sel=lamps.find(l=>l.id===selLamp);airFill($('airDetail'),isDev(sel)?[sel]:[]);
-  const sl=airSheetId&&lamps.find(x=>x.id===airSheetId);airFill($('airSheetBody'),sl?[sl]:[]);$('airSheetTitle').textContent=t(isKat(sl)?'Kattenbak':'Airco');
+  const sl=airSheetId&&lamps.find(x=>x.id===airSheetId);airFill($('airSheetBody'),sl?[sl]:[]);$('airSheetTitle').textContent=isPlug(sl)?sl.name:t(isKat(sl)?'Kattenbak':'Airco');
   // Huis-overzicht: alle apparaten (ook zonder kamer), elk uitklapbaar met de stand in de kop
   houseDevs();
   const kb=isHouse()?[]:lampsIn(homeRoomId()).filter(isKat);airFill($('kbHome'),kb);$('kbFold').classList.toggle('hidden',!kb.length);
