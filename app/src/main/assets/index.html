@@ -238,6 +238,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi .down{color:#3a7a2a}
 .endev{background:var(--cream);border:3px solid var(--ink);padding:6px 8px;margin-top:8px}.endev .g{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px;font-family:var(--ensans);font-size:13px}.endev .g b{display:block;font-size:15px}
 .ensplit{display:flex;height:16px;border:3px solid var(--ink);margin:6px 0 4px;background:#eee}.ensplit>i{display:block;min-width:2px}
+.asguestbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:8px;background:#e05a8a;color:#fff;border:3px solid var(--ink);padding:6px 10px;margin:0 0 8px;font-weight:700}.asguestbar.hidden{display:none}
 .devrow{background:var(--cream);border:3px solid var(--ink);padding:6px 8px;margin-top:6px}.devrow .meta{font-size:12px;opacity:.75;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;word-break:break-all}.devrow .row{flex-wrap:wrap;gap:6px;margin-top:6px}
 .devrow .dn{border:0;border-bottom:2px dashed rgba(0,0,0,.3);background:transparent;padding:2px 0;font-weight:700}.tag{font-size:10px;border:2px solid var(--ink);padding:0 4px;opacity:.7}
 .accrow .meta{font-size:13px;opacity:.75;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
@@ -286,6 +287,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 <main>
 
 <!-- Tabblad: Bediening -->
+<div class="asguestbar hidden" id="asGuestBar"><span class="grow">Je bekijkt de hub als gast</span><button class="btn gold" id="asGuestStop">Terug</button></div>
 <div class="page" id="page-home">
 <div class="roombar hidden" id="roomBar" role="group" aria-label="Kamer"></div>
 <section class="panel hidden tvonly" id="pairCard">
@@ -745,7 +747,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 </section>
 
 <section class="panel srvonly ownonly" id="mensenPanel">
-  <h2>Mensen</h2>
+  <div class="row" style="align-items:center;margin:0"><h2 class="grow" style="margin:0">Mensen</h2><button class="btn" id="asGuestBtn">Bekijk als gast</button></div>
   <p style="margin:0 0 8px">Per persoon: e-mailadres (om via hub.stacklines.nl in te loggen), apparaten op de wifi en apparaten die de hub gebruiken. Een gast ziet alleen Bediening; een hoofdgebruiker kan alles.</p>
   <div id="mensenList"></div>
   <div class="row" style="margin-top:10px;align-items:center"><input type="text" id="mensenNew" class="grow" placeholder="Naam van een nieuw persoon" maxlength="30" autocomplete="off"><button class="btn gold" id="mensenAdd">+ Persoon</button></div>
@@ -933,8 +935,12 @@ function devIcon(l,px){if(isAir(l))return airIcon(l.look,16,px);
   const c=preview(g=>{try{Room.lampFixture(g,o,col,null)}catch(e){}},size);c.className='devic';c.style.width=c.style.height=px+'px';return c}
 function airIcon(look,size,px){const wall=/^airco-wand/.test(look),c=preview(g=>Room.lampFixture(g,{id:'i',x:size/2/Room.PPM-1,y:(wall?size*.72:size*.55)/Room.PPM-1,look},'#fff',null),size);
   c.className='devic';c.style.width=c.style.height=px+'px';return c}
+/* Bekijk als gast (hoofdgebruiker): elk verzoek met X-As-Guest, de hub geeft dan de rechten van een gast */
+let asGuest=false;try{asGuest=localStorage.getItem('asGuest')==='1'}catch(e){}
+function setAsGuest(on){try{if(on)localStorage.setItem('asGuest','1');else localStorage.removeItem('asGuest')}catch(e){}location.hash='home';location.reload()}
 async function api(path, body){
-  const r = await fetch(path, body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  const hd=asGuest?{'X-As-Guest':'1'}:{};
+  const r = await fetch(path, body===undefined?{headers:hd}:{method:'POST',headers:{'Content-Type':'application/json',...hd},body:JSON.stringify(body)});
   // House hub: dit apparaat heeft (nog) geen toegang -> wachtscherm
   if(r.status===401){accessGate();throw new Error('geen toegang')}
   return r.json();
@@ -1903,6 +1909,7 @@ function mensenRender(r){mensenData=r;const box=$('mensenList'),loc=I18N.lang===
       el.querySelector('b').textContent=e.email;const ps=el.querySelector('[data-p]');ps.onchange=()=>{if(ps.value)after(api('/api/people/email',{id:ps.value,email:e.email,add:true}),true)};
       el.querySelector('.btn.red').onclick=()=>after(api('/api/people/email',{id:'',email:e.email,add:false}),true);body.append(el)}
     for(const d of fw)body.append(wifiRow(d,false))}}
+$('asGuestBtn').onclick=()=>setAsGuest(true);$('asGuestStop').onclick=()=>setAsGuest(false);$('asGuestBar').classList.toggle('hidden',!asGuest);
 $('mensenAdd').onclick=async()=>{const v=$('mensenNew').value.trim();if(!v)return;await api('/api/people/save',{id:'',name:v});$('mensenNew').value='';peopleLoad(true);peopleAdmin()};
 $('cfSave').onclick=async()=>{const v=$('cfToken').value.trim();if(!v)return;toast(t('Bezig...'));const r=await api('/api/cloudflare/save',{token:v});$('cfToken').value='';toast(r.message||'');peopleAdmin()};
 async function poLoad(){try{const r=await api('/api/pushover');$('poState').textContent='· '+t(r.configured?'ingevuld':'nog niet ingevuld')}catch(e){}}
