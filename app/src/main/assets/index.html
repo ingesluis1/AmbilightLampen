@@ -195,6 +195,7 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .enchart .tip{position:absolute;pointer-events:none;background:var(--ink);color:var(--cream);font-size:13px;padding:4px 7px;white-space:nowrap;transform:translate(-50%,-100%);z-index:2}
 .enlbl{font-size:13px;margin-top:8px;opacity:.85}
 /* Pixel-icoon in dezelfde stijl als het lettertype (zoals de ϟ bij Stroom) */
+.pxic.sun{width:.8em;height:.8em}
 .pxic{width:.62em;height:.8em;vertical-align:-.05em;shape-rendering:crispEdges}
 .entar{display:grid;grid-template-columns:1fr auto;gap:6px 10px;align-items:center}
 .entar label{font-size:14px}
@@ -544,7 +545,7 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 <section class="panel enneeds">
   <h2 style="margin:0" id="enPerTitle">Per dag</h2>
   <div class="enctl">
-    <div class="seg" id="enKind"><button class="btn on" data-k="kwh" aria-label="Stroom" title="Stroom">&#991; Stroom</button><button class="btn" data-k="gas" aria-label="Gas" title="Gas"><svg class="pxic" viewBox="0 0 7 9" aria-hidden="true"><path d="M3 0h1v1h-1zM3 1h1v1h-1zM4 1h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM1 5h1v1h-1zM2 5h1v1h-1zM4 5h1v1h-1zM5 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM0 7h1v1h-1zM1 7h1v1h-1zM5 7h1v1h-1zM6 7h1v1h-1zM1 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1z" fill="currentColor"/></svg> Gas</button></div>
+    <div class="seg" id="enKind"><button class="btn on" data-k="kwh" aria-label="Stroom" title="Stroom">&#991; Stroom</button><button class="btn" data-k="gas" aria-label="Gas" title="Gas"><svg class="pxic" viewBox="0 0 7 9" aria-hidden="true"><path d="M3 0h1v1h-1zM3 1h1v1h-1zM4 1h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM1 5h1v1h-1zM2 5h1v1h-1zM4 5h1v1h-1zM5 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM0 7h1v1h-1zM1 7h1v1h-1zM5 7h1v1h-1zM6 7h1v1h-1zM1 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1z" fill="currentColor"/></svg> Gas</button><button class="btn" data-k="back" aria-label="Teruglevering" title="Teruglevering"><svg class="pxic sun" viewBox="0 0 9 9" aria-hidden="true"><path d="M4 0h1v1h-1zM1 1h1v1h-1zM7 1h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM8 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1zM5 5h1v1h-1zM6 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM1 7h1v1h-1zM7 7h1v1h-1zM4 8h1v1h-1z" fill="currentColor"/></svg> Terug</button></div>
     <div class="seg" id="enRange"><button class="btn" data-n="7">7 d</button><button class="btn" data-n="30">30 d</button><button class="btn" data-n="90">90 d</button><button class="btn" data-n="m12">12 mnd</button></div>
   </div>
   <div class="enchart" id="enDays"></div>
@@ -1675,7 +1676,7 @@ $('pairBtn').onclick=async()=>{const r=await api('/api/pair/request',{host:$('tv
 $('grantBtn').onclick=async()=>{const r=await api('/api/pair/grant',{pin:$('pin').value});toast(r.message);if(r.ok)poll()};
 /* Energie-pagina (hub): verbruik per dag en per kwartier uit /api/energy. Kleuren: stroom amber, gas blauw
    (gevalideerd tegen de creme achtergrond, ook voor kleurenblinden); tekst blijft in de gewone inktkleur. */
-const EN_COL={kwh:'#b8731f',gas:'#3f6fa8'};
+const EN_COL={kwh:'#b8731f',gas:'#3f6fa8',back:'#4e8a3c'};
 let enN='m12',enData=null,enDay=null,enKind='kwh',enMonths=null;try{enKind=localStorage.getItem('enKind')||'kwh';const n=localStorage.getItem('enN');if(n)enN=n==='m12'?n:+n}catch(e){}
 const nl1=(v,d)=>v==null?'–':v.toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL',{minimumFractionDigits:d,maximumFractionDigits:d});
 const enDate=(s,opt)=>new Date(s+'T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',opt||{weekday:'short',day:'numeric',month:'short'});
@@ -1737,18 +1738,22 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   const sel=ds.findIndex(d=>d.date===enDay),pick=i=>{enDay=ds[i].date;enDays();enDayLoad()};
   // Een grafiek met een knop Stroom/Gas (geen twee assen in een grafiek)
   $('enPerTitle').textContent=t(enN==='m12'?'Per maand':'Per dag');$('enPerHint').classList.toggle('hidden',enN==='m12');
-  if(enN==='m12'){if(!r.gas&&enKind==='gas')enKind='kwh';$('enKind').classList.toggle('hidden',!r.gas);
-    document.querySelectorAll('#enKind .btn').forEach(b=>b.classList.toggle('on',b.dataset.k===enKind));
+  // Soort: stroom, gas of teruglevering (opbrengst = kWh x terugleververgoeding)
+  const hasBack=ds.some(d=>d.back>0)||(enMonths&&enMonths.ok&&enMonths.months.some(m=>m.back>0));
+  if((!r.gas&&enKind==='gas')||(!hasBack&&enKind==='back'))enKind='kwh';
+  $('enKind').querySelector('[data-k=gas]').classList.toggle('hidden',!r.gas);$('enKind').querySelector('[data-k=back]').classList.toggle('hidden',!hasBack);
+  document.querySelectorAll('#enKind .btn').forEach(b=>b.classList.toggle('on',b.dataset.k===enKind));
+  const K={kwh:{unit:' kWh',title:'Stroom',cost:enCostStroom},gas:{unit:' m³',title:'Gas',cost:enCostGas},
+    back:{unit:' kWh',title:'Teruglevering',cost:x=>enT().terug!=null&&x.back!=null?x.back*enT().terug:null}}[enKind];
+  const costTxt=x=>{const c=K.cost(x);return c==null?'':(enKind==='back'?' · '+t('opbrengst {e}',{e:enEUR(c)}):' · ≈ '+enEUR(c))};
+  if(enN==='m12'){
     const ms=enMonths&&enMonths.ok?enMonths.months:[],ml=ms.map(m=>new Date(m.month+'-15T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{month:'short'})),
       src=m=>m.source==='enelogic'?'Enelogic':m.source,full=m=>new Date(m.month+'-15T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{month:'long',year:'numeric'});
-    const gas=enKind==='gas',cost=m=>{const c=gas?enCostGas(m):enCostStroom(m);return c==null?'':' · ≈ '+enEUR(c)};
-    enBars($('enDays'),ms.map(m=>(gas?m.gas:m.kwh)??null),{color:gas?EN_COL.gas:EN_COL.kwh,labels:ml,title:t(gas?'Gas per maand':'Stroom per maand'),
-      tip:(i,v)=>full(ms[i])+': '+nl1(v,0)+(gas?' m³':' kWh')+(!gas&&ms[i].back>0?' · '+t('terug {n}',{n:nl1(ms[i].back,0)}):'')+cost(ms[i])+(ms[i].source?' ('+src(ms[i])+(ms[i].partial?', '+t('nog niet compleet'):'')+')':'')});
+    enBars($('enDays'),ms.map(m=>m[enKind]??null),{color:EN_COL[enKind],labels:ml,title:t(K.title+' per maand'),
+      tip:(i,v)=>full(ms[i])+': '+nl1(v,0)+K.unit+costTxt(ms[i])+(ms[i].source?' ('+src(ms[i])+(ms[i].partial?', '+t('nog niet compleet'):'')+')':'')});
     return}
-  if(!r.gas&&enKind==='gas')enKind='kwh';$('enKind').classList.toggle('hidden',!r.gas);
-  document.querySelectorAll('#enKind .btn').forEach(b=>b.classList.toggle('on',b.dataset.k===enKind));
-  if(enKind==='gas')enBars($('enDays'),ds.map(d=>d.gas??null),{color:EN_COL.gas,labels:lbl,sel,pick,title:t('Gas per dag'),tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+' m³'+(enCostGas(ds[i])!=null?' · ≈ '+enEUR(enCostGas(ds[i])):'')});
-  else enBars($('enDays'),ds.map(d=>d.kwh??null),{color:EN_COL.kwh,labels:lbl,sel,pick,title:t('Stroom per dag'),tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+' kWh'+(ds[i].back>0?' · '+t('terug {n}',{n:nl1(ds[i].back,2)}):'')+(enCostStroom(ds[i])!=null?' · ≈ '+enEUR(enCostStroom(ds[i])):'')});
+  enBars($('enDays'),ds.map(d=>d[enKind]??null),{color:EN_COL[enKind],labels:lbl,sel,pick,title:t(K.title+' per dag'),
+    tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,enKind==='gas'?2:2)+K.unit+costTxt(ds[i])});
 }
 async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textContent=enDate(d,{weekday:'long',day:'numeric',month:'long'});
   const ds=enData.days,i=ds.findIndex(x=>x.date===d);$('enPrev').disabled=i<=0;$('enNext').disabled=i<0||i>=ds.length-1;
