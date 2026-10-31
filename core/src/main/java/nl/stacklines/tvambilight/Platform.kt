@@ -90,6 +90,12 @@ object Net {
 
     /** Eigen adres in het thuisnetwerk (eerst een privé-adres, anders het eerste IPv4-adres). */
     fun localIp(): String? {
+        // Het adres waarmee dit apparaat naar buiten gaat (zonder iets te versturen). Een server heeft vaak ook
+        // Docker-netwerken (172.x); die zijn ook "lokaal", maar daar zitten de lampen niet.
+        try {
+            java.net.DatagramSocket().use { s -> s.connect(java.net.InetAddress.getByName("8.8.8.8"), 53)
+                (s.localAddress as? Inet4Address)?.hostAddress?.takeIf { it != "0.0.0.0" && !it.startsWith("127.") }?.let { return it } }
+        } catch (_: Exception) { }
         try {
             var fallback: String? = null
             for (ni in NetworkInterface.getNetworkInterfaces() ?: return null) {

@@ -19,9 +19,9 @@ object Airco {
     const val MIN_TEMP = 16
     const val MAX_TEMP = 31
 
-    /** Verbindingen bijhouden: één per airco met ip-adres, open zolang de hub draait. */
+    /** Verbindingen bijhouden: één per apparaat (airco, kattenbak) met ip-adres, open zolang de hub draait. */
     fun sync() {
-        val airs = if (enabled) Store.lampsSnapshot().filter { it.kind == "airco" && it.ip.isNotBlank() && it.supported }.associateBy { it.id } else emptyMap()
+        val airs = if (enabled) Store.lampsSnapshot().filter { it.kind != "light" && it.ip.isNotBlank() && it.supported }.associateBy { it.id } else emptyMap()
         for ((id, c) in conns) { val l = airs[id]; if (l == null || l.ip != c.lamp.ip || l.key != c.lamp.key) { c.stop(); conns.remove(id) } }
         for (l in airs.values) if (!conns.containsKey(l.id)) conns[l.id] = TuyaLamp(l, keepOpen = true)
     }

@@ -34,7 +34,7 @@ class Lamp(
     val satFactor get() = if (satBoost > 0) satBoost else if (category == "dd") 1.4 else 1.0
     val placed get() = x >= 0 && y >= 0
     /** Soort apparaat: "light" (lamp, ledstrip) of "airco". Alleen lampen doen mee met sync, scènes en lampen aan/uit. */
-    val kind get() = if (category in AIRCO) "airco" else "light"
+    val kind get() = if (category in AIRCO) "airco" else if (category in LITTER) "kattenbak" else "light"
     val isLight get() = kind == "light"
     /** Staat in de kamer met de tv: alleen die lampen doen mee met de sync. */
     val inTvRoom get() = room == Store.tvRoom.id
@@ -54,6 +54,8 @@ class Lamp(
     companion object {
         /** Tuya-categorieën van airco's: kt = airco, ydkt = mobiele airco, ktkzq = airco-afstandsbediening. */
         val AIRCO = setOf("kt", "ydkt", "ktkzq")
+        /** Tuya-categorie van een (elektrische) kattenbak. */
+        val LITTER = setOf("msp")
 
         fun fromJson(o: JSONObject) = Lamp(
             o.getString("id"), o.optString("key"), o.optString("name", o.getString("id")),

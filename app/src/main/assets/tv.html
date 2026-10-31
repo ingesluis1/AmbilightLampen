@@ -187,7 +187,7 @@ function render(){
   const st=$('mapBox');Room.present($('map'),img,st.clientWidth-14,st.clientHeight-14,true);
 }
 /* Het tv-scherm gaat over de kamer met de tv: alleen de lampen daarvan (geen airco's of lampen uit andere kamers) */
-function tvOnly(s){const tv=(s.rooms||[]).find(r=>r.tv);s.lamps=(s.lamps||[]).filter(l=>l.kind!=='airco'&&(!tv||l.room===tv.id));return s}
+function tvOnly(s){const tv=(s.rooms||[]).find(r=>r.tv);s.lamps=(s.lamps||[]).filter(l=>(!l.kind||l.kind==='light')&&(!tv||l.room===tv.id));return s}
 function status(){
   const s=S,on=s.lamps.filter(l=>l.online).length,placed=s.lamps.filter(l=>l.x>=0).length;
   document.body.classList.toggle('night',s.sync);

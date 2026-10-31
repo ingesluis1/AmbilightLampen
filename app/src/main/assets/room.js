@@ -1040,6 +1040,7 @@ const Room = (() => {
   function lampBox(l, L) {
     const look = l.look || '';
     if (isAircoLook(look)) { const b = aircoBox(l, L), m = 2; return [(b[0] - m) / PPM, (b[1] - m) / PPM, (b[2] + m) / PPM, (b[3] + m) / PPM]; }
+    if (look === 'kattenbak') return [-0.38, -0.4, 0.38, 0.4];
     let strip = null;
     if (look === 'strip') { const st = stripOf(L, l), a = st.rot * Math.PI / 180, h = st.len * PPM / 2;
       const dx = Math.abs(Math.cos(a)) * h, dy = Math.abs(Math.sin(a)) * h; strip = [-dx - 2, -dy - 2, dx + 2, dy + 2]; }
@@ -1134,6 +1135,9 @@ const Room = (() => {
 
   function lampFixture(g, l, color, L) {
     if (isAircoLook(l.look)) { drawAirco(g, l, L); return; }
+    // Kattenbak (apparaat): dezelfde tekening als het meubel, gecentreerd op zijn plek
+    if (l.look === 'kattenbak') { const w = Math.round(ITEMS.litterbox.w * PPM), d = Math.round(ITEMS.litterbox.d * PPM);
+      g.save(); g.translate(Math.round((l.x + 1) * PPM - w / 2), Math.round((l.y + 1) * PPM - d / 2)); SPRITES.litterbox(g, w, d); g.restore(); return; }
     const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
     const O = '#2a1a2e', SHADE = mixHex('#efe0c0', color, 0.6), SH = 'rgba(30,10,30,.3)';
     const look = l.look || '';
