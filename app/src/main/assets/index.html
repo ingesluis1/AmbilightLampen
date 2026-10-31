@@ -1634,7 +1634,7 @@ function houseDevs(){const devs=SRV?lamps.filter(isDev):[],box=$('houseDevs');$(
 const AV={skin:['#f6d3b3','#e9b48a','#c68a5e','#8d5a3b','#5a3a26'],hairColor:['#2a1a12','#5a3a1e','#a0622a','#d8a24a','#efe2bd','#c0392b','#7a4ab0','#3a7ad0','#8a8a92'],
   eyes:['#6a4a2a','#4a7ab0','#3a9a6a','#7a8a9a','#2a2a3a'],
   shirt:['#c0392b','#e07a2a','#e8b84a','#4e8a3c','#3a7ad0','#7a4ab0','#d86aa0','#f2f2f2','#3a3a44'],pants:['#2c3e6a','#3a3a44','#6a4a2a','#8a8a92'],
-  hair:[['kort','Bob ♀'],['kortm','Kort ♂'],['zij','Zijscheiding ♂'],['warrig','Warrig'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
+  hair:[['kort','Bob ♀'],['wip','Wip ♀'],['staartjes','Staartjes ♀'],['kortm','Kort ♂'],['zij','Zijscheiding ♂'],['warrig','Warrig'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
   extra:[['geen','Niets'],['pet','Pet'],['muts','Muts'],['heks','Heksenhoed'],['zonnehoed','Zonnehoed'],['sjaal','Sjaal'],['oren','Kattenoren'],['baard','Baard'],['strik','Strik']],
   face:[['zacht','♀'],['stoer','♂']],
   outfit:[['shirt','Shirt'],['jas','Jas'],['raglan','Raglan'],['ruit','Geruit'],['rok','Rok'],['tuinbroek','Tuinbroek'],['jurk','Jurk']]};
@@ -1642,7 +1642,7 @@ const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',
 /* Pixelpoppetje in Stardew-achtige stijl (eigen tekening): groot hoofd, grote ogen met glimlicht, drie tinten per kleur,
    donkere omlijning en (sticker) een witte rand. Raster 26 x 36; c = canvas. */
 /* Kapsels als pixelraster op het kleine raster (14 breed): [eerste rij, rijen]; H = haarkleur, d = donker/rand, l = glans */
-const AV_HAIR={"kort": [0, ["....dddddd....", "...dHHlHHHd...", "..dHlllHHHHd..", "..dHHHHHHHHd..", "..dHdHHHdHHd..", "..dH......Hd..", "..dH......Hd..", "..dH......Hd..", "..dd......dd.."]], "lang": [0, ["....dddddd....", "...dHHlHHHd...", "..dHlllHHHHd..", "..dHHHHHHHHd..", "..dHdHHHdHHd..", "..dH......Hd..", "..dH......Hd..", "..dH......Hd..", "..dH......Hd..", "..dH......Hd..", "..dH......Hd..", "...d......d..."]], "staart": [0, ["....dddddd....", "...dHHlHHHd...", "..dHlllHHHHd..", "..dHHHHHHHHd..", "..dHdHHHdHHd..", "..dd......dd.."]], "knot": [-3, [".....dddd.....", ".....dHld.....", ".....dddd.....", "....dddddd....", "...dHHlHHHd...", "..dHlllHHHHd..", "..dHHHHHHHHd..", "..dHdHHHdHHd..", "..dd......dd.."]], "kortm": [0, ["....dddddd....", "...dHHlHHHd...", "..dHlllHHHHd..", "..dHHHHHHHHd..", "..dHHdHHdHHd..", "..dd......dd.."]], "zij": [0, ["....dddddd....", "...dHlllHHd...", "..dllHHHHHHd..", "..dHHHHHHdHd..", "..dHHHHHd.dd..", "..dHd.....dd.."]], "warrig": [-1, ["...d..d..d....", "..dHddHddHd...", ".dHHlHHHlHHd..", ".dHlllHHHHHHd.", "..dHHHHHHHHHd.", "..dHdHdHHdHd..", "..d.......dd.."]], "krul": [-1, ["...d.dd.dd....", "..dHdHHdHHd...", ".dHlHHlHHlHd..", ".dHHdHHdHHHd..", "dHlHHHlHHHlHHd", "dHHdHHHdHHHdHd", ".dHd......dHd.", "dHHd......dHHd", ".dd........dd."]]};
+const AV_HAIR={"kort": [0, [".....dddddd.....", "....dHHlHHHd....", "...dHlllHHHHd...", "...dHHHHHHHHd...", "..dHHdHHHdHHHd..", "..dHd......dHd..", "..dHd......dHd..", "..dHd......dHd..", "..dHd......dHd..", "...dd......dd..."], -1], "lang": [0, [".....dddddd.....", "....dHHlHHHd....", "...dHlllHHHHd...", "...dHHHHHHHHd...", "..dHHdHHHdHHHd..", "..dHd......dHd..", ".dHHd......dHHd.", ".dHHd......dHHd.", ".dHd........dHd.", ".dHd........dHd.", ".dHHd......dHHd.", "dHHd........dHHd", "dHld........dlHd", ".dHHd......dHHd.", ".dHd........dHd.", "..dHd......dHd..", "...dd......dd..."], -1], "staart": [0, ["....dddddd....", "...dHHlHHHd...", "..dHlllHHHHd..", "..dHHHHHHHHd..", "..dHdHHHdHHd..", "..dd......dd.."]], "knot": [-3, [".....dddd.....", ".....dHld.....", ".....dddd.....", "....dddddd....", "...dHHlHHHd...", "..dHlllHHHHd..", "..dHHHHHHHHd..", "..dHdHHHdHHd..", "..dd......dd.."]], "kortm": [0, ["....dddddd....", "...dHHlHHHd...", "..dHlllHHHHd..", "..dHHHHHHHHd..", "..dHHdHHdHHd..", "..dd......dd.."]], "zij": [0, ["....dddddd....", "...dHlllHHd...", "..dllHHHHHHd..", "..dHHHHHHdHd..", "..dHHHHHd.dd..", "..dHd.....dd.."]], "warrig": [-1, ["...d..d..d....", "..dHddHddHd...", ".dHHlHHHlHHd..", ".dHlllHHHHHHd.", "..dHHHHHHHHHd.", "..dHdHdHHdHd..", "..d.......dd.."]], "krul": [-1, ["...d.dd.dd....", "..dHdHHdHHd...", ".dHlHHlHHlHd..", ".dHHdHHdHHHd..", "dHlHHHlHHHlHHd", "dHHdHHHdHHHdHd", ".dHd......dHd.", "dHHd......dHHd", ".dd........dd."]], "wip": [0, [".....dddddd.....", "....dHHlHHHd....", "...dHlllHHHHd...", "...dHHHHHHHHd...", "..dHHdHHHdHHHd..", "..dHd......dHd..", "..dHd......dHd..", "..dHd......dHd..", ".dHHd......dHHd.", "dHHd........dHHd", "dd............dd"], -1], "staartjes": [0, [".....dddddd.....", "....dHHlHHHd....", "...dHlllHHHHd...", "...dHHHHHHHHd...", ".ddHHdHHHdHHHdd.", "dHHdd......ddHHd", "dHlHd......dHlHd", "dHHd........dHHd", ".dHd........dHd.", "dHHd........dHHd", ".dHHd......dHHd.", "..dHd......dHd..", "..dd........dd.."], -1]};
 function avShade(hex,f){const n=parseInt(hex.slice(1),16),ch=[n>>16,(n>>8)&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(f<0?v*(1+f):v+(255-v)*f))));return '#'+ch.map(v=>v.toString(16).padStart(2,'0')).join('')}
 /* Pixelpoppetje in Stardew-achtige maat (eigen tekening): ongeveer 14 x 28 pixels, hoofd 12 breed, gezicht 8 breed,
    ogen 2x2 aan weerskanten, geen mond; omlijning in een donkere tint van elk deel, eromheen een witte stickerrand. */
@@ -1651,7 +1651,6 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=20,Hh=
   const S=a.skin,Sd=avShade(S,-.18),Sl=avShade(S,.25),H=a.hairColor,Hd=avShade(H,-.35),Hl=avShade(H,.35),T=a.shirt,Td=avShade(T,-.3),Tl=avShade(T,.3),P=a.pants,Pd=avShade(P,-.35),E=a.eyes||'#4a7ab0';
   const B='#5a3a26',Bd='#3e281a',W2='#ecebf2',W2d='#c9c8d6',man=a.face==='stoer',hat=['pet','muts','heks','zonnehoed'].includes(a.extra);
   // achter het lijf: lang haar, staart, afro
-  if(a.hair==='lang'){rect(1,6,2,15,Hd);rect(11,6,12,15,Hd);rect(2,6,2,14,H);rect(11,6,11,14,H)}
   if(a.hair==='staart'){rect(12,4,13,11,H);p(13,6,Hd);p(13,7,Hd);p(13,8,Hd);p(12,4,Hl)}
   if(a.hair==='afro'&&!hat)for(let y=-2;y<=9;y++)for(let x=-1;x<=14;x++){const dx=(x-6.5)/7.5,dy=(y-3.5)/6;if(dx*dx+dy*dy<=1)p(x,y,((x*7+y*3)%5===0)?Hd:((x+y)%6===0?Hl:H))}
   // lijf: armen, kleding, benen
@@ -1684,7 +1683,7 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=20,Hh=
   rect(8,6,9,6,L);p(9,7,'#cfc6cc');p(8,7,Ed);p(9,8,'#ffffff');p(8,8,E);
   if(!man){p(3,6,L);p(10,6,L);p(4,9,'#f2a0a0');p(9,9,'#ec9a9a')}
   // haar
-  {const m=AV_HAIR[a.hair==='stekel'?'warrig':a.hair];if(m)m[1].forEach((r,i)=>{for(let j=0;j<r.length;j++){const ch=r[j];if(ch!=='.')p(j,m[0]+i,ch==='H'?H:ch==='d'?Hd:Hl)}})}
+  {const m=AV_HAIR[a.hair==='stekel'?'warrig':a.hair];if(m){const x0=m[2]||0;m[1].forEach((r,i)=>{for(let j=0;j<r.length;j++){const ch=r[j];if(ch!=='.')p(x0+j,m[0]+i,ch==='H'?H:ch==='d'?Hd:Hl)}})}}
   if(a.hair==='kaal'){rect(4,1,9,1,S);rect(3,2,10,2,S);p(4,2,Sl);p(5,2,Sl)}
   // extra's
   if(a.extra==='bril'){const F='#3a2a2a';for(const x0 of [3,7]){rect(x0,5,x0+3,5,F);rect(x0,9,x0+3,9,F);p(x0,6,F);p(x0,7,F);p(x0,8,F);p(x0+3,6,F);p(x0+3,7,F);p(x0+3,8,F)}}
@@ -1695,6 +1694,7 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=20,Hh=
   if(a.extra==='oren'){for(const [bx,d] of [[3,1],[10,-1]]){p(bx,-2,H);p(bx,-1,H);p(bx+d,-1,H);p(bx,0,H);p(bx+d,0,H);p(bx+d,-1,'#f2a0b0')}}
   if(a.extra==='baard'){rect(3,9,10,10,H);rect(4,11,9,11,H);rect(9,9,10,10,Hd);p(3,8,H);p(10,8,Hd)}
   if(a.extra==='sjaal'){rect(3,11,10,12,'#b02a2a');rect(4,13,5,17,'#b02a2a');p(5,17,'#7a1a1a');rect(8,11,10,11,'#8a1f1f');p(4,14,'#d04a4a')}
+  if(a.hair==='staartjes'){p(0,4,'#e05a8a');p(13,4,'#e05a8a');p(-1,4,'#c0396a');p(14,4,'#c0396a')}
   if(a.extra==='strik'){rect(8,-1,11,0,'#e05a8a');p(9,-1,'#a0305a');p(10,0,'#f28ab0')}
   // omlijning in een donkere tint van het deel ernaast; daarna een witte stickerrand
   const out=G.map(r=>r.slice()),isOl=new Set();
