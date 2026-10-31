@@ -1634,13 +1634,15 @@ function houseDevs(){const devs=SRV?lamps.filter(isDev):[],box=$('houseDevs');$(
 const AV={skin:['#f6d3b3','#e9b48a','#c68a5e','#8d5a3b','#5a3a26'],hairColor:['#2a1a12','#5a3a1e','#a0622a','#d8a24a','#efe2bd','#c0392b','#7a4ab0','#3a7ad0','#8a8a92'],
   eyes:['#6a4a2a','#4a7ab0','#3a9a6a','#7a8a9a','#2a2a3a'],
   shirt:['#c0392b','#e07a2a','#e8b84a','#4e8a3c','#3a7ad0','#7a4ab0','#d86aa0','#f2f2f2','#3a3a44'],pants:['#2c3e6a','#3a3a44','#6a4a2a','#8a8a92'],
-  hair:[['kort','Kort ♀'],['kortm','Kort ♂'],['stekel','Stekels'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
+  hair:[['kort','Bob ♀'],['kortm','Kort ♂'],['zij','Zijscheiding ♂'],['warrig','Warrig'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
   extra:[['geen','Niets'],['bril','Bril'],['pet','Pet'],['muts','Muts'],['heks','Heksenhoed'],['zonnehoed','Zonnehoed'],['oren','Kattenoren'],['baard','Baard'],['strik','Strik']],
   face:[['zacht','♀'],['stoer','♂']],
   outfit:[['shirt','Shirt'],['jas','Jas'],['rok','Rok'],['tuinbroek','Tuinbroek'],['jurk','Jurk']]};
 const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0',outfit:'shirt',face:'zacht'};
 /* Pixelpoppetje in Stardew-achtige stijl (eigen tekening): groot hoofd, grote ogen met glimlicht, drie tinten per kleur,
    donkere omlijning en (sticker) een witte rand. Raster 26 x 36; c = canvas. */
+/* Kapsels als pixelraster: [eerste rij (y), rijen van 16 tekens] */
+const AV_HAIR={"kort": [0, ["......dddd......", "....ddHHHHdd....", "...dHHlllHHHd...", "..dHHlllHHHHHd..", ".dHHHlHHHHHHHHd.", ".dHHHHHHHHHHHHd.", ".dHHdHHHdHHdHHd.", ".dHH........HHd.", ".dHH........HHd.", ".dHd........dHd.", ".dHd........dHd.", ".dHd........dHd.", "..dd........dd.."]], "lang": [0, ["......dddd......", "....ddHHHHdd....", "...dHHlllHHHd...", "..dHHlllHHHHHd..", ".dHHHlHHHHHHHHd.", ".dHHHHHHHHHHHHd.", ".dHHdHHHdHHdHHd.", ".dHH........HHd.", ".dHH........HHd.", ".dHd........dHd.", ".dHd........dHd.", ".dHd........dHd.", ".dHd........dHd.", ".dHd........dHd.", ".dHd........dHd.", "..d..........d.."]], "staart": [0, ["......dddd......", "....ddHHHHdd....", "...dHHlllHHHd...", "..dHHlllHHHHHd..", ".dHHHlHHHHHHHHd.", ".dHHHHHHHHHHHHd.", ".dHHdHHHdHHdHHd.", ".dHd........dHd.", "..d..........d.."]], "knot": [-4, ["......dddd......", ".....dHlHHd.....", ".....dHHHHd.....", "......dddd......", "......dddd......", "....ddHHHHdd....", "...dHHlllHHHd...", "..dHHlllHHHHHd..", ".dHHHlHHHHHHHHd.", ".dHHHHHHHHHHHHd.", ".dHHdHHHdHHdHHd.", ".dHd........dHd.", "..d..........d.."]], "kortm": [0, ["......dddd......", "....ddHHHHdd....", "...dHHlllHHHd...", "..dHHlllHHHHHd..", "..dHHHHHHHHHHd..", "..dHHdHHHHdHHd..", "..dH........Hd..", "..dd........dd.."]], "zij": [0, ["......dddd......", "....ddHHHHdd....", "...dHlllHHHHd...", "..dHlllHHHHHHd..", "..dHHHHHHHHdHd..", "..dHHHHHHHd.dd..", "..dHHHHHd....d..", "..dHHd......dd..", "..dd............"]], "warrig": [-2, [".....d....d.....", "....dHd..dHd.d..", "...dHHHddHHHdHd.", "..dHHlHHHHlHHHd.", "..dHlllHHHHHHHd.", ".dHHHllHHHHHHHHd", ".dHHHHHHHHHHHHd.", "..dHdHHdHHHdHd..", "..dH..d...d.Hd..", "..d..........d.."]], "krul": [-1, ["....d.dd.dd.d...", "...dHdHHdHHdHd..", "..dHlHHlHHlHHHd.", ".dHlHdHHdHHdHHd.", ".dHHHHlHHHlHHHd.", "dHdHHdHHdHHdHHd.", ".dHHlHHHHlHHHHd.", ".dHdHdHHdHdHdHd.", "dHHd........dHHd", ".dHd........dHd.", "dHHd........dHHd", ".dd..........dd."]]};
 function avShade(hex,f){const n=parseInt(hex.slice(1),16),ch=[n>>16,(n>>8)&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(f<0?v*(1+f):v+(255-v)*f))));return '#'+ch.map(v=>v.toString(16).padStart(2,'0')).join('')}
 function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=38,G=[...Array(Hh)].map(()=>Array(W).fill(null)),ox=2,oy=4;
   const p=(x,y,col)=>{x+=ox;y+=oy;if(x>=0&&x<W&&y>=0&&y<Hh)G[y][x]=col},rect=(x0,y0,x1,y1,col)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)p(x,y,col)};
@@ -1687,15 +1689,9 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=
   eye(8,false);eye(12,true);
   if(a.face==='stoer'){rect(7,7,9,7,avShade(H,-.4));rect(12,7,14,7,avShade(H,-.4))}else{rect(8,8,9,8,avShade(H,-.55));rect(12,8,13,8,avShade(H,-.55))}
   if(a.face!=='stoer'){p(7,11,'#f2a0a0');p(14,11,'#e89090')}p(10,12,Sd);p(11,12,avShade(S,-.3));      // blosjes en mond
-  // haar
-  if(a.hair==='kortm'||a.hair==='stekel'){rect(7,0,14,0,H);rect(5,1,16,1,H);rect(4,2,17,4,H);p(4,2,null);p(17,2,null);rect(5,5,9,5,H);rect(13,5,16,5,H);p(5,6,H);p(16,6,H);
-    rect(4,5,4,8,Hd);rect(17,5,17,8,Hd);rect(7,1,10,1,Hl);p(6,2,Hl);p(12,5,Hd);p(9,5,Hd);
-    if(a.hair==='stekel'&&!['pet','muts','heks','zonnehoed'].includes(a.extra))for(const x of [5,7,9,11,13,15]){p(x,-1,H);p(x+1,-2,H);p(x,0,H);p(x+1,-1,Hl)}}
-  else if(a.hair!=='kaal'&&a.hair!=='afro'){rect(8,0,13,0,H);rect(6,1,15,1,H);rect(5,2,16,2,H);rect(4,3,17,6,H);p(4,3,null);p(17,3,null);rect(8,1,11,1,Hl);rect(6,2,9,2,Hl);p(7,3,Hl);
-    for(const x of [5,6,7,9,10,12,14,15,16])p(x,7,H);rect(5,8,6,12,H);rect(15,8,16,12,H);p(6,12,Hd);p(16,9,Hd);p(16,10,Hd);p(16,11,Hd);p(5,13,H);p(16,13,Hd);p(8,6,Hd);p(11,6,Hd);p(13,7,Hd);p(16,7,Hd);p(5,8,Hd);rect(4,5,4,7,Hd);rect(17,5,17,7,Hd)}
-  else if(a.hair==='kaal'){rect(8,2,13,2,S);rect(6,3,15,3,S);p(8,3,Sl);p(9,3,Sl);p(7,4,Sl)}
-  if(a.hair==='knot'){rect(9,-3,12,-1,H);p(10,-3,Hl);p(10,-2,Hl);p(12,-1,Hd)}
-  if(a.hair==='krul'){for(const [x,y] of [[3,4],[3,6],[18,4],[18,6],[6,1],[9,1],[12,1],[15,1],[4,8],[17,8]])p(x,y,H);for(const [x,y] of [[6,3],[10,4],[14,3],[12,5]])p(x,y,Hd)}
+  // haar: per kapsel een pixelraster (H = haarkleur, d = donker/rand, l = glans), x vanaf 3; zie AV_HAIR
+  {const m=AV_HAIR[a.hair==='stekel'?'warrig':a.hair];if(m)m[1].forEach((r,i)=>{for(let j=0;j<r.length;j++){const ch=r[j];if(ch!=='.')p(3+j,m[0]+i,ch==='H'?H:ch==='d'?Hd:Hl)}})}
+  if(a.hair==='kaal'){rect(8,2,13,2,S);rect(6,3,15,3,S);p(8,3,Sl);p(9,3,Sl);p(7,4,Sl)}
   // extra's
   if(a.extra==='bril'){for(const x0 of [6,12]){rect(x0,8,x0+3,8,'#3a2a2a');rect(x0,11,x0+3,11,'#3a2a2a');p(x0,9,'#3a2a2a');p(x0,10,'#3a2a2a');p(x0+3,9,'#3a2a2a');p(x0+3,10,'#3a2a2a')}p(10,9,'#3a2a2a');p(11,9,'#3a2a2a')}
   if(a.extra==='pet'){rect(7,0,14,0,'#c0392b');rect(5,1,16,1,'#c0392b');rect(4,2,17,5,'#c0392b');rect(7,0,11,1,'#e05a4a');rect(4,6,18,6,'#8e2a1f');p(19,6,'#8e2a1f');p(10,3,'#f2f2f2');p(11,3,'#f2f2f2')}
