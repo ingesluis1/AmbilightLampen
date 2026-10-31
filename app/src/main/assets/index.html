@@ -288,6 +288,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 
 <!-- Tabblad: Bediening -->
 <div class="asguestbar hidden" id="asGuestBar"><span class="grow">Je bekijkt de hub als gast</span><button class="btn gold" id="asGuestStop">Terug</button></div>
+<div class="banner hidden" id="notHomeBar" style="margin:0 0 8px">Je bent niet thuis: je kunt kijken, maar niets bedienen.</div>
 <div class="page" id="page-home">
 <div class="roombar hidden" id="roomBar" role="group" aria-label="Kamer"></div>
 <section class="panel hidden tvonly" id="pairCard">
@@ -1946,7 +1947,7 @@ async function gateCheck(){let st;try{st=await (await fetch('/api/access/status'
 $('gateAsk').onclick=async()=>{const n=$('gateName').value.trim();if(!n){$('gateName').focus();return}
   try{const r=await (await fetch('/api/access/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})})).json();toast(r.message||'')}catch(e){}gateCheck()};
 /* Rol toepassen: gast ziet alleen Bediening */
-function roleUI(s){const g=s&&s.role==='guest';document.body.classList.toggle('guest',g);if(g&&curTab!=='home')showTab('home');
+function roleUI(s){const g=s&&s.role==='guest';$('notHomeBar').classList.toggle('hidden',!(g&&s.canControl===false));document.body.classList.toggle('guest',g);if(g&&curTab!=='home')showTab('home');
   const n=s&&s.role==='owner'?s.accessPending||0:0;$('accBanner').classList.toggle('hidden',!n);
   if(n)$('accBanner').textContent=t('{n} apparaat vraagt toegang. Tik om te bekijken.',{n})}
 $('houseScene').onclick=()=>{houseSceneOpen=!houseSceneOpen;homeUI();if(houseSceneOpen)setTimeout(()=>$('scenePanel').scrollIntoView({block:'start',behavior:'smooth'}),50)};
