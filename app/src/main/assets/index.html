@@ -1611,7 +1611,7 @@ async function kbHist(id,h){let c=kbLogs[id];if(!c||Date.now()-c.at>60000){try{c
   const cats=(c.cats||[]).map((ct,i)=>({name:ct.name,color:KAT_COL[i%KAT_COL.length],pts:v.filter(x=>x.weight>0&&x.cat===ct.name).slice().reverse()}));
   const wl=v.filter(x=>x.weight>0);
   if(wl.length)kbDots(h.querySelector('.kbw'),cats.length?cats:[{name:t('Kat'),color:KAT_COL[0],pts:wl.slice().reverse()}],loc);
-  else h.querySelector('.kbw').innerHTML=`<p class="hint" style="margin:0">${esc(t('Nog geen gewicht gemeten. Vanaf nu bewaart de hub het gewicht bij elk bezoek.'))}</p>`;
+  else{const w=h.querySelector('.kbw');w.classList.add('hidden');w.previousElementSibling.classList.add('hidden')}
   const dur=s=>s>=60?Math.floor(s/60)+' min '+(s%60)+' s':s+' s';
   list.innerHTML=`<div class="lbl">${esc(t('Laatste bezoeken'))}</div>`+v.slice(0,8).map(x=>`<div class="kbrow">${esc(new Date(x.t).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}<span>${x.cat?esc(x.cat+' · '):''}${x.weight>0?esc(nl1(x.weight/1000,2)+' kg'+(x.src==='weging'?'':' · ')):''}${x.src==='weging'?' · '+esc(t('alleen gewogen')):esc(dur(x.seconds||0))}</span></div>`).join('')}
 /* Gewicht als punten met lijn, een lijn per kat, op een tijd-as; as van net onder het laagste tot net boven het hoogste
