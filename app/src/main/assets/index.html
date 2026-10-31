@@ -1309,7 +1309,9 @@ function sheetSend(){if(!sheet)return;clearTimeout(sheetTimer);const s=sheet;she
 function closeSheet(){sheet=null;$('lampSheet').classList.add('hidden');closeAirSheet();if(fullOpen)setTimeout(draw,0)}
 /* Airco op de kaart aangetikt: zelfde bediening als onder Bediening, in een vak onder de kaart */
 let airSheetId=null;
-function openAirSheet(id){closeSheet();airSheetId=id;$('airSheet').classList.remove('hidden');$('airSheetBody').dataset.k='';airAll()}
+/* Gast: stekkers en kattenbak staan op de kaart, maar zonder stand en zonder bediening (locked van de hub) */
+const isLocked=l=>{const x=l&&S&&(S.lamps||[]).find(q=>q.id===l.id);return !!(x&&x.locked)};
+function openAirSheet(id){if(isLocked({id}))return;closeSheet();airSheetId=id;$('airSheet').classList.remove('hidden');$('airSheetBody').dataset.k='';airAll()}
 function closeAirSheet(){airSheetId=null;$('airSheet').classList.add('hidden')}
 $('airSheetDone').onclick=()=>{closeAirSheet();if(fullOpen)setTimeout(draw,0)};
 $('sheetBri').oninput=e=>{if(!sheet)return;sheet.bright=+e.target.value;sheetUI();sheetSend()};
@@ -1733,7 +1735,7 @@ function devSummary(l){if(isPlug(l)){const p=stOf(l.id);return p&&p.known?stLine
   if(isKat(l)){const k=kbOf(l.id);return k&&k.known?kbStatus(k)+' · '+t('{n}× vandaag',{n:k.visits??0})+((k.faults||[]).length?' · ⚠ '+(k.faults||[]).map(x=>t(KB_FAULT[x]||x)).join(', '):''):''}
   const a=airOf(l.id);return a&&a.known?t(a.on?'aan':'uit')+(a.inside!=null?' · '+t('binnen {n} °C',{n:a.inside}):''):''}
 const houseDevOpen=new Set();
-function houseDevs(){const devs=SRV?lamps.filter(isDev):[],box=$('houseDevs');$('houseDevWrap').classList.toggle('hidden',!devs.length);
+function houseDevs(){const devs=SRV?lamps.filter(l=>isDev(l)&&!isLocked(l)):[],box=$('houseDevs');$('houseDevWrap').classList.toggle('hidden',!devs.length);
   const key=devs.map(l=>l.id+l.name+l.look+lampRoom(l)).join();
   if(box.dataset.k!==key){box.dataset.k=key;box.innerHTML='';
     for(const l of devs){const d=document.createElement('details');d.className='hdev';d.dataset.id=l.id;d.open=houseDevOpen.has(l.id);
@@ -1961,7 +1963,7 @@ function airAll(){if(!S)return;const sel=lamps.find(l=>l.id===selLamp);airFill($
   const sl=airSheetId&&lamps.find(x=>x.id===airSheetId);airFill($('airSheetBody'),sl?[sl]:[]);$('airSheetTitle').textContent=isPlug(sl)?sl.name:t(isKat(sl)?'Kattenbak':'Airco');
   // Huis-overzicht: alle apparaten (ook zonder kamer), elk uitklapbaar met de stand in de kop
   houseDevs();
-  const kb=isHouse()?[]:lampsIn(homeRoomId()).filter(isKat);airFill($('kbHome'),kb);$('kbFold').classList.toggle('hidden',!kb.length);
+  const kb=isHouse()?[]:lampsIn(homeRoomId()).filter(l=>isKat(l)&&!isLocked(l));airFill($('kbHome'),kb);$('kbFold').classList.toggle('hidden',!kb.length);
   const k1=kb.length===1&&kbOf(kb[0].id);$('kbSum').textContent=t('Kattenbak')+(k1&&k1.known?' · '+kbStatus(k1)+' · '+t('{n}× vandaag',{n:k1.visits??0})+((k1.faults||[]).length?' · ⚠':''):'');
   const here=isHouse()?[]:lampsIn(homeRoomId()).filter(isAir);airFill($('airHome'),here);$('airFold').classList.toggle('hidden',!here.length);
   // In de kop: aan/uit en de temperatuur binnen, zodat je hem ook dichtgeklapt ziet
