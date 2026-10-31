@@ -166,7 +166,7 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 /* Energie: tegels en staafgrafieken (een reeks per grafiek, geen tweede as) */
 /* Energie: cijfers en kleine tekst in een gewoon lettertype (het pixellettertype is lastig bij 3/8/9 en €); koppen en knoppen blijven pixel */
 #page-energy{--ensans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
-#page-energy .hint,#page-energy p,#page-energy .enlbl,#page-energy .entable,#page-energy .enchart,#page-energy .entar label,#page-energy .entar input,#page-energy .ennote{font-family:var(--ensans);font-variant-numeric:tabular-nums}
+#page-energy .hint,#page-energy p,#page-energy .enlbl,#page-energy .entable,#page-energy .enchart,#page-energy .entar label,#page-energy .entar span,#page-energy .entar input,#page-energy .ennote{font-family:var(--ensans);font-variant-numeric:tabular-nums}
 #page-energy .enchart svg text{font-family:var(--ensans)}
 #page-energy .enchart .tip{font-family:var(--ensans)}
 .entable{width:100%;border-collapse:collapse;background:var(--cream);border:3px solid var(--ink);font-size:15px}
@@ -568,7 +568,9 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
       <label for="tTerug">Teruglevering per kWh</label><span>€ <input type="text" inputmode="decimal" id="tTerug" placeholder="0,05"></span>
       <label for="tGas">Gas per m³</label><span>€ <input type="text" inputmode="decimal" id="tGas" placeholder="1,30"></span>
       <label for="tVast">Vaste kosten per maand (vastrecht en netbeheer, min de vermindering energiebelasting)</label><span>€ <input type="text" inputmode="decimal" id="tVast" placeholder="20,00"></span>
+      <label for="tKorting">Korting per jaar (bijvoorbeeld welkomstkorting)</label><span>€ <input type="text" inputmode="decimal" id="tKorting" placeholder="0"></span>
     </div>
+    <div class="ennote" id="enTarHist"></div>
     <button class="btn gold" id="enTarSave" style="margin-top:8px;width:100%">Tarieven opslaan</button>
   </details>
 </section>
@@ -1705,16 +1707,31 @@ async function enLoad(){if(!SRV)return;let r;try{[r,enMonths]=await Promise.all(
 const enEUR0=(v,whole)=>v.toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:whole?0:2,maximumFractionDigits:whole?0:2});
 const enEUR=v=>v==null?'–':v.toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL',{style:'currency',currency:'EUR'});
 const enT=()=>(enData&&enData.tariffs)||{};
-const enHasT=()=>{const T=enT();return T.stroom!=null||T.gas!=null};
-function enCostStroom(d){const T=enT();if(T.stroom==null||d.kwh==null)return null;const low=T.stroomDal!=null&&d.kwhLow!=null?d.kwhLow:0;
-  let c=(d.kwh-low)*T.stroom+(low?low*T.stroomDal:0);if(T.terug!=null&&d.back)c-=d.back*T.terug;return c}
-function enCostGas(d){const T=enT();return T.gas==null||d.gas==null?null:d.gas*T.gas}
-const enFixedDay=()=>(enT().vast||0)*12/365;
-function enCostDay(d){const a=enCostStroom(d),b=enCostGas(d);if(a==null&&b==null)return null;return (a||0)+(b||0)+enFixedDay()}
+/* Tarieven per periode (from = geldt vanaf die dag). Een dag gebruikt de periode van die dag; een maand wordt naar
+   dagen verdeeld over de periodes. Saldering (t/m 31-12-2026): teruglevering telt tegen de stroomprijs, daarna
+   tegen de terugleververgoeding. Vaste kosten en korting (per jaar) per dag. */
+const EN_SALDERING_END='2027-01-01';
+const enPer=()=>{const T=enT();return T.periods&&T.periods.length?T.periods:[T]};
+const enHasT=()=>enPer().some(P=>P.stroom!=null||P.gas!=null);
+function enTP(day){let p=null;for(const q of enPer())if(!q.from||q.from<=day)p=q;return p||enPer()[0]||{}}
+function enParts(x){if(x.date)return [[enTP(x.date),1,1,x.date<EN_SALDERING_END]];
+  const [y,m]=x.month.split('-').map(Number),n=new Date(y,m,0).getDate(),map=new Map();
+  for(let d=1;d<=n;d++){const day=x.month+'-'+String(d).padStart(2,'0'),P=enTP(day),k=P;const e=map.get(k)||{c:0,sal:0};e.c++;if(day<EN_SALDERING_END)e.sal++;map.set(k,e)}
+  return [...map].map(([P,e])=>[P,e.c/n,e.c,e.sal===e.c])}
+function enCostStroom(x){if(x.kwh==null)return null;let c=null;
+  for(const [P,f,,sal] of enParts(x)){if(P.stroom==null)continue;const low=P.stroomDal!=null&&x.kwhLow!=null?x.kwhLow*f:0;
+    c=(c||0)+(x.kwh*f-low)*P.stroom+low*(P.stroomDal??P.stroom)-(x.back||0)*f*(sal?P.stroom:(P.terug||0))}return c}
+function enCostGas(x){if(x.gas==null)return null;let c=null;for(const [P,f] of enParts(x))if(P.gas!=null)c=(c||0)+x.gas*f*P.gas;return c}
+/* Wat je teruglevering waard is: met saldering de stroomprijs, anders de terugleververgoeding */
+function enBackValue(x){if(x.back==null)return null;let c=null;for(const [P,f,,sal] of enParts(x)){const pr=sal?P.stroom:P.terug;if(pr!=null)c=(c||0)+x.back*f*pr}return c}
+function enFixed(x){let c=0;for(const [P,,days] of enParts(x))c+=((P.vast||0)-(P.korting||0)/12)*12/365*days;return c}
+function enCostDay(x){const a=enCostStroom(x),b=enCostGas(x);if(a==null&&b==null)return null;return (a||0)+(b||0)+enFixed(x)}
 function enTarUI(){const T=enT(),f=v=>v==null?'':String(v).replace('.',',');
-  for(const [id,k] of [['tStroom','stroom'],['tStroomDal','stroomDal'],['tTerug','terug'],['tGas','gas'],['tVast','vast']])if(document.activeElement!==$(id))$(id).value=f(T[k]);
+  for(const [id,k] of [['tStroom','stroom'],['tStroomDal','stroomDal'],['tTerug','terug'],['tGas','gas'],['tVast','vast'],['tKorting','korting']])if(document.activeElement!==$(id))$(id).value=f(T[k]);
+  const ps=enPer().filter(P=>P.from),d=s=>new Date(s+'T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{day:'numeric',month:'short',year:'numeric'});
+  $('enTarHist').innerHTML=ps.length>1?esc(t('De velden hierboven gelden vanaf {d}. Eerder:',{d:d(ps[ps.length-1].from)}))+'<br>'+ps.slice(0,-1).map((P,i)=>esc(t('vanaf {d}',{d:d(P.from)})+': '+t('stroom')+' € '+nl1(P.stroom,4)+' · '+t('gas')+' € '+nl1(P.gas,4)+(P.korting?' · '+t('korting')+' € '+nl1(P.korting,0)+'/'+t('jaar'):''))).join('<br>'):'';
   $('enTarSum').textContent=enHasT()?t('ingevuld'):t('nog niet ingevuld');if(!enHasT())$('enTarDet').open=true}
-$('enTarSave').onclick=async()=>{const r=await api('/api/energy/tariffs',{stroom:$('tStroom').value,stroomDal:$('tStroomDal').value,terug:$('tTerug').value,gas:$('tGas').value,vast:$('tVast').value});
+$('enTarSave').onclick=async()=>{const r=await api('/api/energy/tariffs',{stroom:$('tStroom').value,stroomDal:$('tStroomDal').value,terug:$('tTerug').value,gas:$('tGas').value,vast:$('tVast').value,korting:$('tKorting').value});
   toast(r.message||'');if(r.ok&&enData){enData.tariffs=r.tariffs;enDays();enDayLoad()}};
 function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d=>enDate(d.date,{day:'numeric',month:'numeric'}));
   $('enStamp').textContent=t('Uit Enelogic, bijgewerkt t/m {d}. Je netbeheerder stuurt de standen één keer per dag.',{d:enDate(r.last,{weekday:'long',day:'numeric',month:'long'})});
@@ -1725,14 +1742,14 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   const rows=[[enDate(r.last),'',last.kwh,last.gas,T?enCostDay(last):null,1,2],
     [t('Deze maand'),t('{n} dagen',{n:month.filter(d=>d.kwh!=null).length}),sum('kwh',month),sum('gas',month),T?month.reduce((a,d)=>a+(enCostDay(d)||0),0):null,0,1]];
   if(M.length)rows.push([t('{n} maanden',{n:M.length}),mlab(M[0].month)+' – '+mlab(M[M.length-1].month),M.reduce((a,m)=>a+(m.kwh||0),0),M.reduce((a,m)=>a+(m.gas||0),0),
-    T?M.reduce((a,m)=>a+(enCostStroom(m)||0)+(enCostGas(m)||0),0)+(enT().vast||0)*M.length:null,0,0]);
+    T?M.reduce((a,m)=>a+(enCostDay(m)||0),0):null,0,0]);
   const sw=c=>`<i class="ensw" style="background:${c}"></i>`;
   let h=`<table class="entable"><thead><tr><th></th><th>${sw(EN_COL.kwh)}${esc(t('Stroom'))}</th>${r.gas?`<th>${sw(EN_COL.gas)}${esc(t('Gas'))}</th>`:''}${T?`<th>${esc(t('Kosten'))}</th>`:''}</tr></thead><tbody>`;
   for(const [p,sub,k,g,c,dk,dg] of rows)h+=`<tr><th scope="row">${esc(p)}${sub?`<small>${esc(sub)}</small>`:''}</th><td>${nl1(k,dk)}<small> kWh</small></td>${r.gas?`<td>${nl1(g,dg)}<small> m³</small></td>`:''}${T?`<td>${c==null?'–':enEUR0(c,dk===0&&dg===0)}</td>`:''}</tr>`;
   h+='</tbody></table>';
   const backs=[[last.back,t('op {d}',{d:enDate(r.last)}),1],[sum('back',month),t('deze maand'),0]].concat(M.length?[[M.reduce((a,m)=>a+(m.back||0),0),t('in {n} maanden',{n:M.length}),0]]:[]).filter(x=>x[0]>0);
   if(backs.length)h+=`<p class="ennote">${esc(t('Teruggeleverd'))}: ${backs.map(([v,l,d])=>nl1(v,d)+' kWh '+esc(l)).join(' · ')}</p>`;
-  if(T&&M.length)h+=`<p class="ennote">${esc(t('Kosten zijn een schatting tegen je huidige tarieven, inclusief vaste kosten.'))}</p>`;
+  if(T)h+=`<p class="ennote">${esc(t('Kosten zijn een schatting met de tarieven die toen golden, inclusief vaste kosten en korting. Tot en met 2026 telt je teruglevering mee via saldering.'))}</p>`;
   $('enTiles').innerHTML=h;
   enTarUI();
   const sel=ds.findIndex(d=>d.date===enDay),pick=i=>{enDay=ds[i].date;enDays();enDayLoad()};
@@ -1744,8 +1761,8 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   $('enKind').querySelector('[data-k=gas]').classList.toggle('hidden',!r.gas);$('enKind').querySelector('[data-k=back]').classList.toggle('hidden',!hasBack);
   document.querySelectorAll('#enKind .btn').forEach(b=>b.classList.toggle('on',b.dataset.k===enKind));
   const K={kwh:{unit:' kWh',title:'Stroom',cost:enCostStroom},gas:{unit:' m³',title:'Gas',cost:enCostGas},
-    back:{unit:' kWh',title:'Teruglevering',cost:x=>enT().terug!=null&&x.back!=null?x.back*enT().terug:null}}[enKind];
-  const costTxt=x=>{const c=K.cost(x);return c==null?'':(enKind==='back'?' · '+t('opbrengst {e}',{e:enEUR(c)}):' · ≈ '+enEUR(c))};
+    back:{unit:' kWh',title:'Teruglevering',cost:enBackValue}}[enKind];
+  const costTxt=x=>{const c=K.cost(x);return c==null?'':(enKind==='back'?' · '+t('waard ≈ {e}',{e:enEUR(c)}):' · ≈ '+enEUR(c))};
   if(enN==='m12'){
     const ms=enMonths&&enMonths.ok?enMonths.months:[],ml=ms.map(m=>new Date(m.month+'-15T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{month:'short'})),
       src=m=>m.source==='enelogic'?'Enelogic':m.source,full=m=>new Date(m.month+'-15T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{month:'long',year:'numeric'});
