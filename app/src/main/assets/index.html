@@ -288,20 +288,20 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 </section>
 
 <!-- Huis: een kaart per kamer (alleen met meer dan één kamer) -->
-<section class="panel srvonly hidden" id="homePeople">
-  <h2>Thuis</h2>
-  <div class="people" id="peopleRow"></div>
-  <details id="myAvatarBox" style="margin-top:10px"><summary><b>Mijn poppetje</b></summary><div id="myAvatarEd"></div></details>
-</section>
-
 <section class="panel hidden" id="housePanel">
   <h2>Huis</h2>
   <p id="houseSum"></p>
   <div class="house" id="houseCards"></div>
-  <div class="row" style="margin-top:12px"><button class="btn gold grow" id="houseOff">Hele huis uit</button><button class="btn grow" id="houseOn">Alles aan</button></div>
+  <div class="row" style="margin-top:12px"><button class="btn gold grow" id="houseOff">Hele huis uit</button><button class="btn grow" id="houseOn">Alles aan</button><button class="btn grow" id="houseScene">Scène</button></div>
   <div class="hint" id="houseHint"></div>
   <div class="banner hidden ownonly" id="accBanner" style="margin-top:10px;cursor:pointer"></div>
   <div id="houseDevWrap" class="hidden"><h2 style="margin-top:14px">Apparaten</h2><div id="houseDevs"></div></div>
+</section>
+
+<section class="panel srvonly hidden" id="homePeople">
+  <h2>Thuis</h2>
+  <div class="people" id="peopleRow"></div>
+  <details id="myAvatarBox" style="margin-top:10px"><summary><b>Mijn poppetje</b></summary><div id="myAvatarEd"></div></details>
 </section>
 
 <section class="panel" id="homeMapPanel">
@@ -328,7 +328,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <div id="homeStatus" class="hint"></div>
 </section>
 
-<section class="panel">
+<section class="panel" id="scenePanel">
   <h2>Scènes</h2>
   <p class="tvonly">Vaste of langzaam bewegende kleuren, in plaats van de sync. Sync starten stopt de scène.</p>
   <p class="srvonly">Vaste of langzaam bewegende kleuren op je lampen.</p>
@@ -1767,6 +1767,7 @@ $('gateAsk').onclick=async()=>{const n=$('gateName').value.trim();if(!n){$('gate
 function roleUI(s){const g=s&&s.role==='guest';document.body.classList.toggle('guest',g);if(g&&curTab!=='home')showTab('home');
   const n=s&&s.role==='owner'?s.accessPending||0:0;$('accBanner').classList.toggle('hidden',!n);
   if(n)$('accBanner').textContent=t('{n} apparaat vraagt toegang. Tik om te bekijken.',{n})}
+$('houseScene').onclick=()=>{houseSceneOpen=!houseSceneOpen;homeUI();if(houseSceneOpen)setTimeout(()=>$('scenePanel').scrollIntoView({block:'start',behavior:'smooth'}),50)};
 $('accBanner').onclick=()=>{showTab('settings');setTimeout(()=>$('accPanel').scrollIntoView({block:'start'}),50)};
 const ACC_ROLE={owner:'Hoofdgebruiker',guest:'Gast',pending:'Wacht op goedkeuring',denied:'Geweigerd'};
 async function accLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/access/list')}catch(e){return}accRender(r.devices||[])}
@@ -2313,9 +2314,12 @@ function lampCol(l){if(!lampIsOn(l.id))return '#6d5a4c';const ll=S&&S.liveLamps&
 function roomStatus(r){const ls=lightsIn(r.id),n=ls.filter(l=>lampIsOn(l.id)).length;
   if(r.tv&&S&&S.sync)return t('tv synct');if(r.scene)return t(r.sceneName||'Scène');
   if(!ls.length)return t('nog geen lampen');return n?t('{a} van {b} aan',{a:n,b:ls.length}):t('alles uit')}
+/* Huis: scènes pas na de knop Scène (voor het hele huis); in een kamer staan ze er altijd */
+let houseSceneOpen=false;
 function homeUI(){if(!S)return;roomBar();const house=isHouse();
   $('housePanel').classList.toggle('hidden',!house);$('homeMapPanel').classList.toggle('hidden',house);$('ctrlPanel').classList.toggle('hidden',house);
   $('homePeople').classList.toggle('hidden',!(SRV&&house));
+  $('scenePanel').classList.toggle('hidden',house&&!houseSceneOpen);$('houseScene').classList.toggle('on',houseSceneOpen);
   if(house){houseCards();return}
   const rid=homeRoomId(),rm=roomById(rid)||{},ls=lampsIn(rid),lights=ls.filter(isLight),isTv=!!rm.tv;
   $('homeRoomTitle').classList.toggle('hidden',!multi());
