@@ -756,6 +756,12 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <div class="row" style="margin-top:8px"><button class="btn gold grow" id="gwSave">Opslaan en testen</button><button class="btn" id="gwTest">Testen</button><button class="btn red" id="gwClear">Wissen</button></div>
   <div class="hint" id="gwState"></div>
   </details>
+  <details class="apigrp" id="poPanel"><summary><b>Meldingen (Pushover)</b> <span class="hint" id="poState"></span></summary>
+    <p style="margin:6px 0 8px">Meldingen op je telefoon, bijvoorbeeld als de was klaar is. Je <b>gebruikerssleutel</b> staat op <b>pushover.net</b> bovenaan na het inloggen. Maak daar onder <i>Create an Application/API Token</i> een app "House hub" aan voor het <b>app-token</b>.</p>
+    <input type="password" id="poUser" placeholder="Gebruikerssleutel (user key)" autocomplete="off">
+    <input type="password" id="poToken" placeholder="App-token (API token)" autocomplete="off" style="margin-top:6px">
+    <div class="row" style="margin-top:8px"><button class="btn gold grow" id="poSave">Opslaan en testen</button><button class="btn" id="poTest">Testen</button><button class="btn red" id="poClear">Wissen</button></div>
+  </details>
   <details class="apigrp" id="cfPanel"><summary><b>Cloudflare (inloggen via hub.stacklines.nl)</b> <span class="hint" id="cfState"></span></summary>
 
     <p class="hint" style="margin:6px 0">Hiermee zet de hub de e-mailadressen ook in Cloudflare, zodat ze echt binnen kunnen. Maak op <b>dash.cloudflare.com</b> bij Mijn profiel, API-tokens een eigen token met het recht <i>Account · Access: Apps and Policies · Edit</i> en plak het hier. Het blijft op de server.</p>
@@ -1883,6 +1889,11 @@ function mensenRender(r){mensenData=r;const box=$('mensenList'),loc=I18N.lang===
     for(const d of fw)body.append(wifiRow(d,false))}}
 $('mensenAdd').onclick=async()=>{const v=$('mensenNew').value.trim();if(!v)return;await api('/api/people/save',{id:'',name:v});$('mensenNew').value='';peopleLoad(true);peopleAdmin()};
 $('cfSave').onclick=async()=>{const v=$('cfToken').value.trim();if(!v)return;toast(t('Bezig...'));const r=await api('/api/cloudflare/save',{token:v});$('cfToken').value='';toast(r.message||'');peopleAdmin()};
+async function poLoad(){try{const r=await api('/api/pushover');$('poState').textContent='· '+t(r.configured?'ingevuld':'nog niet ingevuld')}catch(e){}}
+const poDone=r=>{toast(r.message||'');$('poState').textContent='· '+t(r.configured?'ingevuld':'nog niet ingevuld')};
+$('poSave').onclick=async()=>{const u=$('poUser').value.trim(),k=$('poToken').value.trim();if(!u||!k){toast(t('Vul de gebruikerssleutel en het app-token in'));return}const r=await api('/api/pushover/save',{user:u,token:k});if(r.ok){$('poUser').value='';$('poToken').value=''}poDone(r)};
+$('poTest').onclick=async()=>poDone(await api('/api/pushover/test',{}));
+$('poClear').onclick=async()=>poDone(await api('/api/pushover/clear',{}));
 $('cfClear').onclick=async()=>{const r=await api('/api/cloudflare/clear',{});toast(r.message||'');peopleAdmin()};
 setInterval(()=>{if(S&&SRV&&curTab==='home')peopleLoad()},30000);
 /* Automatisch: alles uit als iemand weggaat (instellingen op de hub) */
@@ -2657,7 +2668,7 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(n==='energy')enLoad();
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();poLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(n==='energy')enLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
