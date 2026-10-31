@@ -206,6 +206,24 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .kbhist .lbl{font-family:inherit}
 .kbrow{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:3px 0;border-bottom:1px solid rgba(58,28,14,.12)}
 .kbrow span{font-weight:600}
+.people{display:flex;flex-wrap:wrap;gap:12px}
+.person{display:flex;flex-direction:column;align-items:center;width:64px;font-size:13px;text-align:center}
+.person canvas{image-rendering:pixelated;width:52px;height:72px}
+.person.away{opacity:.4}
+.person small{opacity:.75;font-size:11px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.aved{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:8px}
+.aved canvas{image-rendering:pixelated;width:104px;height:144px;background:var(--cream);border:3px solid var(--ink)}
+.aved .opts{flex:1;min-width:200px}
+.aved .lbl{font-size:13px;margin:6px 0 3px}
+.swrow{display:flex;flex-wrap:wrap;gap:5px}
+.swrow button{width:28px;height:28px;border:3px solid var(--ink);padding:0;cursor:pointer}
+.swrow button.on{box-shadow:0 0 0 3px var(--gold)}
+.swrow .btn{width:auto;height:auto;padding:4px 8px;font-size:13px}
+.netrow{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
+.netrow .meta{font-size:13px;opacity:.75;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.netrow .row{flex-wrap:wrap;gap:6px;margin-top:6px}
+.dotg{display:inline-block;width:9px;height:9px;border-radius:50%;background:#4e8a3c;margin-right:5px}
+body.guest .rcard.add{display:none!important}
 #gate{position:fixed;inset:0;z-index:50;background:var(--void);overflow:auto;padding:0 16px}
 body.gated .tabbar,body.gated main{display:none!important}
 /* Gast: alleen Bediening, niets wat iets instelt of opslaat */
@@ -270,6 +288,12 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 </section>
 
 <!-- Huis: een kaart per kamer (alleen met meer dan één kamer) -->
+<section class="panel srvonly hidden" id="homePeople">
+  <h2>Thuis</h2>
+  <div class="people" id="peopleRow"></div>
+  <details id="myAvatarBox" style="margin-top:10px"><summary><b>Mijn poppetje</b></summary><div id="myAvatarEd"></div></details>
+</section>
+
 <section class="panel hidden" id="housePanel">
   <h2>Huis</h2>
   <p id="houseSum"></p>
@@ -677,6 +701,14 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <div class="hint hidden" id="perAppHint">Hiervoor heeft de app "Gebruikstoegang" nodig: tv-instellingen, Apps, Speciale app-toegang, Gebruikstoegang, Ambilight Lampen aan.</div>
   <div id="appList"></div>
   <div class="row" style="margin-top:10px"><select id="appAdd" class="grow"><option value="">App toevoegen...</option></select></div>
+</section>
+
+<section class="panel srvonly ownonly" id="netPanel">
+  <h2>Gezien op je wifi</h2>
+  <p style="margin:0 0 8px">Telefoons, laptops en andere apparaten die op je wifi zijn geweest (je lampen en andere apparaten van het huis staan er niet tussen). Koppel een apparaat aan iemand, dan zie je onder Bediening wie er thuis is.</p>
+  <div id="netList"></div>
+  <h2 style="margin-top:14px">Mensen</h2>
+  <div id="peopleList"></div>
 </section>
 
 <section class="panel srvonly ownonly" id="accPanel">
@@ -1598,6 +1630,99 @@ function houseDevs(){const devs=SRV?lamps.filter(isDev):[],box=$('houseDevs');$(
   for(const d of box.children){const l=lamps.find(x=>x.id===d.dataset.id);if(!l)continue;const rm=roomById(lampRoom(l));
     d.querySelector('b').textContent=l.name;d.querySelector('small').textContent=[rm?rm.name:t('zonder kamer'),devSummary(l)].filter(Boolean).join(' · ');
     airFill(d.querySelector('.hdevbody'),[l])}}
+/* ---------- Mensen en poppetjes (House hub) ---------- */
+const AV={skin:['#f6d3b3','#e9b48a','#c68a5e','#8d5a3b','#5a3a26'],hairColor:['#2a1a12','#5a3a1e','#a0622a','#d8a24a','#efe2bd','#c0392b','#7a4ab0','#3a7ad0','#8a8a92'],
+  eyes:['#6a4a2a','#4a7ab0','#3a9a6a','#7a8a9a','#2a2a3a'],
+  shirt:['#c0392b','#e07a2a','#e8b84a','#4e8a3c','#3a7ad0','#7a4ab0','#d86aa0','#f2f2f2','#3a3a44'],pants:['#2c3e6a','#3a3a44','#6a4a2a','#8a8a92'],
+  hair:[['kort','Kort'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['kaal','Kaal']],
+  extra:[['geen','Niets'],['bril','Bril'],['pet','Pet'],['oren','Kattenoren'],['baard','Baard'],['strik','Strik']]};
+const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0'};
+/* Pixelpoppetje in Stardew-achtige stijl (eigen tekening): groot hoofd, grote ogen met glimlicht, drie tinten per kleur,
+   donkere omlijning en (sticker) een witte rand. Raster 26 x 36; c = canvas. */
+function avShade(hex,f){const n=parseInt(hex.slice(1),16),ch=[n>>16,(n>>8)&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(f<0?v*(1+f):v+(255-v)*f))));return '#'+ch.map(v=>v.toString(16).padStart(2,'0')).join('')}
+function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=36,G=[...Array(Hh)].map(()=>Array(W).fill(null)),ox=2,oy=1;
+  const p=(x,y,col)=>{x+=ox;y+=oy;if(x>=0&&x<W&&y>=0&&y<Hh)G[y][x]=col},rect=(x0,y0,x1,y1,col)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)p(x,y,col)};
+  const S=a.skin,Sd=avShade(S,-.18),Sl=avShade(S,.25),H=a.hairColor,Hd=avShade(H,-.35),Hl=avShade(H,.35),T=a.shirt,Td=avShade(T,-.3),Tl=avShade(T,.3),P=a.pants,Pd=avShade(P,-.35),E=a.eyes||'#4a7ab0';
+  const long=a.hair==='lang';
+  if(long){rect(3,6,5,19,Hd);rect(16,6,18,19,Hd);rect(4,6,5,18,H);rect(16,6,17,18,H)}                 // lang haar achter
+  if(a.hair==='staart'){rect(17,7,19,16,H);rect(19,9,19,15,Hd);p(18,8,Hl)}
+  // lichaam
+  rect(5,16,16,23,T);rect(4,17,5,22,T);rect(16,17,17,22,T);rect(14,17,16,23,Td);rect(17,17,17,22,Td);rect(6,17,7,21,Tl);
+  rect(9,16,12,17,Sl);p(10,18,Sl);p(11,18,Sl);                                                     // halsopening
+  rect(4,23,5,23,S);rect(16,23,17,23,S);p(17,23,Sd);                                                 // handen
+  rect(6,24,15,28,P);rect(13,24,15,28,Pd);rect(10,26,11,28,null);                                     // broek met beenspleet
+  rect(6,29,9,29,'#5a3a26');rect(12,29,15,29,'#5a3a26');p(9,29,'#3e281a');p(15,29,'#3e281a');         // schoenen
+  // hoofd
+  rect(5,4,16,14,S);p(5,4,null);p(16,4,null);p(5,14,null);p(16,14,null);rect(15,8,16,13,Sd);rect(7,14,15,14,Sd);rect(10,15,11,15,Sd);
+  rect(6,5,8,6,Sl);
+  // ogen: wit glimlicht + iris
+  const eye=(x,flip)=>{p(x,9,flip?E:'#ffffff');p(x+1,9,flip?'#ffffff':E);p(x,10,flip?avShade(E,-.4):E);p(x+1,10,flip?E:avShade(E,-.4))};
+  eye(7,false);eye(13,true);
+  p(6,12,'#f2a0a0');p(15,12,'#e89090');p(10,12,Sd);p(11,12,avShade(S,-.3));                          // blosjes en mond
+  // haar
+  if(a.hair!=='kaal'){rect(5,2,16,6,H);rect(4,3,17,5,H);rect(7,2,13,2,Hl);rect(8,3,11,3,Hl);
+    for(const x of [5,6,7,9,10,12,14,15,16])p(x,7,H);for(const x of [5,6,15,16])p(x,8,H);p(8,6,Hd);p(11,6,Hd);p(13,7,Hd);p(16,7,Hd);p(5,8,Hd);rect(4,5,4,7,Hd);rect(17,5,17,7,Hd)}
+  else{p(8,4,Sl);p(9,4,Sl)}
+  if(a.hair==='knot'){rect(8,0,13,1,H);p(9,0,Hl);p(10,0,Hl);p(13,1,Hd)}
+  if(a.hair==='krul'){for(const [x,y] of [[3,4],[3,6],[18,4],[18,6],[6,1],[9,1],[12,1],[15,1],[4,8],[17,8]])p(x,y,H);for(const [x,y] of [[6,3],[10,4],[14,3],[12,5]])p(x,y,Hd)}
+  // extra's
+  if(a.extra==='bril'){for(const x0 of [6,12]){rect(x0,8,x0+3,8,'#3a2a2a');rect(x0,11,x0+3,11,'#3a2a2a');p(x0,9,'#3a2a2a');p(x0,10,'#3a2a2a');p(x0+3,9,'#3a2a2a');p(x0+3,10,'#3a2a2a')}p(10,9,'#3a2a2a');p(11,9,'#3a2a2a')}
+  if(a.extra==='pet'){rect(4,1,17,5,'#c0392b');rect(6,1,15,1,'#e05a4a');rect(4,6,18,6,'#8e2a1f');p(10,3,'#f2f2f2');p(11,3,'#f2f2f2')}
+  if(a.extra==='oren'){for(const [bx,d] of [[5,1],[16,-1]]){p(bx,0,H);p(bx,1,H);p(bx+d,1,H);p(bx,2,H);p(bx+d,2,H);p(bx+2*d,2,H);p(bx+d,2,'#f2a0b0')}}
+  if(a.extra==='baard'){rect(6,11,15,15,H);rect(7,15,14,16,H);rect(13,12,15,15,Hd);p(10,12,avShade(S,-.3));p(11,12,avShade(S,-.3))}
+  if(a.extra==='strik'){rect(13,1,17,3,'#e05a8a');p(15,2,'#a0305a');p(13,1,'#f28ab0')}
+  // omlijning: lege vakjes naast een getekend vakje worden donker (8 buren), daarna een witte stickerrand
+  const out=G.map(r=>r.slice()),dark='#3b2417';
+  for(let y=0;y<Hh;y++)for(let x=0;x<W;x++)if(!G[y][x]){let n=false;for(let dy=-1;dy<=1&&!n;dy++)for(let dx=-1;dx<=1;dx++){const yy=y+dy,xx=x+dx;if((dx||dy)&&G[yy]&&G[yy][xx]){n=true;break}}if(n)out[y][x]=dark}
+  if(sticker){const o2=out.map(r=>r.slice());for(let y=0;y<Hh;y++)for(let x=0;x<W;x++)if(!out[y][x]){for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])if(out[y+dy]&&out[y+dy][x+dx]===dark){o2[y][x]='#ffffff';break}}out.splice(0,Hh,...o2)}
+  c.width=W;c.height=Hh;const g=c.getContext('2d');g.clearRect(0,0,W,Hh);
+  for(let y=0;y<Hh;y++)for(let x=0;x<W;x++)if(out[y][x]){g.fillStyle=out[y][x];g.fillRect(x,y,1,1)}
+  return c}
+let peopleData=null,peopleAt=0,netData=null;
+async function peopleLoad(force){if(!SRV||!S)return;if(!force&&Date.now()-peopleAt<20000&&peopleData){peopleRender();return}
+  try{const r=await api('/api/people');peopleData=r.people||[];peopleAt=Date.now()}catch(e){return}peopleRender()}
+function peopleRender(){const box=$('peopleRow'),list=peopleData||[];$('homePeople').classList.toggle('hidden',!(SRV&&isHouse()));
+  box.innerHTML=list.length?'':`<p class="hint" style="margin:0">${esc(t('Nog niemand. Maak hieronder je poppetje.'))}</p>`;
+  const loc=I18N.lang==='en'?'en-GB':'nl-NL';
+  for(const p of list.slice().sort((a,b)=>(b.home-a.home)||a.name.localeCompare(b.name))){const d=document.createElement('div');d.className='person'+(p.home?'':' away');
+    d.append(drawAvatar(document.createElement('canvas'),p.avatar));const n=document.createElement('b');n.textContent=p.name;d.append(n);
+    const sm=document.createElement('small');sm.textContent=p.home?t('thuis'):p.last?t('weg sinds {d}',{d:new Date(p.last).toLocaleString(loc,{weekday:'short',hour:'2-digit',minute:'2-digit'})}):t('nog niet gezien');d.append(sm);box.append(d)}
+  const me=list.find(p=>p.me);if(!$('myAvatarEd').dataset.done){$('myAvatarEd').dataset.done='1';avEditor($('myAvatarEd'),me?me.avatar:{},null,()=>peopleLoad(true))}
+  if(S&&S.role==='owner'&&curTab==='settings')peopleAdmin()}
+/* Editor: voorbeeld + keuzes; opslaan voor jezelf (id null) of voor een persoon (hoofdgebruiker) */
+function avEditor(box,start,personId,done){const a={...avDefault,...(start||{})};box.innerHTML='';const w=document.createElement('div');w.className='aved';
+  const cv=drawAvatar(document.createElement('canvas'),a),opts=document.createElement('div');opts.className='opts';w.append(cv,opts);box.append(w);
+  const redraw=()=>{drawAvatar(cv,a);opts.querySelectorAll('[data-k]').forEach(b=>b.classList.toggle('on',a[b.dataset.k]===b.dataset.v))};
+  const row=(k,label,vals,isCol)=>{const l=document.createElement('div');l.className='lbl';l.textContent=t(label);const r=document.createElement('div');r.className='swrow';
+    for(const v of vals){const b=document.createElement('button');b.dataset.k=k;b.dataset.v=isCol?v:v[0];if(isCol)b.style.background=v;else{b.className='btn';b.textContent=t(v[1])}
+      b.onclick=()=>{a[k]=b.dataset.v;redraw()};r.append(b)}opts.append(l,r)};
+  row('skin','Huid',AV.skin,true);row('eyes','Ogen',AV.eyes,true);row('hair','Haar',AV.hair,false);row('hairColor','Haarkleur',AV.hairColor,true);row('shirt','Shirt',AV.shirt,true);row('pants','Broek',AV.pants,true);row('extra','Extra',AV.extra,false);
+  const save=document.createElement('button');save.className='btn gold';save.style.cssText='width:100%;margin-top:8px';save.textContent=t('Poppetje opslaan');
+  save.onclick=async()=>{const r=await api('/api/people/avatar',{id:personId||'',avatar:a});toast(r.message||'');if(r.people){peopleData=r.people;peopleAt=Date.now()}if(done)done()};
+  box.append(save);redraw()}
+/* Hoofdgebruiker: gezien op de wifi (koppelen aan iemand, verbergen) en de mensen (naam, poppetje, verwijderen) */
+async function peopleAdmin(){if(!S||S.role!=='owner')return;let r;try{r=await api('/api/net/devices')}catch(e){return}netData=r.devices||[];
+  const loc=I18N.lang==='en'?'en-GB':'nl-NL',list=$('netList'),ppl=peopleData||[];list.innerHTML=netData.length?'':`<p class="hint">${esc(t('Nog niets gezien.'))}</p>`;
+  for(const d of netData){const el=document.createElement('div');el.className='netrow';
+    const vendor=d.mac.startsWith('a4:38:cc')?'Nintendo':d.random?t('telefoon of laptop (privé-adres)'):'';
+    el.innerHTML=`<div class="row" style="margin:0;align-items:center"><b class="grow">${d.home?'<i class="dotg"></i>':''}</b><span class="badge"></span></div>
+      <div class="meta">${esc([d.ip,vendor,d.mac,t('laatst {d}',{d:new Date(d.last).toLocaleString(loc,{weekday:'short',hour:'2-digit',minute:'2-digit'})})].filter(Boolean).join(' · '))}</div>
+      <div class="row"><select class="grow"><option value="">${esc(t('Dit is…'))}</option>${ppl.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}<option value="+">${esc(t('+ Nieuw persoon'))}</option></select><button class="btn" data-h="1">${esc(t('Verbergen'))}</button></div>`;
+    el.querySelector('b').append(document.createTextNode(d.name||t('Naamloos apparaat')));el.querySelector('.badge').textContent=d.person||t('niet gekoppeld');
+    const sel=el.querySelector('select');if(d.person){const p=ppl.find(x=>x.name===d.person);if(p)sel.value=p.id}
+    sel.onchange=async()=>{let id=sel.value;if(!id)return;let name='';if(id==='+'){name=(prompt(t('Naam van deze persoon'))||'').trim();if(!name){sel.value='';return}id=''}
+      const r=await api('/api/people/save',{id,name,addMac:d.mac});if(r.people){peopleData=r.people;peopleAt=Date.now()}peopleRender();peopleAdmin()};
+    el.querySelector('[data-h]').onclick=async()=>{await api('/api/net/hide',{mac:d.mac,hide:true});peopleAdmin()};
+    list.append(el)}
+  const pl=$('peopleList');pl.innerHTML='';
+  for(const p of ppl){const el=document.createElement('details');el.className='netrow';
+    el.innerHTML=`<summary style="display:flex;align-items:center;gap:10px;cursor:pointer"></summary><div class="ped"></div><button class="btn red" style="margin-top:8px">${esc(t('Persoon verwijderen'))}</button>`;
+    const sm=el.querySelector('summary');sm.append(drawAvatar(document.createElement('canvas'),p.avatar));sm.querySelector('canvas').style.cssText='width:26px;height:36px;image-rendering:pixelated';
+    const nm=document.createElement('b');nm.textContent=p.name+(p.home?' · '+t('thuis'):'');sm.append(nm);
+    el.ontoggle=()=>{if(el.open&&!el.dataset.ed){el.dataset.ed='1';avEditor(el.querySelector('.ped'),p.avatar,p.id,()=>{peopleRender();peopleAdmin()})}};
+    el.querySelector('.btn.red').onclick=async()=>{if(!confirm(t('{n} verwijderen?',{n:p.name})))return;const r=await api('/api/people/save',{id:p.id,delete:true});if(r.people){peopleData=r.people;peopleAt=Date.now()}peopleRender();peopleAdmin()};
+    pl.append(el)}}
+setInterval(()=>{if(S&&SRV&&curTab==='home')peopleLoad()},30000);
 /* ---------- Toegang (House hub) ---------- */
 let gateTimer=0;
 function accessGate(){if(!document.body.classList.contains('gated')){document.body.classList.add('gated');$('gate').classList.remove('hidden')}gateCheck()}
@@ -2161,6 +2286,7 @@ function roomStatus(r){const ls=lightsIn(r.id),n=ls.filter(l=>lampIsOn(l.id)).le
   if(!ls.length)return t('nog geen lampen');return n?t('{a} van {b} aan',{a:n,b:ls.length}):t('alles uit')}
 function homeUI(){if(!S)return;roomBar();const house=isHouse();
   $('housePanel').classList.toggle('hidden',!house);$('homeMapPanel').classList.toggle('hidden',house);$('ctrlPanel').classList.toggle('hidden',house);
+  $('homePeople').classList.toggle('hidden',!(SRV&&house));
   if(house){houseCards();return}
   const rid=homeRoomId(),rm=roomById(rid)||{},ls=lampsIn(rid),lights=ls.filter(isLight),isTv=!!rm.tv;
   $('homeRoomTitle').classList.toggle('hidden',!multi());
@@ -2319,7 +2445,7 @@ function liveFrom(s){
 }
 async function load(){
   S=await api('/api/state');
-  hostMode(S);
+  hostMode(S);if(SRV)peopleLoad(true);
   if(!dirty){syncLayouts(true);curRoom='';lamps=S.lamps.map(l=>airNorm({...l}));settings=S.settings;groups=(S.groups||[]).map(g=>JSON.parse(JSON.stringify(g)));base=stateSnapshot();if(!groups.find(g=>g.id===setTarget))setTarget='';groupUI();showSettings()}
   else{syncLayouts(false);for(const nl of S.lamps)if(!lamps.find(l=>l.id===nl.id)){const x=airNorm({...nl});lamps.push(x);if(base)base.lamps.push(lampFields(x))}}
   lamps=lamps.filter(l=>S.lamps.find(n=>n.id===l.id));
@@ -2327,7 +2453,7 @@ async function load(){
   liveFrom(S);
   chips();showLamp();lampList();draw();
 }
-async function poll(){try{const s=await api('/api/state');S=s;roleUI(s);syncLayouts(false);useRoom(wantRoom());liveFrom(s);chips();showLamp();lampList();draw();airAll()}catch(e){}}
+async function poll(){try{const s=await api('/api/state');S=s;roleUI(s);if(!peopleData&&SRV)peopleLoad();syncLayouts(false);useRoom(wantRoom());liveFrom(s);chips();showLamp();lampList();draw();airAll()}catch(e){}}
 // Tabbladen
 function showTab(n){
   if(n==='settings'&&grpOpen){grpOpen=null;placeSettings()}
@@ -2336,12 +2462,12 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();accLoad()}if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(n==='energy')enLoad();
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();accLoad();peopleLoad(true).then(peopleAdmin)}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(n==='energy')enLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
 $('roomLampSettings').onclick=()=>{showTab('lamps');selectLamp(selLamp);setTimeout(()=>{const r=[...$('lampList').children].find(r=>r.dataset.id===selLamp);(r||$('lampDetailPanel')).scrollIntoView({block:'start'})},50)};
-(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang);hostMode(s)}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';try{homeView=localStorage.getItem('homeRoom')||''}catch(e){}showTab(tb);load()})();
+(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang);hostMode(s);document.body.classList.toggle('guest',s.role==='guest')}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';homeView='house';showTab(tb);load()})();
 const fast=()=>S&&(S.sync||S.activeScene||(S.rooms||[]).some(r=>r.scene));
 setInterval(()=>{if(fast())poll()},500);
 setInterval(()=>{if(!fast())poll()},1500);
