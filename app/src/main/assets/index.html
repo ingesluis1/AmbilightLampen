@@ -1679,12 +1679,13 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=
   rect(5,4,16,14,S);p(5,4,null);p(16,4,null);p(5,14,null);p(16,14,null);rect(15,8,16,13,Sd);rect(7,14,15,14,Sd);rect(10,15,11,15,Sd);
   rect(6,5,8,6,Sl);
   // ogen: wit glimlicht + iris
-  const eye=(x,flip)=>{p(x,9,flip?E:'#ffffff');p(x+1,9,flip?'#ffffff':E);p(x,10,flip?avShade(E,-.4):E);p(x+1,10,flip?E:avShade(E,-.4))};
-  eye(7,false);eye(13,true);rect(7,8,8,8,avShade(H,-.55));rect(13,8,14,8,avShade(H,-.55));
-  p(6,12,'#f2a0a0');p(15,12,'#e89090');p(10,12,Sd);p(11,12,avShade(S,-.3));                          // blosjes en mond
+  // ogen (2x2): boven lichte iris + donkere pupil, onder wit glimlicht + iris; links en rechts gespiegeld, neusbrug ertussen
+  const eye=(x,flip)=>{const Ed=avShade(E,-.6),El=avShade(E,.45);p(x,9,flip?Ed:El);p(x+1,9,flip?El:Ed);p(x,10,flip?E:'#ffffff');p(x+1,10,flip?'#ffffff':E)};
+  eye(8,false);eye(12,true);rect(8,8,9,8,avShade(H,-.55));rect(12,8,13,8,avShade(H,-.55));
+  p(7,11,'#f2a0a0');p(14,11,'#e89090');p(10,12,Sd);p(11,12,avShade(S,-.3));                          // blosjes en mond
   // haar
   if(a.hair!=='kaal'&&a.hair!=='afro'){rect(5,2,16,6,H);rect(4,3,17,5,H);rect(7,2,13,2,Hl);rect(8,3,11,3,Hl);
-    for(const x of [5,6,7,9,10,12,14,15,16])p(x,7,H);for(const x of [5,6,15,16])p(x,8,H);p(8,6,Hd);p(11,6,Hd);p(13,7,Hd);p(16,7,Hd);p(5,8,Hd);rect(4,5,4,7,Hd);rect(17,5,17,7,Hd)}
+    for(const x of [5,6,7,9,10,12,14,15,16])p(x,7,H);rect(5,8,6,12,H);rect(15,8,16,12,H);p(6,12,Hd);p(16,9,Hd);p(16,10,Hd);p(16,11,Hd);p(5,13,H);p(16,13,Hd);p(8,6,Hd);p(11,6,Hd);p(13,7,Hd);p(16,7,Hd);p(5,8,Hd);rect(4,5,4,7,Hd);rect(17,5,17,7,Hd)}
   else if(a.hair==='kaal'){p(8,4,Sl);p(9,4,Sl)}
   if(a.hair==='knot'){rect(8,0,13,1,H);p(9,0,Hl);p(10,0,Hl);p(13,1,Hd)}
   if(a.hair==='krul'){for(const [x,y] of [[3,4],[3,6],[18,4],[18,6],[6,1],[9,1],[12,1],[15,1],[4,8],[17,8]])p(x,y,H);for(const [x,y] of [[6,3],[10,4],[14,3],[12,5]])p(x,y,Hd)}
@@ -1697,7 +1698,7 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=
   if(a.extra==='heks'){rect(3,5,18,6,'#4a2a6a');rect(5,3,16,4,'#5a3a7a');rect(7,1,14,2,'#5a3a7a');rect(9,-1,12,0,'#5a3a7a');p(12,-2,'#5a3a7a');p(13,-3,'#5a3a7a');rect(5,4,16,4,'#e8b84a');p(14,3,'#e8b84a')}
   if(a.extra==='zonnehoed'){rect(1,4,20,5,'#e8c06a');rect(2,6,19,6,'#c89a3a');rect(5,1,16,3,'#e8c06a');rect(6,0,15,0,'#f2d68a');rect(5,3,16,3,'#c0392b')}
   if(a.extra==='hoofddoek'){const C='#d8a0b0',Cd=avShade('#d8a0b0',-.25);rect(4,1,17,8,C);rect(3,4,4,15,C);rect(17,4,18,15,C);rect(4,13,17,16,C);rect(17,6,18,15,Cd);rect(6,15,15,16,Cd);
-    rect(6,7,15,14,S);p(6,7,C);p(15,7,C);rect(15,9,15,13,Sd);rect(7,14,14,14,Sd);eye(7,false);eye(13,true);p(6,12,'#f2a0a0');p(15,12,'#e89090');p(10,12,Sd);p(11,12,avShade(S,-.3))}
+    rect(6,7,15,14,S);p(6,7,C);p(15,7,C);rect(15,9,15,13,Sd);rect(7,14,14,14,Sd);eye(8,false);eye(12,true);p(7,11,'#f2a0a0');p(14,11,'#e89090');p(10,12,Sd);p(11,12,avShade(S,-.3))}
   if(a.extra==='strik'){rect(13,1,17,3,'#e05a8a');p(15,2,'#a0305a');p(13,1,'#f28ab0')}
   // omlijning: lege vakjes naast een getekend vakje worden donker (8 buren), daarna een witte stickerrand
   // omlijning in een donkere tint van het deel ernaast (haar paarsig bij paars haar, huid donkerroze), zoals bij handgetekende sprites
