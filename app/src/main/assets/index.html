@@ -206,6 +206,15 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .kbhist .lbl{font-family:inherit}
 .kbrow{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:3px 0;border-bottom:1px solid rgba(58,28,14,.12)}
 .kbrow span{font-weight:600}
+#gate{position:fixed;inset:0;z-index:50;background:var(--void);overflow:auto;padding:0 16px}
+body.gated .tabbar,body.gated main{display:none!important}
+/* Gast: alleen Bediening, niets wat iets instelt of opslaat */
+body.guest .tabbar .btn:not([data-tab=home]){display:none!important}
+body.guest .tabbar{grid-template-columns:1fr!important}
+body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneSaveRow{display:none!important}
+.accrow{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
+.accrow .meta{font-size:13px;opacity:.75;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
+.accrow .row{flex-wrap:wrap;gap:6px;margin-top:6px}
 .hdev{background:var(--cream);border:3px solid var(--ink);margin-top:8px}
 .hdev>summary{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;list-style:none}
 .hdev>summary::-webkit-details-marker{display:none}
@@ -267,6 +276,7 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
   <div class="house" id="houseCards"></div>
   <div class="row" style="margin-top:12px"><button class="btn gold grow" id="houseOff">Hele huis uit</button><button class="btn grow" id="houseOn">Alles aan</button></div>
   <div class="hint" id="houseHint"></div>
+  <div class="banner hidden ownonly" id="accBanner" style="margin-top:10px;cursor:pointer"></div>
   <div id="houseDevWrap" class="hidden"><h2 style="margin-top:14px">Apparaten</h2><div id="houseDevs"></div></div>
 </section>
 
@@ -669,6 +679,12 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
   <div class="row" style="margin-top:10px"><select id="appAdd" class="grow"><option value="">App toevoegen...</option></select></div>
 </section>
 
+<section class="panel srvonly ownonly" id="accPanel">
+  <h2>Toegang</h2>
+  <p style="margin:0 0 8px">Apparaten die de House hub willen gebruiken. Een gast ziet alleen Bediening; een hoofdgebruiker kan alles.</p>
+  <div id="accList"></div>
+</section>
+
 <section class="panel srvonly" id="enePanel">
   <h2>Energie (Enelogic)</h2>
   <p style="margin:0 0 8px">Verbruik van je slimme meter via Enelogic. Vul de API-sleutel van je Enelogic-account in. Hij blijft op de server.</p>
@@ -745,6 +761,15 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
     <select id="sheetFx"><option value="none">Vast</option><option value="breathe">Ademen (kleur golft zacht)</option><option value="pulse">Pulseren (helderheid)</option><option value="flicker">Flikkeren (kaars)</option><option value="fire">Haardvuur</option><option value="cycle">Kleurenloop</option><option value="wave">Golf door de kamer</option><option value="twinkle">Twinkelen</option><option value="storm">Onweer</option><option value="party">Feest</option></select>
   </div>
 </div>
+
+<!-- House hub: wachtscherm voor een apparaat zonder toegang -->
+<div id="gate" class="hidden"><section class="panel" style="max-width:420px;margin:40px auto">
+  <h2>House hub</h2>
+  <p id="gateText">Dit apparaat heeft nog geen toegang. Geef het een naam en vraag toegang. De hoofdgebruiker keurt het dan goed.</p>
+  <div id="gateForm"><input type="text" id="gateName" placeholder="Naam van dit apparaat, bijvoorbeeld Telefoon Sam" maxlength="40" autocomplete="off">
+  <button class="btn gold" id="gateAsk" style="width:100%;margin-top:8px">Toegang vragen</button></div>
+  <p class="hint hidden" id="gateWait" style="margin-top:10px"></p>
+</section></div>
 
 <nav class="tabbar">
   <button class="btn" data-tab="home"><span class="ic">▶</span>Bediening</button>
@@ -830,6 +855,8 @@ function airIcon(look,size,px){const wall=/^airco-wand/.test(look),c=preview(g=>
   c.className='devic';c.style.width=c.style.height=px+'px';return c}
 async function api(path, body){
   const r = await fetch(path, body===undefined?{}:{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+  // House hub: dit apparaat heeft (nog) geen toegang -> wachtscherm
+  if(r.status===401){accessGate();throw new Error('geen toegang')}
   return r.json();
 }
 
@@ -1571,6 +1598,34 @@ function houseDevs(){const devs=SRV?lamps.filter(isDev):[],box=$('houseDevs');$(
   for(const d of box.children){const l=lamps.find(x=>x.id===d.dataset.id);if(!l)continue;const rm=roomById(lampRoom(l));
     d.querySelector('b').textContent=l.name;d.querySelector('small').textContent=[rm?rm.name:t('zonder kamer'),devSummary(l)].filter(Boolean).join(' · ');
     airFill(d.querySelector('.hdevbody'),[l])}}
+/* ---------- Toegang (House hub) ---------- */
+let gateTimer=0;
+function accessGate(){if(!document.body.classList.contains('gated')){document.body.classList.add('gated');$('gate').classList.remove('hidden')}gateCheck()}
+async function gateCheck(){let st;try{st=await (await fetch('/api/access/status')).json()}catch(e){return}
+  if(st.role&&st.role!=='none'){location.reload();return}
+  const wait=st.state==='pending';$('gateForm').classList.toggle('hidden',wait);$('gateWait').classList.toggle('hidden',!wait);
+  if(wait)$('gateWait').textContent=t('Je verzoek is verstuurd als "{n}". Wacht tot de hoofdgebruiker je goedkeurt; deze pagina gaat dan vanzelf verder.',{n:st.name});
+  if(st.state==='denied')$('gateText').textContent=t('De hoofdgebruiker heeft dit apparaat geweigerd. Je kunt opnieuw toegang vragen.');
+  clearTimeout(gateTimer);gateTimer=setTimeout(gateCheck,5000)}
+$('gateAsk').onclick=async()=>{const n=$('gateName').value.trim();if(!n){$('gateName').focus();return}
+  try{const r=await (await fetch('/api/access/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})})).json();toast(r.message||'')}catch(e){}gateCheck()};
+/* Rol toepassen: gast ziet alleen Bediening */
+function roleUI(s){const g=s&&s.role==='guest';document.body.classList.toggle('guest',g);if(g&&curTab!=='home')showTab('home');
+  const n=s&&s.role==='owner'?s.accessPending||0:0;$('accBanner').classList.toggle('hidden',!n);
+  if(n)$('accBanner').textContent=t('{n} apparaat vraagt toegang. Tik om te bekijken.',{n})}
+$('accBanner').onclick=()=>{showTab('settings');setTimeout(()=>$('accPanel').scrollIntoView({block:'start'}),50)};
+const ACC_ROLE={owner:'Hoofdgebruiker',guest:'Gast',pending:'Wacht op goedkeuring',denied:'Geweigerd'};
+async function accLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/access/list')}catch(e){return}accRender(r.devices||[])}
+function accRender(list){const box=$('accList'),loc=I18N.lang==='en'?'en-GB':'nl-NL';box.innerHTML=list.length?'':`<p class="hint">${esc(t('Nog geen apparaten.'))}</p>`;
+  for(const d of list){const el=document.createElement('div');el.className='accrow';
+    const seen=d.lastSeen?new Date(d.lastSeen).toLocaleString(loc,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+    const ua=/iPhone|iPad/.test(d.ua)?'iPhone/iPad':/Android/.test(d.ua)?'Android':/Windows/.test(d.ua)?'Windows':/Mac OS/.test(d.ua)?'Mac':'';
+    el.innerHTML=`<div class="row" style="margin:0;align-items:center"><b class="grow"></b><span class="badge">${esc(t(ACC_ROLE[d.role]||d.role))}</span></div>
+      <div class="meta">${esc([d.me?t('dit apparaat'):'',ua,d.ip,seen?t('laatst {d}',{d:seen}):''].filter(Boolean).join(' · '))}</div>
+      <div class="row">${d.me?'':(d.role!=='guest'?`<button class="btn" data-r="guest">${esc(t('Gast'))}</button>`:'')+(d.role!=='owner'?`<button class="btn" data-r="owner">${esc(t('Hoofdgebruiker'))}</button>`:'')+(d.role==='pending'?`<button class="btn" data-r="denied">${esc(t('Weigeren'))}</button>`:'')+`<button class="btn red" data-r="delete">${esc(t('Verwijderen'))}</button>`}</div>`;
+    el.querySelector('b').textContent=d.name;
+    el.querySelectorAll('[data-r]').forEach(b=>b.onclick=async()=>{const r=await api('/api/access/set',{id:d.id,role:b.dataset.r});toast(r.message||'');if(r.devices)accRender(r.devices);poll()});
+    box.append(el)}}
 /* Opnieuw tekenen alleen als er iets veranderd is (anders verspringen knoppen onder je vinger) */
 function airFill(box,list){const key=JSON.stringify(list.map(l=>[l.id,l.name,airOf(l.id),kbOf(l.id)]))+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;
   box.innerHTML='';for(const l of list)box.append(isKat(l)?kbCard(l):airCard(l))}
@@ -2272,7 +2327,7 @@ async function load(){
   liveFrom(S);
   chips();showLamp();lampList();draw();
 }
-async function poll(){try{const s=await api('/api/state');S=s;syncLayouts(false);useRoom(wantRoom());liveFrom(s);chips();showLamp();lampList();draw();airAll()}catch(e){}}
+async function poll(){try{const s=await api('/api/state');S=s;roleUI(s);syncLayouts(false);useRoom(wantRoom());liveFrom(s);chips();showLamp();lampList();draw();airAll()}catch(e){}}
 // Tabbladen
 function showTab(n){
   if(n==='settings'&&grpOpen){grpOpen=null;placeSettings()}
@@ -2281,7 +2336,7 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings')eneLoad();if(n==='energy')enLoad();
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();accLoad()}if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(n==='energy')enLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
