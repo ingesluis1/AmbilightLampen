@@ -208,11 +208,11 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .kbrow span{font-weight:600}
 .people{display:flex;flex-wrap:wrap;gap:12px}
 .person{display:flex;flex-direction:column;align-items:center;width:64px;font-size:13px;text-align:center}
-.person canvas{image-rendering:pixelated;width:52px;height:72px}
+.person canvas{image-rendering:pixelated;width:52px;height:76px}
 .person.away{opacity:.4}
 .person small{opacity:.75;font-size:11px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
 .aved{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:8px}
-.aved canvas{image-rendering:pixelated;width:104px;height:144px;background:var(--cream);border:3px solid var(--ink)}
+.aved canvas{image-rendering:pixelated;width:104px;height:152px;background:var(--cream);border:3px solid var(--ink)}
 .aved .opts{flex:1;min-width:200px}
 .aved .lbl{font-size:13px;margin:6px 0 3px}
 .swrow{display:flex;flex-wrap:wrap;gap:5px}
@@ -1634,35 +1634,58 @@ function houseDevs(){const devs=SRV?lamps.filter(isDev):[],box=$('houseDevs');$(
 const AV={skin:['#f6d3b3','#e9b48a','#c68a5e','#8d5a3b','#5a3a26'],hairColor:['#2a1a12','#5a3a1e','#a0622a','#d8a24a','#efe2bd','#c0392b','#7a4ab0','#3a7ad0','#8a8a92'],
   eyes:['#6a4a2a','#4a7ab0','#3a9a6a','#7a8a9a','#2a2a3a'],
   shirt:['#c0392b','#e07a2a','#e8b84a','#4e8a3c','#3a7ad0','#7a4ab0','#d86aa0','#f2f2f2','#3a3a44'],pants:['#2c3e6a','#3a3a44','#6a4a2a','#8a8a92'],
-  hair:[['kort','Kort'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['kaal','Kaal']],
-  extra:[['geen','Niets'],['bril','Bril'],['pet','Pet'],['oren','Kattenoren'],['baard','Baard'],['strik','Strik']]};
-const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0'};
+  hair:[['kort','Kort'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
+  extra:[['geen','Niets'],['bril','Bril'],['pet','Pet'],['muts','Muts'],['heks','Heksenhoed'],['zonnehoed','Zonnehoed'],['hoofddoek','Hoofddoek'],['oren','Kattenoren'],['baard','Baard'],['strik','Strik']],
+  outfit:[['shirt','Shirt'],['jas','Jas'],['rok','Rok'],['tuinbroek','Tuinbroek'],['jurk','Jurk']]};
+const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0',outfit:'shirt'};
 /* Pixelpoppetje in Stardew-achtige stijl (eigen tekening): groot hoofd, grote ogen met glimlicht, drie tinten per kleur,
    donkere omlijning en (sticker) een witte rand. Raster 26 x 36; c = canvas. */
 function avShade(hex,f){const n=parseInt(hex.slice(1),16),ch=[n>>16,(n>>8)&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(f<0?v*(1+f):v+(255-v)*f))));return '#'+ch.map(v=>v.toString(16).padStart(2,'0')).join('')}
-function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=36,G=[...Array(Hh)].map(()=>Array(W).fill(null)),ox=2,oy=1;
+function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=38,G=[...Array(Hh)].map(()=>Array(W).fill(null)),ox=2,oy=4;
   const p=(x,y,col)=>{x+=ox;y+=oy;if(x>=0&&x<W&&y>=0&&y<Hh)G[y][x]=col},rect=(x0,y0,x1,y1,col)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)p(x,y,col)};
   const S=a.skin,Sd=avShade(S,-.18),Sl=avShade(S,.25),H=a.hairColor,Hd=avShade(H,-.35),Hl=avShade(H,.35),T=a.shirt,Td=avShade(T,-.3),Tl=avShade(T,.3),P=a.pants,Pd=avShade(P,-.35),E=a.eyes||'#4a7ab0';
   const long=a.hair==='lang';
   if(long){rect(3,6,5,19,Hd);rect(16,6,18,19,Hd);rect(4,6,5,18,H);rect(16,6,17,18,H)}                 // lang haar achter
+  if(a.hair==='afro'){for(let y=-2;y<=10;y++)for(let x=2;x<=19;x++){const dx=(x-10.5)/9,dy=(y-4)/7.2;if(dx*dx+dy*dy<=1)p(x,y,((x*7+y*3)%5===0)?Hd:((x+y)%6===0?Hl:H))}}
   if(a.hair==='staart'){rect(17,7,19,16,H);rect(19,9,19,15,Hd);p(18,8,Hl)}
-  // lichaam
-  rect(5,16,16,23,T);rect(4,17,5,22,T);rect(16,17,17,22,T);rect(14,17,16,23,Td);rect(17,17,17,22,Td);rect(6,17,7,21,Tl);
-  rect(9,16,12,17,Sl);p(10,18,Sl);p(11,18,Sl);                                                     // halsopening
-  rect(4,23,5,23,S);rect(16,23,17,23,S);p(17,23,Sd);                                                 // handen
-  rect(6,24,15,28,P);rect(13,24,15,28,Pd);rect(10,26,11,28,null);                                     // broek met beenspleet
-  rect(6,29,9,29,'#5a3a26');rect(12,29,15,29,'#5a3a26');p(9,29,'#3e281a');p(15,29,'#3e281a');         // schoenen
+  // lichaam (slank: lijf zo breed als het hoofd, losse armen, twee benen); kleding: shirt, jas, tuinbroek, jurk
+  const O=a.outfit||'shirt',W2='#ecebf2',W2d='#c9c8d6';
+  const arms=(col,cold)=>{rect(5,17,6,22,col);rect(15,17,16,22,col);p(5,17,cold);p(16,18,cold);p(16,19,cold);p(16,20,cold);p(16,21,cold);p(16,22,cold);
+    rect(5,23,6,23,S);rect(15,23,16,23,S);p(16,23,Sd)};
+  const legs=(col,cold)=>{rect(7,24,9,28,col);rect(12,24,14,28,col);p(9,24,cold);p(14,24,cold);rect(14,25,14,28,cold);
+    rect(7,29,9,29,'#5a3a26');rect(12,29,14,29,'#5a3a26');p(9,29,'#3e281a');p(14,29,'#3e281a')};
+  if(O==='jurk'){
+    rect(7,16,14,22,T);rect(6,16,15,16,T);rect(13,17,14,22,Td);rect(8,17,9,20,Tl);rect(9,16,12,16,Sl);p(10,17,Sl);p(11,17,Sl);
+    arms(T,Td);rect(7,22,14,22,avShade(T,-.45));                                                    // ceintuur
+    for(let y=23;y<=27;y++){const w=y-23;rect(7-Math.min(1,w>>1),y,14+Math.min(1,w>>1),y,T);rect(13,y,14+Math.min(1,w>>1),y,Td)}rect(8,23,9,26,Tl);
+    rect(8,28,9,28,S);rect(12,28,13,28,S);rect(8,29,9,29,'#5a3a26');rect(12,29,13,29,'#5a3a26')}
+  else if(O==='rok'){
+    rect(7,16,14,22,T);rect(6,16,15,16,T);rect(13,17,14,22,Td);rect(8,17,9,21,Tl);arms(T,Td);rect(9,16,12,16,Sl);p(10,17,Sl);p(11,17,Sl);
+    for(let y=23;y<=26;y++){const w=(y-23)>>1;rect(7-w,y,14+w,y,P);rect(13,y,14+w,y,Pd)}rect(7,23,14,23,avShade(P,-.45));
+    rect(8,27,9,28,S);rect(12,27,13,28,S);rect(8,29,9,29,'#5a3a26');rect(12,29,13,29,'#5a3a26')}
+  else if(O==='tuinbroek'){
+    rect(7,16,14,23,W2);rect(6,16,15,16,W2);rect(13,17,14,23,W2d);arms(W2,W2d);rect(9,16,12,16,Sl);
+    rect(7,19,14,23,T);rect(8,16,8,18,T);rect(13,16,13,18,T);rect(9,20,12,22,Tl);p(8,19,'#e8c84a');p(13,19,'#e8c84a');rect(13,20,14,23,Td);
+    legs(T,Td)}
+  else if(O==='jas'){
+    rect(7,16,14,23,T);rect(6,16,15,16,T);rect(13,17,14,23,Td);arms(T,Td);
+    rect(10,16,11,23,W2);p(11,17,W2d);p(11,19,W2d);p(9,16,Tl);p(12,16,Td);p(9,17,Tl);p(12,17,Td);p(8,20,Tl);p(8,21,Tl);  // open jas met shirt eronder
+    legs(P,Pd)}
+  else{
+    rect(7,16,14,23,T);rect(6,16,15,16,T);rect(13,17,14,23,Td);rect(8,17,9,21,Tl);arms(T,Td);
+    rect(9,16,12,16,Sl);p(10,17,Sl);p(11,17,Sl);                                                     // halsopening
+    legs(P,Pd)}
   // hoofd
   rect(5,4,16,14,S);p(5,4,null);p(16,4,null);p(5,14,null);p(16,14,null);rect(15,8,16,13,Sd);rect(7,14,15,14,Sd);rect(10,15,11,15,Sd);
   rect(6,5,8,6,Sl);
   // ogen: wit glimlicht + iris
   const eye=(x,flip)=>{p(x,9,flip?E:'#ffffff');p(x+1,9,flip?'#ffffff':E);p(x,10,flip?avShade(E,-.4):E);p(x+1,10,flip?E:avShade(E,-.4))};
-  eye(7,false);eye(13,true);
+  eye(7,false);eye(13,true);rect(7,8,8,8,avShade(H,-.55));rect(13,8,14,8,avShade(H,-.55));
   p(6,12,'#f2a0a0');p(15,12,'#e89090');p(10,12,Sd);p(11,12,avShade(S,-.3));                          // blosjes en mond
   // haar
-  if(a.hair!=='kaal'){rect(5,2,16,6,H);rect(4,3,17,5,H);rect(7,2,13,2,Hl);rect(8,3,11,3,Hl);
+  if(a.hair!=='kaal'&&a.hair!=='afro'){rect(5,2,16,6,H);rect(4,3,17,5,H);rect(7,2,13,2,Hl);rect(8,3,11,3,Hl);
     for(const x of [5,6,7,9,10,12,14,15,16])p(x,7,H);for(const x of [5,6,15,16])p(x,8,H);p(8,6,Hd);p(11,6,Hd);p(13,7,Hd);p(16,7,Hd);p(5,8,Hd);rect(4,5,4,7,Hd);rect(17,5,17,7,Hd)}
-  else{p(8,4,Sl);p(9,4,Sl)}
+  else if(a.hair==='kaal'){p(8,4,Sl);p(9,4,Sl)}
   if(a.hair==='knot'){rect(8,0,13,1,H);p(9,0,Hl);p(10,0,Hl);p(13,1,Hd)}
   if(a.hair==='krul'){for(const [x,y] of [[3,4],[3,6],[18,4],[18,6],[6,1],[9,1],[12,1],[15,1],[4,8],[17,8]])p(x,y,H);for(const [x,y] of [[6,3],[10,4],[14,3],[12,5]])p(x,y,Hd)}
   // extra's
@@ -1670,11 +1693,19 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=
   if(a.extra==='pet'){rect(4,1,17,5,'#c0392b');rect(6,1,15,1,'#e05a4a');rect(4,6,18,6,'#8e2a1f');p(10,3,'#f2f2f2');p(11,3,'#f2f2f2')}
   if(a.extra==='oren'){for(const [bx,d] of [[5,1],[16,-1]]){p(bx,0,H);p(bx,1,H);p(bx+d,1,H);p(bx,2,H);p(bx+d,2,H);p(bx+2*d,2,H);p(bx+d,2,'#f2a0b0')}}
   if(a.extra==='baard'){rect(6,11,15,15,H);rect(7,15,14,16,H);rect(13,12,15,15,Hd);p(10,12,avShade(S,-.3));p(11,12,avShade(S,-.3))}
+  if(a.extra==='muts'){rect(4,1,17,5,'#3a6aa0');rect(4,5,17,6,'#2a4a7a');for(const x of [6,9,12,15])p(x,6,'#5a8ac0');rect(9,0,12,0,'#e8e8f0')}
+  if(a.extra==='heks'){rect(3,5,18,6,'#4a2a6a');rect(5,3,16,4,'#5a3a7a');rect(7,1,14,2,'#5a3a7a');rect(9,-1,12,0,'#5a3a7a');p(12,-2,'#5a3a7a');p(13,-3,'#5a3a7a');rect(5,4,16,4,'#e8b84a');p(14,3,'#e8b84a')}
+  if(a.extra==='zonnehoed'){rect(1,4,20,5,'#e8c06a');rect(2,6,19,6,'#c89a3a');rect(5,1,16,3,'#e8c06a');rect(6,0,15,0,'#f2d68a');rect(5,3,16,3,'#c0392b')}
+  if(a.extra==='hoofddoek'){const C='#d8a0b0',Cd=avShade('#d8a0b0',-.25);rect(4,1,17,8,C);rect(3,4,4,15,C);rect(17,4,18,15,C);rect(4,13,17,16,C);rect(17,6,18,15,Cd);rect(6,15,15,16,Cd);
+    rect(6,7,15,14,S);p(6,7,C);p(15,7,C);rect(15,9,15,13,Sd);rect(7,14,14,14,Sd);eye(7,false);eye(13,true);p(6,12,'#f2a0a0');p(15,12,'#e89090');p(10,12,Sd);p(11,12,avShade(S,-.3))}
   if(a.extra==='strik'){rect(13,1,17,3,'#e05a8a');p(15,2,'#a0305a');p(13,1,'#f28ab0')}
   // omlijning: lege vakjes naast een getekend vakje worden donker (8 buren), daarna een witte stickerrand
-  const out=G.map(r=>r.slice()),dark='#3b2417';
-  for(let y=0;y<Hh;y++)for(let x=0;x<W;x++)if(!G[y][x]){let n=false;for(let dy=-1;dy<=1&&!n;dy++)for(let dx=-1;dx<=1;dx++){const yy=y+dy,xx=x+dx;if((dx||dy)&&G[yy]&&G[yy][xx]){n=true;break}}if(n)out[y][x]=dark}
-  if(sticker){const o2=out.map(r=>r.slice());for(let y=0;y<Hh;y++)for(let x=0;x<W;x++)if(!out[y][x]){for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])if(out[y+dy]&&out[y+dy][x+dx]===dark){o2[y][x]='#ffffff';break}}out.splice(0,Hh,...o2)}
+  // omlijning in een donkere tint van het deel ernaast (haar paarsig bij paars haar, huid donkerroze), zoals bij handgetekende sprites
+  const out=G.map(r=>r.slice()),isOl=new Set();
+  for(let y=0;y<Hh;y++)for(let x=0;x<W;x++)if(!G[y][x]){let col=null;
+    for(const [dx,dy] of [[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]]){const v=G[y+dy]&&G[y+dy][x+dx];if(v&&v!=='#ffffff'){col=v;break}}
+    if(col){out[y][x]=avShade(col,-.6);isOl.add(y*W+x)}}
+  if(sticker){const o2=out.map(r=>r.slice());for(let y=0;y<Hh;y++)for(let x=0;x<W;x++)if(!out[y][x]){for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]])if(isOl.has((y+dy)*W+x+dx)&&x+dx>=0&&x+dx<W){o2[y][x]='#ffffff';break}}out.splice(0,Hh,...o2)}
   c.width=W;c.height=Hh;const g=c.getContext('2d');g.clearRect(0,0,W,Hh);
   for(let y=0;y<Hh;y++)for(let x=0;x<W;x++)if(out[y][x]){g.fillStyle=out[y][x];g.fillRect(x,y,1,1)}
   return c}
@@ -1696,7 +1727,7 @@ function avEditor(box,start,personId,done){const a={...avDefault,...(start||{})}
   const row=(k,label,vals,isCol)=>{const l=document.createElement('div');l.className='lbl';l.textContent=t(label);const r=document.createElement('div');r.className='swrow';
     for(const v of vals){const b=document.createElement('button');b.dataset.k=k;b.dataset.v=isCol?v:v[0];if(isCol)b.style.background=v;else{b.className='btn';b.textContent=t(v[1])}
       b.onclick=()=>{a[k]=b.dataset.v;redraw()};r.append(b)}opts.append(l,r)};
-  row('skin','Huid',AV.skin,true);row('eyes','Ogen',AV.eyes,true);row('hair','Haar',AV.hair,false);row('hairColor','Haarkleur',AV.hairColor,true);row('shirt','Shirt',AV.shirt,true);row('pants','Broek',AV.pants,true);row('extra','Extra',AV.extra,false);
+  row('skin','Huid',AV.skin,true);row('eyes','Ogen',AV.eyes,true);row('hair','Haar',AV.hair,false);row('hairColor','Haarkleur',AV.hairColor,true);row('outfit','Kleding',AV.outfit,false);row('shirt','Kleur kleding',AV.shirt,true);row('pants','Broek',AV.pants,true);row('extra','Extra',AV.extra,false);
   const save=document.createElement('button');save.className='btn gold';save.style.cssText='width:100%;margin-top:8px';save.textContent=t('Poppetje opslaan');
   save.onclick=async()=>{const r=await api('/api/people/avatar',{id:personId||'',avatar:a});toast(r.message||'');if(r.people){peopleData=r.people;peopleAt=Date.now()}if(done)done()};
   box.append(save);redraw()}
@@ -1717,7 +1748,7 @@ async function peopleAdmin(){if(!S||S.role!=='owner')return;let r;try{r=await ap
   const pl=$('peopleList');pl.innerHTML='';
   for(const p of ppl){const el=document.createElement('details');el.className='netrow';
     el.innerHTML=`<summary style="display:flex;align-items:center;gap:10px;cursor:pointer"></summary><div class="ped"></div><button class="btn red" style="margin-top:8px">${esc(t('Persoon verwijderen'))}</button>`;
-    const sm=el.querySelector('summary');sm.append(drawAvatar(document.createElement('canvas'),p.avatar));sm.querySelector('canvas').style.cssText='width:26px;height:36px;image-rendering:pixelated';
+    const sm=el.querySelector('summary');sm.append(drawAvatar(document.createElement('canvas'),p.avatar));sm.querySelector('canvas').style.cssText='width:26px;height:38px;image-rendering:pixelated';
     const nm=document.createElement('b');nm.textContent=p.name+(p.home?' · '+t('thuis'):'');sm.append(nm);
     el.ontoggle=()=>{if(el.open&&!el.dataset.ed){el.dataset.ed='1';avEditor(el.querySelector('.ped'),p.avatar,p.id,()=>{peopleRender();peopleAdmin()})}};
     el.querySelector('.btn.red').onclick=async()=>{if(!confirm(t('{n} verwijderen?',{n:p.name})))return;const r=await api('/api/people/save',{id:p.id,delete:true});if(r.people){peopleData=r.people;peopleAt=Date.now()}peopleRender();peopleAdmin()};
