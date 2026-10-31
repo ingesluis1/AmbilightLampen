@@ -2370,12 +2370,14 @@ const enMonName=(m,o)=>new Date(m+'-15T12:00:00').toLocaleDateString(I18N.lang==
 const enPct=(a,b)=>b>0?Math.round((a-b)/b*100):null;
 const enDelta=p=>p==null?'':`<span class="${p>0?'up':'down'}">${p>0?'▲ +':'▼ '}${p}%</span>`;
 async function enExtraLoad(){
+  // Elk blok zodra zijn eigen gegevens er zijn: de stekkers (snel) wachten niet op het jaaroverzicht (Enelogic, langzamer)
+  api('/api/stekker/all?days=62').then(r=>{enPlugsAll=r.plugs||[];enDevUI()}).catch(()=>{});
+  enPatLoad();
+  if(enAll){enMonthUI();enYearUI()}
   const tasks=[];
   if(!enAll||Date.now()-enAllAt>30*60e3)tasks.push(api('/api/energy?days=400').then(r=>{if(r&&r.ok){enAll=r;enAllAt=Date.now()}}).catch(()=>{}));
   if(!enMonthsLong)tasks.push(api('/api/energy/months?n=25').then(r=>{if(r&&r.ok)enMonthsLong=r}).catch(()=>{}));
-  tasks.push(api('/api/stekker/all?days=62').then(r=>{enPlugsAll=r.plugs||[]}).catch(()=>{}));
-  enPatLoad();
-  await Promise.all(tasks);enMonthUI();enYearUI();enDevUI()}
+  if(tasks.length){await Promise.all(tasks);enMonthUI();enYearUI()}}
 const enCostL=l=>l.reduce((a,d)=>a+(enCostDay(d)||0),0),enSumL=(l,k)=>l.reduce((a,d)=>a+(d[k]||0),0);
 
 /* Deze maand: tot nu, verwachting, en vergelijken met vorige maand (zelfde dagen) en dezelfde maand vorig jaar */
