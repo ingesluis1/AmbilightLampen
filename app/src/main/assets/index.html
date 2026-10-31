@@ -233,6 +233,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .accrow{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
 .mgrp{border-bottom:2px solid rgba(0,0,0,.15)}.mgrp>div{padding:0 0 10px}
 .apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
+.ensplit{display:flex;height:16px;border:3px solid var(--ink);margin:6px 0 4px;background:#eee}.ensplit>i{display:block;min-width:2px}
 .devrow{background:var(--cream);border:3px solid var(--ink);padding:6px 8px;margin-top:6px}.devrow .meta{font-size:12px;opacity:.75;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;word-break:break-all}.devrow .row{flex-wrap:wrap;gap:6px;margin-top:6px}
 .devrow .dn{border:0;border-bottom:2px dashed rgba(0,0,0,.3);background:transparent;padding:2px 0;font-weight:700}.tag{font-size:10px;border:2px solid var(--ink);padding:0 4px;opacity:.7}
 .accrow .meta{font-size:13px;opacity:.75;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
@@ -624,6 +625,11 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <div class="enlbl hidden" id="enDaySolarLbl">Opwek per kwartier (zonnepanelen)</div>
   <div class="enchart small hidden" id="enDaySolar"></div>
   <p class="hint" id="enDaySum" style="margin:6px 0 0"></p>
+  <div id="enSplitBox" class="hidden">
+    <div class="row" style="align-items:center;margin-top:10px"><div class="enlbl grow" style="margin:0">Waar ging de stroom heen?</div>
+      <div class="seg" id="enSplitSeg"><button class="btn on" data-s="day">Deze dag</button><button class="btn" data-s="month">Deze maand</button></div></div>
+    <div id="enSplit"></div>
+  </div>
 </section>
 <section class="panel enneeds">
   <details id="enTarDet"><summary><b>Contracten</b> <span class="hint" id="enTarSum"></span></summary>
@@ -2312,8 +2318,32 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   if(hasG)enBars($('enDayGas'),g,{color:EN_COL.gas,min:.05,labels:g.map((_,k)=>k%3===0?String(k):''),title:t('Gas per uur'),tip:(k,v)=>String(k).padStart(2,'0')+':00: '+nl1(v,3)+' m³'});
   const tot=r.kwh.reduce((a,v)=>a+(v||0),0),peak=Math.max(...w.map(v=>v||0)),pk=w.indexOf(peak),totB=(r.back||[]).reduce((a,v)=>a+(v||0),0),totS=sol.reduce((a,v)=>a+(v||0),0)/4000;
   const dd=ds.find(x=>x.date===d)||{},c=enCostDay(dd);
+  enDayTot=r.kwh.some(v=>v!=null)?tot:null;enSplitLoad();
   $('enDaySum').textContent=t('Totaal {k} kWh. Hoogste kwartier {t}: gemiddeld {w} W.',{k:nl1(tot,2),t:hhmm(pk),w:nl1(peak,0)})
     +(totB>0?' '+t('Teruggeleverd {n} kWh.',{n:nl1(totB,2)}):'')+(hasS?' '+t('Opgewekt ongeveer {n} kWh.',{n:nl1(totS,2)}):'')+(c!=null?' '+t('Kosten die dag ≈ {e}.',{e:enEUR(c)}):'')}
+/* Verdeling: wat de slimme stekkers verbruikten, en de rest ("Overig") = totaal van de meter min de stekkers.
+   Per dag (gekozen dag) of per maand (die maand, t/m de laatste dag van de meter). Kosten met het tarief van die dag. */
+let enDayTot=null,enSplitMode='day',enPlugs=null,enPlugsAt=0;
+const EN_PLUG_COL=['#c0396a','#3f8a8a','#7a5bb0','#c8a020','#4a7ac0','#8a6040'];
+async function enSplitLoad(){if(!SRV)return;const d=enDay;
+  if(!enPlugs||Date.now()-enPlugsAt>60000||enPlugs.date!==d){try{const r=await api('/api/stekker/all?days=62&date='+d);enPlugs={date:d,list:r.plugs||[]};enPlugsAt=Date.now()}catch(e){return}}
+  if(enDay!==d)return;enSplitRender()}
+function enSplitRender(){const box=$('enSplitBox'),list=(enPlugs&&enPlugs.list)||[];box.classList.toggle('hidden',!list.length);if(!list.length)return;
+  const d=enDay,month=d.slice(0,7),last=enData&&enData.last||d;
+  let rows,total,note='';
+  if(enSplitMode==='day'){rows=list.map(p=>({name:p.name,kwh:+(p.days||{})[d]||0,cost:(+(p.days||{})[d]||0)*(enTP(d).stroom??NaN)}));total=enDayTot;
+    if(total==null)note=t('Het totaal van je meter voor deze dag komt morgen; nu alleen de stekkers.')}
+  else{const upto=last.slice(0,7)===month?last:month+'-31';
+    rows=list.map(p=>{let k=0,c=0;for(const [day,v] of Object.entries(p.days||{}))if(day.startsWith(month)&&day<=upto){k+=+v||0;c+=(+v||0)*(enTP(day).stroom??NaN)}return{name:p.name,kwh:k,cost:c}});
+    const m=enMonths&&enMonths.ok&&enMonths.months.find(x=>x.month===month);total=m&&m.kwh!=null?m.kwh:null;
+    note=total==null?t('Het totaal van je meter voor deze maand is er nog niet; nu alleen de stekkers.'):t('t/m {d}, de laatste dag van je meter',{d:enDate(upto,{day:'numeric',month:'short'})})}
+  const sum=rows.reduce((a,x)=>a+x.kwh,0);
+  if(total!=null)rows.push({name:t('Overig (de rest van het huis)'),kwh:Math.max(0,total-sum),cost:Math.max(0,total-sum)*(enTP(d).stroom??NaN),rest:true});
+  const all=total!=null?Math.max(total,sum):sum,pct=v=>all>0?Math.round(v/all*100):0,col=(x,i)=>x.rest?'#c8bca8':EN_PLUG_COL[i%EN_PLUG_COL.length];
+  const bar=`<div class="ensplit">${rows.map((x,i)=>x.kwh>0?`<i style="flex:${x.kwh};background:${col(x,i)}" title="${esc(x.name)}"></i>`:'').join('')}</div>`;
+  $('enSplit').innerHTML=(all>0?bar:'')+rows.map((x,i)=>`<div class="kbrow"><span><i class="ensw" style="background:${col(x,i)}"></i>${esc(x.name)}</span><span>${esc(stKwh(x.kwh))}${all>0?' · '+pct(x.kwh)+'%':''}${isFinite(x.cost)?' · ≈ '+esc(enEUR(x.cost)):''}</span></div>`).join('')
+    +(note?`<p class="hint" style="margin:4px 0 0">${esc(note)}</p>`:'')+(sum===0?`<p class="hint" style="margin:4px 0 0">${esc(t('De stekkers meten sinds 31 oktober.'))}</p>`:'')}
+document.querySelectorAll('#enSplitSeg .btn').forEach(b=>b.onclick=()=>{enSplitMode=b.dataset.s;document.querySelectorAll('#enSplitSeg .btn').forEach(x=>x.classList.toggle('on',x===b));enSplitRender()});
 document.querySelectorAll('#enKind .btn').forEach(b=>b.onclick=()=>{enKind=b.dataset.k;try{localStorage.setItem('enKind',enKind)}catch(e){}if(enData)enDays()});
 document.querySelectorAll('#enRange .btn').forEach(b=>b.classList.toggle('on',b.dataset.n===String(enN)));
 document.querySelectorAll('#enRange .btn').forEach(b=>b.onclick=()=>{enN=b.dataset.n==='m12'?'m12':+b.dataset.n;try{localStorage.setItem('enN',String(enN))}catch(e){}document.querySelectorAll('#enRange .btn').forEach(x=>x.classList.toggle('on',x===b));enLoad()});
