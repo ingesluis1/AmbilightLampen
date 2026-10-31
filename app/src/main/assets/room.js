@@ -1038,9 +1038,14 @@ const Room = (() => {
    * Dekt de hele getekende lamp (bij een staande lamp of booglamp dus ook de kap), met wat marge.
    */
   /** Meubel waar een stekker aan hangt (item.plug = id van de stekker), of undefined. */
-  function plugItem(L, l) { return L && (L.items || []).find(it => it.plug === l.id); }
+  function plugItem(L, l) { return L && ((L.tv && L.tv.plug === l.id && L.tv) || (L.items || []).find(it => it.plug === l.id)); }
   /** Breedte en diepte van een meubel in meters, rekening houdend met draaien. */
-  function itemDims(it) { const def = ITEMS[it.type] || { w: 1, d: 1 }, w = it.w || def.w, d = it.d || def.d; return ((it.dir || 90) / 90) % 2 === 0 ? [d, w] : [w, d]; }
+  function itemDims(it) {
+    // De tv (L.tv, geen type): tv-meubel van tv.w + 0,4 bij 0,45 m
+    const def = it.type ? (ITEMS[it.type] || { w: 1, d: 1 }) : { w: (it.w || 1) + 0.4, d: 0.45 };
+    const w = it.type ? (it.w || def.w) : def.w, d = it.type ? (it.d || def.d) : def.d;
+    return ((it.dir ?? 90) / 90) % 2 === 0 ? [d, w] : [w, d];
+  }
 
   function lampBox(l, L) {
     const look = l.look || '';
@@ -1146,10 +1151,10 @@ const Room = (() => {
       g.save(); g.translate(Math.round((l.x + 1) * PPM - w / 2), Math.round((l.y + 1) * PPM - d / 2)); SPRITES.litterbox(g, w, d); g.restore(); return; }
     // Slimme stekker (apparaat): wit blokje met twee pennetjes en een lampje (groen = aan)
     if (l.look === 'stekker' && plugItem(L, l)) {
-      // Aan een meubel: klein stekkertje rechtsboven op het meubel
-      const it = plugItem(L, l), [w, d] = itemDims(it), x = Math.round((it.x + 1 + w / 2) * PPM) - 4, y = Math.round((it.y + 1 - d / 2) * PPM) + 1;
-      g.fillStyle = '#2a1a2e'; g.fillRect(x - 3, y - 1, 6, 6); g.fillStyle = '#f2efe8'; g.fillRect(x - 2, y, 4, 4);
-      g.fillStyle = '#9a948c'; g.fillRect(x - 1, y + 1, 1, 2); g.fillRect(x + 1, y + 1, 1, 2); return; }
+      // Aan een meubel of de tv: heel klein stekkertje dat boven de rechterbovenhoek hangt
+      const it = plugItem(L, l), [w, d] = itemDims(it), x = Math.round((it.x + 1 + w / 2) * PPM) - 4, y = Math.round((it.y + 1 - d / 2) * PPM) - 5;
+      g.fillStyle = '#2a1a2e'; g.fillRect(x, y, 4, 4); g.fillStyle = '#f2efe8'; g.fillRect(x + 1, y + 1, 2, 2);
+      g.fillStyle = '#2a1a2e'; g.fillRect(x + 1, y + 4, 1, 1); g.fillRect(x + 2, y + 4, 1, 1); return; }
     if (l.look === 'stekker') { const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
       g.fillStyle = 'rgba(30,10,30,.3)'; g.fillRect(x - 3, y - 2, 8, 8);
       g.fillStyle = '#2a1a2e'; g.fillRect(x - 4, y - 4, 8, 8);

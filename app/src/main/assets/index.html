@@ -1177,15 +1177,16 @@ cv.addEventListener('pointerdown',e=>{if(!L||!view||curTab!=='room')return;cv.se
 });
 cv.addEventListener('pointermove',e=>{if(!L||!view)return;const [mx,my]=pos(e);
   if(painting)paint(mx,my);
-  else if(drag==='tv'){L.tv.x=snap(mx);L.tv.y=snap(my);changed()}
+  else if(drag==='tv'){L.tv.x=snap(mx);L.tv.y=snap(my);if(L.tv.plug){const p=lamps.find(x=>x.id===L.tv.plug);if(p){p.x=L.tv.x;p.y=L.tv.y}}changed()}
   else if(drag==='item'&&L.items[selItem]){const it=L.items[selItem];it.x=snap(mx);it.y=snap(my);wallFix(it);if(it.plug){const p=lamps.find(x=>x.id===it.plug);if(p){p.x=it.x;p.y=it.y}}changed()}
   else if(drag==='fx'){const f=fxSel();if(f){f.x=Math.max(0,snap(mx+fxOff[0]));f.y=Math.max(0,snap(my+fxOff[1]));fxPlace(f);changed()}}
   else if(drag==='lamp'&&selLamp){const l=lamps.find(l=>l.id===selLamp);l.x=Math.max(0,snap(mx));l.y=Math.max(0,snap(my));airFix(l);changed();showLamp()}
 });
 /* Stekker op een meubel loslaten = hij hoort bij dat meubel (koelkast, wasmachine, tv-meubel...) */
-function plugAttach(l){if(!L||!isPlug(l))return;const before=(L.items||[]).find(it=>it.plug===l.id);for(const it of L.items||[])if(it.plug===l.id)delete it.plug;
-  const i=itemAt(l.x,l.y),it=i>=0?L.items[i]:null,def=it&&Room.ITEMS[it.type];
-  if(it&&def&&!def.wall){it.plug=l.id;l.x=it.x;l.y=it.y;changed();if(before!==it)toast(t('{n} hoort nu bij: {m}',{n:l.name,m:t(def.name)}))}
+function plugAttach(l){if(!L||!isPlug(l))return;const before=Room.plugItem(L,l);for(const it of L.items||[])if(it.plug===l.id)delete it.plug;if(L.tv&&L.tv.plug===l.id)delete L.tv.plug;
+  const onTv=()=>{if(!L.tv)return false;const [w,d]=Room.itemDims(L.tv);return Math.abs(l.x-L.tv.x)<=w/2&&Math.abs(l.y-L.tv.y)<=d/2};
+  const i=itemAt(l.x,l.y),it0=i>=0?L.items[i]:null,def=it0&&Room.ITEMS[it0.type],it=it0&&def&&!def.wall?it0:onTv()?L.tv:null;
+  if(it){it.plug=l.id;l.x=it.x;l.y=it.y;changed();if(before!==it)toast(t('{n} hoort nu bij: {m}',{n:l.name,m:it===L.tv?t('Tv'):t(def.name)}))}
   else if(before){changed();toast(t('{n} hangt niet meer aan een meubel',{n:l.name}))}}
 const up=()=>{if(drag==='lamp'&&selLamp){const l=lamps.find(x=>x.id===selLamp);if(isPlug(l))plugAttach(l)}painting=false;drag=null};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
 /* ---------- kamer groot: lampen bedienen op de kaart ----------
