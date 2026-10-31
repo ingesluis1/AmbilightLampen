@@ -727,6 +727,9 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <h2>Toegang</h2>
   <p style="margin:0 0 8px">Apparaten die de House hub willen gebruiken. Een gast ziet alleen Bediening; een hoofdgebruiker kan alles.</p>
   <div id="accList"></div>
+  <div class="lbl" style="margin-top:12px">Via hub.stacklines.nl</div>
+  <p class="hint" style="margin:0 0 6px">Wie daar met dit e-mailadres inlogt, is meteen binnen, op elk apparaat.</p>
+  <div id="accEmails"></div>
 </section>
 
 <section class="panel srvonly" id="enePanel">
@@ -810,7 +813,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 <div id="gate" class="hidden"><section class="panel" style="max-width:420px;margin:40px auto">
   <h2>House hub</h2>
   <p id="gateText">Dit apparaat heeft nog geen toegang. Geef het een naam en vraag toegang. De hoofdgebruiker keurt het dan goed.</p>
-  <div id="gateForm"><input type="text" id="gateName" placeholder="Naam van dit apparaat, bijvoorbeeld Telefoon Sam" maxlength="40" autocomplete="off">
+  <div id="gateForm"><input type="text" id="gateName" placeholder="Naam" maxlength="40" autocomplete="off">
   <button class="btn gold" id="gateAsk" style="width:100%;margin-top:8px">Toegang vragen</button></div>
   <p class="hint hidden" id="gateWait" style="margin-top:10px"></p>
 </section></div>
@@ -1813,7 +1816,11 @@ function roleUI(s){const g=s&&s.role==='guest';document.body.classList.toggle('g
 $('houseScene').onclick=()=>{houseSceneOpen=!houseSceneOpen;homeUI();if(houseSceneOpen)setTimeout(()=>$('scenePanel').scrollIntoView({block:'start',behavior:'smooth'}),50)};
 $('accBanner').onclick=()=>{showTab('settings');setTimeout(()=>$('accPanel').scrollIntoView({block:'start'}),50)};
 const ACC_ROLE={owner:'Hoofdgebruiker',guest:'Gast',pending:'Wacht op goedkeuring',denied:'Geweigerd'};
-async function accLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/access/list')}catch(e){return}accRender(r.devices||[])}
+async function accLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/access/list')}catch(e){return}accRender(r.devices||[]);try{accEmails((await api('/api/access/emails')).emails||{})}catch(e){}}
+function accEmails(m){const box=$('accEmails'),ks=Object.keys(m);box.innerHTML=ks.length?'':`<p class="hint" style="margin:0">${esc(t('Nog niemand.'))}</p>`;
+  for(const e of ks){const el=document.createElement('div');el.className='row';el.style.alignItems='center';
+    el.innerHTML=`<span class="grow"></span><span class="badge">${esc(t(ACC_ROLE[m[e]]||m[e]))}</span><button class="btn red">${esc(t('Weghalen'))}</button>`;el.querySelector('span').textContent=e;
+    el.querySelector('button').onclick=async()=>{const r=await api('/api/access/emails',{email:e,role:''});accEmails(r.emails||{})};box.append(el)}}
 function accRender(list){const box=$('accList'),loc=I18N.lang==='en'?'en-GB':'nl-NL';box.innerHTML=list.length?'':`<p class="hint">${esc(t('Nog geen apparaten.'))}</p>`;
   for(const d of list){const el=document.createElement('div');el.className='accrow';
     const seen=d.lastSeen?new Date(d.lastSeen).toLocaleString(loc,{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
