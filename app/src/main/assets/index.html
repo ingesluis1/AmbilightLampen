@@ -1762,7 +1762,7 @@ function enBars(el,vals,o){const W=Math.max(200,el.clientWidth),H=el.clientHeigh
 async function enLoad(){if(!SRV)return;let r;try{[r,enMonths]=await Promise.all([api('/api/energy?days='+(enN==='m12'?30:enN)),api('/api/energy/months?n=12').catch(()=>null)])}catch(e){return}
   const ok=!!(r&&r.ok);$('enSetup').classList.toggle('hidden',ok||!(r&&r.setup));document.querySelectorAll('.enneeds').forEach(x=>x.classList.toggle('hidden',!ok));
   if(!ok){$('enTiles').innerHTML='';$('enStamp').textContent=r&&!r.setup?t('Fout: {e}',{e:r.message}):'';return}
-  enData=r;if(!enDay||!r.days.some(d=>d.date===enDay))enDay=r.last;enDays();enDayLoad()}
+  enData=r;if(!enDay||(!r.days.some(d=>d.date===enDay)&&enDay>enToday()))enDay=r.last;enDays();enDayLoad()}
 /* Prijsindicatie uit de tarieven (euro's incl. btw). Dal-kWh tegen het daltarief als dat is ingevuld. */
 const enEUR0=(v,whole)=>v.toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL',{style:'currency',currency:'EUR',minimumFractionDigits:whole?0:2,maximumFractionDigits:whole?0:2});
 const enEUR=v=>v==null?'–':v.toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL',{style:'currency',currency:'EUR'});
@@ -1838,14 +1838,15 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
     tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+K.unit+costTxt(ds[i])+selfTxt(ds[i])});
 }
 async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textContent=enDate(d,{weekday:'long',day:'numeric',month:'long'});
-  const ds=enData.days,i=ds.findIndex(x=>x.date===d);$('enPrev').disabled=i<=0;$('enNext').disabled=i<0||i>=ds.length-1;
+  // Bladeren t/m vandaag: stroom en gas komen pas de dag erna (netbeheerder), de opwek (Growatt) is er meteen
+  const ds=enData.days;$('enPrev').disabled=!ds.length||d<=ds[0].date;$('enNext').disabled=d>=enToday();
   let r;try{r=await api('/api/energy/day?date='+d)}catch(e){return}if(enDay!==d||!r.ok)return;
   const hhmm=k=>String(Math.floor(k/4)%24).padStart(2,'0')+':'+String(k%4*15).padStart(2,'0'),w=r.kwh.map(v=>v==null?null:v*4000);
   const bw=(r.back||[]).map(v=>v==null?null:v*4000),hasB=bw.some(v=>v>0);
   enBars($('enDay'),w,{color:EN_COL.kwh,min:100,neg:hasB?bw:null,negColor:EN_COL.back,labels:w.map((_,k)=>k%4===0?String(k/4):''),title:t('Stroom per kwartier'),
     tip:(k,v,b)=>hhmm(k)+'–'+hhmm(k+1)+': '+t('verbruik {n} W',{n:nl1(v||0,0)})+(b?' · '+t('terug {n} W',{n:nl1(b,0)}):'')});
-  const sw=c=>`<i class="ensw" style="background:${c}"></i>`;
-  $('enDayLegend').innerHTML=sw(EN_COL.kwh)+esc(t('verbruik (omhoog)'))+(hasB?' &nbsp; '+sw(EN_COL.back)+esc(t('teruglevering (omlaag)')):'');
+  const sw=c=>`<i class="ensw" style="background:${c}"></i>`,noE=!r.kwh.some(v=>v!=null);
+  $('enDayLegend').innerHTML=noE?esc(t('Stroom en gas van deze dag komen pas binnen als je netbeheerder ze doorgeeft (meestal de volgende dag).')):sw(EN_COL.kwh)+esc(t('verbruik (omhoog)'))+(hasB?' &nbsp; '+sw(EN_COL.back)+esc(t('teruglevering (omlaag)')):'');
   const sol=r.solarW||[],hasS=sol.some(v=>v>0);$('enDaySolar').classList.toggle('hidden',!hasS);$('enDaySolarLbl').classList.toggle('hidden',!hasS);
   if(hasS)enBars($('enDaySolar'),sol,{color:EN_COL.solar,min:100,labels:sol.map((_,k)=>k%4===0?String(k/4):''),title:t('Opwek per kwartier'),tip:(k,v)=>hhmm(k)+'–'+hhmm(k+1)+': '+t('opwek {n} W',{n:nl1(v||0,0)})});
   const g=r.gas||[],hasG=g.some(v=>v!=null);$('enDayGas').classList.toggle('hidden',!hasG);$('enDayGasLbl').classList.toggle('hidden',!hasG);
@@ -1857,8 +1858,10 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
 document.querySelectorAll('#enKind .btn').forEach(b=>b.onclick=()=>{enKind=b.dataset.k;try{localStorage.setItem('enKind',enKind)}catch(e){}if(enData)enDays()});
 document.querySelectorAll('#enRange .btn').forEach(b=>b.classList.toggle('on',b.dataset.n===String(enN)));
 document.querySelectorAll('#enRange .btn').forEach(b=>b.onclick=()=>{enN=b.dataset.n==='m12'?'m12':+b.dataset.n;try{localStorage.setItem('enN',String(enN))}catch(e){}document.querySelectorAll('#enRange .btn').forEach(x=>x.classList.toggle('on',x===b));enLoad()});
-$('enPrev').onclick=()=>{const ds=enData.days,i=ds.findIndex(x=>x.date===enDay);if(i>0){enDay=ds[i-1].date;enDays();enDayLoad()}};
-$('enNext').onclick=()=>{const ds=enData.days,i=ds.findIndex(x=>x.date===enDay);if(i<ds.length-1){enDay=ds[i+1].date;enDays();enDayLoad()}};
+const enToday=()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')};
+const enAddDay=(d,k)=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+k);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+$('enPrev').onclick=()=>{if(!enData||!enData.days.length||enDay<=enData.days[0].date)return;enDay=enAddDay(enDay,-1);enDays();enDayLoad()};
+$('enNext').onclick=()=>{if(!enData||enDay>=enToday())return;enDay=enAddDay(enDay,1);enDays();enDayLoad()};
 window.addEventListener('resize',()=>{if(curTab==='energy'&&enData){enDays();enDayLoad()}});
 /* Enelogic: ingevulde sleutels komen nooit terug; de velden tonen alleen "al ingevuld" */
 function eneUI(s){if(!s)return;const ph=(id,base,set)=>{$(id).placeholder=t(base)+(set?' · '+t('al ingevuld'):'')};
