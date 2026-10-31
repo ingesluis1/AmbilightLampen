@@ -1566,12 +1566,22 @@ function airCard(l){const a=airOf(l.id),d=document.createElement('div');d.classN
   d.querySelector('[data-sl]').onclick=()=>airSet(l.id,{sleep:!a.sleep});
   return d}
 /* Kattenbak (alleen op de hub; stand uit /api/state als lamp.litter). Status, bezoeken vandaag, gewicht, storingen, schoonmaken. */
+const KB_CSS=document.head.appendChild(document.createElement('style'));KB_CSS.textContent='.kbic{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.kbic .btn.ic{display:flex;align-items:center;justify-content:center;padding:8px 0}.kbic .btn.ic svg{width:28px;height:28px}';
 const kbOf=id=>{const x=S&&(S.lamps||[]).find(q=>q.id===id);return x&&x.litter};
 const KB_STATUS={standby:'Klaar',sleep:'Slaapt',uv:'Bezig met steriliseren',cat_in:'Kat erin',cat_near:'Kat in de buurt',cat_out:'Kat net weg',cleaning:'Bezig met schoonmaken',clean:'Bezig met schoonmaken',smooth:'Zand egaliseren',clear_sand:'Zand bijvullen'};
 const KB_FAULT={vol:'Afvalbak vol',bak:'Bak eruit',motor:'Motorstoring',sensor:'Sensorstoring',filter:'Filter vervangen'};
 const kbStatus=a=>a.cleaning?t('Bezig met schoonmaken'):t(KB_STATUS[a.status]||a.status||'?');
 const KB_DONE={clean:'Kattenbak gaat schoonmaken',pour:'Kattenbak vult zand bij',smooth:'Kattenbak egaliseert het zand',filterReset:'Teller van het geurfilter staat weer op 30 dagen'};
 function kbSet(id,b){const a=kbOf(id);if(a)Object.assign(a,b.clean?{cleaning:true}:b.pour||b.smooth||b.filterReset?{}:b);airAll();api('/api/kattenbak',{id,...b}).then(r=>{if(!r.ok&&r.message)toast(r.message);else{const k=Object.keys(KB_DONE).find(k=>b[k]);if(k)toast(t(KB_DONE[k]));else if(b.uv)toast(t('Kattenbak steriliseert'))}})}
+const KB_IC={
+  clean:'<path d="M14 3l-5 9M7 12h6l3 9H4z"/><path d="M8 16v5M12 16v5"/>',
+  pour:'<path d="M4 6h11l-2 6H6z"/><path d="M15 8l4-2"/><path d="M8 15v1M11 17v1M7 19v1M10 21v.5M13 20v1"/>',
+  smooth:'<path d="M3 9c2-2 3 2 5 0s3 2 5 0 3 2 5 0 2 1 3 1"/><path d="M3 17h18"/><path d="M12 11v4M10 13l2 2 2-2"/>',
+  uv:'<path d="M12 3l2 5 5 1-4 3 1 5-4-3-4 3 1-5-4-3 5-1z"/>',
+  auto:'<circle cx="12" cy="12" r="9"/><path d="M8.5 16l3.5-9 3.5 9M10 13h4"/>',
+  light:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c1 1 1 2 1 3h6c0-1 0-2 1-3A6 6 0 0 0 12 3z"/>',
+  lock:'<rect x="5" y="11" width="14" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4M12 15v2"/>'};
+const kbIc=(k,name,cls='',dis=false)=>`<button class="btn ic${cls}" data-${k}="1" title="${esc(t(name))}" aria-label="${esc(t(name))}"${dis?' disabled':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">${KB_IC[k]}</svg></button>`;
 function kbCard(l){const a=kbOf(l.id),d=document.createElement('div');d.className='aircard';
   if(!a){d.innerHTML=`<div class="hint">${esc(t('De kattenbak bedien je op de House hub.'))}</div>`;return d}
   if(!a.known){d.innerHTML=`<b>${esc(l.name)}</b><div class="hint">${esc(t(a.online?'Even geduld, de stand wordt opgehaald...':'De kattenbak is niet bereikbaar.'))}</div>`;return d}
@@ -1580,9 +1590,8 @@ function kbCard(l){const a=kbOf(l.id),d=document.createElement('div');d.classNam
     ${a.online?'':`<div class="hint">${esc(t('De kattenbak is nu niet bereikbaar.'))}</div>`}
     ${f.length?`<div class="hint" style="color:#a02a1a;font-weight:700">⚠ ${esc(f.join(' · '))}</div>`:''}
     <div class="lbl">${esc(t('Vandaag'))}</div><div><b>${a.visits??0}×</b> ${esc(t('gebruikt'))}${a.seconds?' · '+esc(min(a.seconds)):''}${a.weight?' · '+esc(t('kat {kg} kg',{kg:nl1(a.weight/1000,1)})):''}</div>
-    <button class="btn gold" data-clean="1" style="width:100%;margin-top:10px"${a.cleaning?' disabled':''}>${esc(t('Nu schoonmaken'))}</button>
-    <div class="row" style="margin-top:8px"><button class="btn grow" data-pour="1">${esc(t('Zand bijvullen'))}</button><button class="btn grow" data-smooth="1">${esc(t('Zand egaliseren'))}</button><button class="btn grow${a.uv?' on':''}" data-uv="1">${esc(t('Steriliseren'))}</button></div>
-    <div class="row" style="margin-top:8px"><button class="btn grow${a.autoClean?' on':''}" data-auto="1">${esc(t('Automatisch schoonmaken'))}</button><button class="btn grow${a.light?' on':''}" data-light="1">${esc(t('Lampje afvalbak'))}</button><button class="btn grow${a.childLock?' on':''}" data-lock="1">${esc(t('Kinderslot'))}</button></div>
+    <div class="kbic" style="margin-top:10px">${kbIc('clean','Nu schoonmaken',' gold',a.cleaning)}${kbIc('pour','Zand bijvullen')}${kbIc('smooth','Zand egaliseren')}${kbIc('uv','Steriliseren',a.uv?' on':'')}</div>
+    <div class="kbic" style="margin-top:8px">${kbIc('auto','Automatisch schoonmaken',a.autoClean?' on':'')}${kbIc('light','Lampje afvalbak',a.light?' on':'')}${kbIc('lock','Kinderslot',a.childLock?' on':'')}</div>
     ${a.autoClean?`<div class="lbl">${esc(t('Schoonmaken na een bezoek, na'))}</div><div class="seg">${[30,60,120,300].map(s=>`<button class="btn${a.delay===s?' on':''}" data-delay="${s}">${esc(s<60?t('{s} s',{s}):t('{m} min',{m:s/60}))}</button>`).join('')}</div>`:''}
     ${a.filterDays!=null?`<div class="lbl">${esc(t('Geurfilter'))}</div><div class="row" style="align-items:center"><span class="grow">${esc(t('nog {n} dagen',{n:a.filterDays}))}</span><button class="btn" data-freset="1">${esc(t('Nieuw filter erin'))}</button></div>`:''}`;
   d.querySelector('[data-clean]').onclick=()=>kbSet(l.id,{clean:true});
