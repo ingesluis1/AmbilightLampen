@@ -1685,10 +1685,11 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=26,Hh=
   rect(6,5,8,6,Sl);
   // ogen: wit glimlicht + iris
   // ogen (2x2): boven lichte iris + donkere pupil, onder wit glimlicht + iris; links en rechts gespiegeld, neusbrug ertussen
-  const eye=(x,flip)=>{const Ed=avShade(E,-.6),El=avShade(E,.45);p(x,9,flip?Ed:El);p(x+1,9,flip?El:Ed);p(x,10,flip?E:'#ffffff');p(x+1,10,flip?'#ffffff':E)};
+  // ogen 2 breed en 3 hoog: wimperlijn, daaronder iris aan de binnenkant en lichtgrijs/wit aan de buitenkant (geen mond)
+  const eye=(x,flip)=>{const Ed=avShade(E,-.45),L='#3a2228',out=flip?x+1:x,inn=flip?x:x+1;rect(x,8,x+1,8,L);p(out,9,'#cfc6cc');p(inn,9,Ed);p(out,10,'#ffffff');p(inn,10,E);
+    if(a.face!=='stoer'){p(flip?x+2:x-1,8,L);p(flip?x+2:x-1,9,avShade(S,-.35))}};
   eye(8,false);eye(12,true);
-  if(a.face==='stoer'){rect(7,7,9,7,avShade(H,-.4));rect(12,7,14,7,avShade(H,-.4))}else{rect(8,8,9,8,avShade(H,-.55));rect(12,8,13,8,avShade(H,-.55))}
-  if(a.face!=='stoer'){p(7,11,'#f2a0a0');p(14,11,'#e89090')}p(10,12,Sd);p(11,12,avShade(S,-.3));      // blosjes en mond
+  if(a.face!=='stoer'){p(7,11,'#f2a0a0');p(14,11,'#ec9a9a')}                                           // blosjes (geen mond)
   // haar: per kapsel een pixelraster (H = haarkleur, d = donker/rand, l = glans), x vanaf 3; zie AV_HAIR
   {const m=AV_HAIR[a.hair==='stekel'?'warrig':a.hair];if(m)m[1].forEach((r,i)=>{for(let j=0;j<r.length;j++){const ch=r[j];if(ch!=='.')p(3+j,m[0]+i,ch==='H'?H:ch==='d'?Hd:Hl)}})}
   if(a.hair==='kaal'){rect(8,2,13,2,S);rect(6,3,15,3,S);p(8,3,Sl);p(9,3,Sl);p(7,4,Sl)}
