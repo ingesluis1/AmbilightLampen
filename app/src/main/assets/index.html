@@ -1073,8 +1073,8 @@ setInterval(()=>{if(S&&(curTab==='home'||fullOpen)&&catAnimState().length)draw()
 function draw(){
   if(!L)return;
   // Alleen de lampen van deze kamer; de tv alleen in de tv-kamer
-  const rm=roomById(curRoom)||{},isTv=!!rm.tv,LD=isTv?L:{...L,tv:null},lamps=roomLamps();
-  const key=JSON.stringify(L)+isTv+lamps.map(l=>l.id).join();
+  const rm=roomById(curRoom)||{},isTv=!!rm.tv,LD={...L,tv:isTv?L.tv:null,wallColor:rm.color||''},lamps=roomLamps();
+  const key=JSON.stringify(L)+isTv+(rm.color||'')+lamps.map(l=>l.id).join();
   if(key!==baseKey){baseImg=Room.base(LD,lamps);baseKey=key}
   const dim=S&&((isTv&&S.sync)||(hasRooms()?!!rm.scene||!roomAnyOn(curRoom):(!!S.activeScene||S.lampsOff)));
   const img=Room.frame(baseImg,LD,lamps,live,dim,isTv&&S&&S.sync&&S.top);

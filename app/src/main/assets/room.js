@@ -181,6 +181,9 @@ const Room = (() => {
 
   function walls(g, L) {
     const TOP = '#3b2240', HI = '#7a4a72', CAP = '#4a2a4f';
+    // Behang in de kleur van de kamer (L.wallColor), zacht gemaakt; zonder kleur het oude zalmroze
+    const wc = /^#[0-9a-f]{6}$/i.test(L.wallColor || '') ? L.wallColor : null;
+    const WP = wc ? mixHex(wc, '#f4e6d4', 0.5) : '#dca18a', WS = wc ? mixHex(wc, '#c8a890', 0.45) : '#cc8d78', WT = wc ? mixHex(wc, '#fbf0e2', 0.65) : '#e7b39c';
     for (let y = -1; y <= L.h; y++) for (let x = -1; x <= L.w; x++) {
       if (isFloor(L, x, y)) continue;
       const N = isFloor(L, x, y - 1), S = isFloor(L, x, y + 1), Wf = isFloor(L, x - 1, y), E = isFloor(L, x + 1, y);
@@ -192,10 +195,10 @@ const Room = (() => {
         g.fillStyle = TOP; g.fillRect(X, Y, PPM, 5);
         g.fillStyle = HI; g.fillRect(X, Y + 4, PPM, 1);
         for (let i = 0; i < PPM; i++) {
-          g.fillStyle = ((X + i) % 6 === 0) ? '#cc8d78' : '#dca18a';
+          g.fillStyle = ((X + i) % 6 === 0) ? WS : WP;
           g.fillRect(X + i, Y + 5, 1, 8);
         }
-        g.fillStyle = '#e7b39c'; g.fillRect(X, Y + 5, PPM, 1);
+        g.fillStyle = WT; g.fillRect(X, Y + 5, PPM, 1);
         g.fillStyle = '#a7684a'; g.fillRect(X, Y + 13, PPM, 1);
         g.fillStyle = '#8a5238'; g.fillRect(X, Y + 14, PPM, 1);
         g.fillStyle = '#5a3040'; g.fillRect(X, Y + 15, PPM, 1);
