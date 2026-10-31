@@ -24,12 +24,13 @@ object TuyaCloud {
 
     private fun sha256(s: String) = MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
 
-    private fun call(method: String, path: String, token: String?, body: String = ""): JSONObject {
+    /** [signPath]: het pad zoals het ondertekend wordt (Tuya: vóór url-codering); standaard gelijk aan [path]. */
+    private fun call(method: String, path: String, token: String?, body: String = "", signPath: String = path): JSONObject {
         val id = Store.cloudId ?: throw IllegalStateException("geen Access ID")
         val secret = Store.cloudSecret ?: throw IllegalStateException("geen Access Secret")
         val host = HOSTS[Store.cloudRegion] ?: HOSTS.getValue("eu")
         val t = System.currentTimeMillis().toString()
-        val stringToSign = "$method\n${sha256(body)}\n\n$path"
+        val stringToSign = "$method\n${sha256(body)}\n\n$signPath"
         val mac = Mac.getInstance("HmacSHA256").apply { init(SecretKeySpec(secret.toByteArray(), "HmacSHA256")) }
         val sign = mac.doFinal((id + (token ?: "") + t + stringToSign).toByteArray()).joinToString("") { "%02X".format(it) }
         val c = URL(host + path).openConnection() as HttpURLConnection
@@ -60,6 +61,26 @@ object TuyaCloud {
             call("POST", "/v1.0/devices/$deviceId/commands", token, cmd)
         }
         return online
+    }
+
+    /**
+     * Geschiedenis van een apparaat uit de cloud: alle gemelde standen (type 7) tussen [startMs] en [endMs],
+     * oudste eerst. Elke melding: event_time (ms), code, value. Hooguit 50 pagina's van 100.
+     */
+    fun deviceLogs(deviceId: String, startMs: Long, endMs: Long): List<JSONObject> {
+        val token = call("GET", "/v1.0/token?grant_type=1", null).getJSONObject("result").getString("access_token")
+        val out = ArrayList<JSONObject>(); var row: String? = null
+        for (page in 0 until 50) {
+            // Parameters op alfabet (dat hoort bij de handtekening)
+            // Ondertekenen met de ruwe waarde, versturen url-gecodeerd (de row key kan + / = bevatten)
+            fun q(rk: String?) = "end_time=$endMs&query_type=1&size=100" + (rk?.let { "&start_row_key=$it" } ?: "") + "&start_time=$startMs&type=7"
+            val base = "/v1.0/devices/$deviceId/logs?"
+            val r = call("GET", base + q(row?.let { java.net.URLEncoder.encode(it, "UTF-8") }), token, signPath = base + q(row)).optJSONObject("result") ?: break
+            r.optJSONArray("logs")?.let { a -> for (i in 0 until a.length()) out += a.getJSONObject(i) }
+            if (!r.optBoolean("has_next")) break
+            row = r.optString("next_row_key").ifEmpty { break }
+        }
+        return out.sortedBy { it.optLong("event_time") }
     }
 
     /** Haalt alle lampen op en voegt nieuwe toe of werkt sleutels bij. Geeft een melding voor de gebruiker. */

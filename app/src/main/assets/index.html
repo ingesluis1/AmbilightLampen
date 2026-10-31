@@ -202,6 +202,10 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .pxic.arr{width:.85em;height:.75em}
 .pxic{width:.62em;height:.8em;vertical-align:-.05em;shape-rendering:crispEdges}
 .encon{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
+.kbhist{margin-top:10px;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums}
+.kbhist .lbl{font-family:inherit}
+.kbrow{display:flex;justify-content:space-between;gap:8px;font-size:14px;padding:3px 0;border-bottom:1px solid rgba(58,28,14,.12)}
+.kbrow span{font-weight:600}
 .hdev{background:var(--cream);border:3px solid var(--ink);margin-top:8px}
 .hdev>summary{display:flex;align-items:center;gap:10px;padding:8px 10px;cursor:pointer;list-style:none}
 .hdev>summary::-webkit-details-marker{display:none}
@@ -952,6 +956,37 @@ function setTool(k){
 }
 
 /* ---------- tekenen ---------- */
+/* Katje op de kaart: meldt de kattenbak een kat (cat_near, cat_in, net cat_out), dan loopt er een pixelkat in die kamer.
+   Welke kat: met een gewicht de dichtstbijzijnde (Olly rood, Zora grijs gestreept); zonder gewicht de eerste rode. */
+let kbCats=[];const kbSeen={};
+const CAT_FUR={Olly:['#e07a2a','#b4541a'],Zora:['#9a9aa2','#5a5a66']};
+const CAT_A=["...........o.o.","o.........obbbo","o.........bebeb",".o.oooooooobbbo","..obsbbsbbsbbo.","..obbbbbbbbbbo.","..oo.oo..oo.oo."];
+const CAT_B=["...........o.o.",".o........obbbo",".o........bebeb","..ooooooooobbbo","..obsbbsbbsbbo.","..obbbbbbbbbbo.","...oo..oo..oo.."];
+const CAT_SIT=["......o.o","o....obbbo","o....bebeb",".o...obbbo","..o.obbbbo","..obbsbbbo","..oooooooo"];
+let kbCatsAsk=false;
+function catAnimState(){const now=Date.now(),out=[];if(!kbCats.length&&!kbCatsAsk&&SRV){kbCatsAsk=true;api('/api/kattenbak/log?days=1').then(r=>{kbCats=r.cats||[]}).catch(()=>{})}
+  for(const l of roomLamps().filter(isKat)){if(l.x<0)continue;const k=kbOf(l.id);if(!k||!k.known)continue;const st=k.cleaning?'clean':k.status;
+    const sn=kbSeen[l.id]||(kbSeen[l.id]={st:'',since:now});if(sn.st!==st){sn.st=st;sn.since=now}
+    const age=now-sn.since,active=st==='cat_near'||st==='cat_in'||(st==='cat_out'&&age<9000);if(!active)continue;
+    let cat=null;const w=k.weight||0;
+    if(w>0&&kbCats.length)cat=kbCats.reduce((a,b)=>Math.abs(b.kg*1000-w)<Math.abs(a.kg*1000-w)?b:a).name;
+    out.push({l,st,age,cat:cat||'Olly'})}
+  return out}
+function drawCats(g,k,sc){const list=catAnimState();if(!list.length)return false;const px=k/11,now=Date.now();
+  for(const a of list){const fur=CAT_FUR[a.cat]||CAT_FUR.Olly,col={o:'#2a1a2e',b:fur[0],s:fur[1],e:'#f2e36a'};
+    // Looprichting: van het midden van de kamer naar de bak (dan loopt het katje nooit door een muur)
+    let dx=(L.w/2)-a.l.x,dy=(L.h/2)-a.l.y;const dl=Math.hypot(dx,dy)||1;dx/=dl;dy/=dl;
+    const at=m=>sc(a.l.x+dx*m,a.l.y+dy*m),frame=Math.floor(now/180)%2;let rows,p,flip;
+    if(a.st==='cat_in'){rows=CAT_SIT;p=at(.55);flip=dx>0}
+    else if(a.st==='cat_out'){rows=frame?CAT_A:CAT_B;p=at(.6+Math.min(2,a.age/1000*.25));flip=dx<0}
+    else{const ph=(now/1000)%5,d=ph<2.5?ph/2.5:2-ph/2.5;rows=frame?CAT_A:CAT_B;p=at(1.6-d*1.0);flip=ph<2.5?dx>0:dx<0}
+    // CAT_* kijken naar rechts; flip = spiegelen (naar links kijken)
+    const wd=Math.max(...rows.map(r=>r.length)),x=p[0]-wd*px/2,y=p[1]-rows.length*px/2;
+    rows.forEach((r,ry)=>{for(let rx=0;rx<r.length;rx++){const c=col[r[rx]];if(!c)continue;g.fillStyle=c;const cx=flip?wd-1-rx:rx;g.fillRect(Math.round(x+cx*px),Math.round(y+ry*px),Math.ceil(px),Math.ceil(px))}});
+    g.font='600 '+Math.max(11,k*.22)+'px system-ui,sans-serif';g.textAlign='center';g.lineWidth=3;g.strokeStyle='rgba(29,17,36,.8)';
+    g.strokeText(a.cat,p[0],y-px*1.5);g.fillStyle='#fff3d6';g.fillText(a.cat,p[0],y-px*1.5)}
+  return true}
+setInterval(()=>{if(S&&(curTab==='home'||fullOpen)&&catAnimState().length)draw()},160);
 function draw(){
   if(!L)return;
   // Alleen de lampen van deze kamer; de tv alleen in de tv-kamer
@@ -982,8 +1017,8 @@ function draw(){
     for(const l of lamps){if(l.x<0)continue;const [x,y]=sc(l.x,l.y),fx=S&&S.liveLamps&&S.liveLamps[l.id]&&S.liveLamps[l.id].effect;
       if(sheet&&sheet.id===l.id){g.strokeStyle='#ffe08a';g.lineWidth=3;g.strokeRect(x-k*.32,y-k*.32,k*.64,k*.64)}
       if(fx&&fx!=='none'){g.fillStyle='#ffe08a';g.fillText('\u2726',x+k*.34,y-k*.16)}}
-    return}
-  if(ro)return;
+    drawCats(g,k,sc);return}
+  if(ro){drawCats(g,k,sc);return}
   if(tool==='item'&&L.items[selItem]){const it=L.items[selItem],def=Room.ITEMS[it.type],rot=((it.dir||90)/90)%2===0;
     // Deur of raam: het kader volgt de muur waar hij tegenaan staat (zelfde vlak als itemAt), ook op de achtermuur (van voren, erboven)
     if(def&&def.wall){const s=Room.wallSnap(L,it.x,it.y),half=(it.w||def.w)/2,[x,y]=sc(s.x,s.y);
@@ -1477,7 +1512,52 @@ function kbCard(l){const a=kbOf(l.id),d=document.createElement('div');d.classNam
   d.querySelector('[data-auto]').onclick=()=>kbSet(l.id,{autoClean:!a.autoClean});
   d.querySelector('[data-light]').onclick=()=>kbSet(l.id,{light:!a.light});
   d.querySelectorAll('[data-delay]').forEach(b=>b.onclick=()=>kbSet(l.id,{delay:+b.dataset.delay}));
+  if(SRV){const h=document.createElement('div');h.className='kbhist';
+    h.innerHTML=`<div class="lbl">${esc(t('Gewicht per bezoek (kg)'))}</div><div class="enchart small kbw"></div>
+      <div class="lbl">${esc(t('Bezoeken per dag'))}</div><div class="enchart small kbv"></div><div class="kblist"></div>`;
+    d.append(h);setTimeout(()=>kbHist(l.id,h),0)}
   return d}
+/* Bezoeken (de hub houdt ze bij): gewicht per bezoek als punten, aantal per dag als staafjes (14 dagen), laatste bezoeken */
+const kbLogs={};
+async function kbHist(id,h){let c=kbLogs[id];if(!c||Date.now()-c.at>60000){try{const r=await api('/api/kattenbak/log?days=30&id='+encodeURIComponent(id));c=kbLogs[id]={at:Date.now(),v:r.visits||[],cats:r.cats||[]};kbCats=c.cats}catch(e){return}}
+  if(!h.isConnected)return;const v=c.v,list=h.querySelector('.kblist');
+  if(!v.length){h.querySelector('.kbw').classList.add('hidden');h.querySelector('.kbv').classList.add('hidden');h.querySelectorAll('.lbl').forEach(x=>x.classList.add('hidden'));
+    list.innerHTML=`<p class="hint" style="margin:6px 0 0">${esc(t('Nog geen bezoeken opgeslagen. Vanaf nu houdt de hub elk bezoek bij, met gewicht en duur.'))}</p>`;return}
+  const loc=I18N.lang==='en'?'en-GB':'nl-NL',dkey=ms=>{const x=new Date(ms);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
+  const days=[...Array(14)].map((_,i)=>enAddDay(enToday(),i-13)),cnt=days.map(dd=>v.filter(x=>dkey(x.t)===dd).length);
+  enBars(h.querySelector('.kbv'),cnt,{color:'#3f6fa8',min:2,labels:days.map(dd=>new Date(dd+'T12:00:00').toLocaleDateString(loc,{day:'numeric',month:'numeric'})),title:t('Bezoeken per dag'),
+    tip:(i,n)=>new Date(days[i]+'T12:00:00').toLocaleDateString(loc,{weekday:'short',day:'numeric',month:'short'})+': '+n+'×'});
+  // Gewicht per kat: elke kat een eigen lijn (de hub wijst bezoeken met gewicht toe aan de dichtstbijzijnde kat)
+  const cats=(c.cats||[]).map((ct,i)=>({name:ct.name,color:KAT_COL[i%KAT_COL.length],pts:v.filter(x=>x.weight>0&&x.cat===ct.name).slice().reverse()}));
+  const wl=v.filter(x=>x.weight>0);
+  if(wl.length)kbDots(h.querySelector('.kbw'),cats.length?cats:[{name:t('Kat'),color:KAT_COL[0],pts:wl.slice().reverse()}],loc);
+  else h.querySelector('.kbw').innerHTML=`<p class="hint" style="margin:0">${esc(t('Nog geen gewicht gemeten. Vanaf nu bewaart de hub het gewicht bij elk bezoek.'))}</p>`;
+  const dur=s=>s>=60?Math.floor(s/60)+' min '+(s%60)+' s':s+' s';
+  list.innerHTML=`<div class="lbl">${esc(t('Laatste bezoeken'))}</div>`+v.slice(0,8).map(x=>`<div class="kbrow">${esc(new Date(x.t).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}<span>${x.cat?esc(x.cat+' · '):''}${x.weight>0?esc(nl1(x.weight/1000,2)+' kg · '):''}${esc(dur(x.seconds||0))}</span></div>`).join('')}
+/* Gewicht als punten met lijn, een lijn per kat, op een tijd-as; as van net onder het laagste tot net boven het hoogste
+   gewicht (kleine verschillen blijven zichtbaar). Legenda erboven, tooltip bij het dichtstbijzijnde punt. */
+const KAT_COL=['#8a5bb0','#b8731f','#3f6fa8','#4e8a3c'];
+function kbDots(el,series,loc){const W=Math.max(200,el.clientWidth),H=el.clientHeight,padL=42,padB=18,padT=8,w=W-padL-6,h=H-padB-padT;
+  const all=series.flatMap(sr=>sr.pts);if(!all.length){el.innerHTML='';return}
+  let lo=Math.min(...all.map(p=>p.weight))/1000,hi=Math.max(...all.map(p=>p.weight))/1000;if(hi-lo<0.4){const m=(hi+lo)/2;lo=m-0.2;hi=m+0.2}lo-=0.1;hi+=0.1;
+  let t0=Math.min(...all.map(p=>p.t)),t1=Math.max(...all.map(p=>p.t));if(t1-t0<3600e3){t0-=1800e3;t1+=1800e3}
+  const x=tt=>padL+(tt-t0)/(t1-t0)*w,y=v=>padT+h-(v-lo)/(hi-lo)*h,step=niceStep((hi-lo)/3);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(t('Gewicht per bezoek (kg)'))}">`;
+  for(let g=Math.ceil(lo/step)*step;g<=hi;g+=step)s+=`<line x1="${padL}" x2="${W}" y1="${y(g)}" y2="${y(g)}" stroke="rgba(58,28,14,.15)"/><text x="${padL-5}" y="${y(g)+4}" text-anchor="end" font-size="11" fill="var(--text)">${nl1(g,step<0.1?2:1)}</text>`;
+  const pts=[];
+  for(const sr of series){if(!sr.pts.length)continue;
+    if(sr.pts.length>1)s+=`<polyline fill="none" stroke="${sr.color}" stroke-width="2" points="${sr.pts.map(p=>x(p.t)+','+y(p.weight/1000)).join(' ')}"/>`;
+    for(const p of sr.pts){s+=`<circle cx="${x(p.t)}" cy="${y(p.weight/1000)}" r="4" fill="${sr.color}" stroke="var(--cream)" stroke-width="2"/>`;pts.push([x(p.t),y(p.weight/1000),sr.name,p])}}
+  const days=Math.max(1,Math.round((t1-t0)/864e5)),nl=Math.min(5,days+1);
+  for(let i=0;i<nl;i++){const tt=t0+(t1-t0)*i/Math.max(1,nl-1);s+=`<text x="${x(tt)}" y="${H-3}" text-anchor="${i===0?'start':i===nl-1?'end':'middle'}" font-size="11" fill="var(--text)">${esc(new Date(tt).toLocaleDateString(loc,{day:'numeric',month:'numeric'}))}</text>`}
+  const legend=series.filter(sr=>sr.pts.length).map(sr=>`<span style="margin-right:12px"><i class="ensw" style="background:${sr.color}"></i>${esc(sr.name)}</span>`).join('');
+  el.innerHTML=s+'</svg><div class="tip hidden"></div>';if(legend&&series.length>1){const lg=document.createElement('div');lg.className='ennote';lg.innerHTML=legend;el.before(lg)}
+  const tp=el.querySelector('.tip');
+  el.onpointermove=e=>{const r=el.getBoundingClientRect(),px=(e.clientX-r.left)*W/r.width,py=(e.clientY-r.top)*H/r.height;let b=pts[0];
+    for(const q of pts)if(Math.hypot(q[0]-px,q[1]-py)<Math.hypot(b[0]-px,b[1]-py))b=q;
+    tp.textContent=b[2]+' · '+new Date(b[3].t).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})+': '+nl1(b[3].weight/1000,2)+' kg';
+    tp.classList.remove('hidden');tp.style.left=Math.min(r.width-90,Math.max(90,b[0]*r.width/W))+'px';tp.style.top=Math.max(14,b[1]*r.height/H-6)+'px'};
+  el.onpointerleave=()=>tp.classList.add('hidden')}
 function devSummary(l){if(isKat(l)){const k=kbOf(l.id);return k&&k.known?kbStatus(k)+' · '+t('{n}× vandaag',{n:k.visits??0})+((k.faults||[]).length?' · ⚠ '+(k.faults||[]).map(x=>t(KB_FAULT[x]||x)).join(', '):''):''}
   const a=airOf(l.id);return a&&a.known?t(a.on?'aan':'uit')+(a.inside!=null?' · '+t('binnen {n} °C',{n:a.inside}):''):''}
 const houseDevOpen=new Set();

@@ -28,6 +28,8 @@ object Kattenbak {
             d["16"]?.let { put("light", it == true) }
             d["24"]?.let { put("status", it.toString()) }
             (d["22"] as? Number)?.toInt()?.let { f -> put("faults", JSONArray().apply { FAULTS.forEachIndexed { i, n -> if (f and (1 shl i) != 0) put(n) } }) }
+            // Alle nummers zoals de bak ze meldt (om onbekende functies, zoals het gewicht, op te sporen)
+            put("raw", JSONObject(d.toMap()))
         }
     }
 
