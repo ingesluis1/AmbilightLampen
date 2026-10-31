@@ -1634,9 +1634,9 @@ function houseDevs(){const devs=SRV?lamps.filter(isDev):[],box=$('houseDevs');$(
 const AV={skin:['#f6d3b3','#e9b48a','#c68a5e','#8d5a3b','#5a3a26'],hairColor:['#2a1a12','#5a3a1e','#a0622a','#d8a24a','#efe2bd','#c0392b','#7a4ab0','#3a7ad0','#8a8a92'],
   eyes:['#6a4a2a','#4a7ab0','#3a9a6a','#7a8a9a','#2a2a3a'],
   shirt:['#c0392b','#e07a2a','#e8b84a','#4e8a3c','#3a7ad0','#7a4ab0','#d86aa0','#f2f2f2','#3a3a44'],pants:['#2c3e6a','#3a3a44','#6a4a2a','#8a8a92'],
-  hair:[['kort','Kort'],['kortm','Kort (stoer)'],['stekel','Stekels'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
+  hair:[['kort','Kort ♀'],['kortm','Kort ♂'],['stekel','Stekels'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
   extra:[['geen','Niets'],['bril','Bril'],['pet','Pet'],['muts','Muts'],['heks','Heksenhoed'],['zonnehoed','Zonnehoed'],['oren','Kattenoren'],['baard','Baard'],['strik','Strik']],
-  face:[['zacht','Zacht'],['stoer','Stoer']],
+  face:[['zacht','♀'],['stoer','♂']],
   outfit:[['shirt','Shirt'],['jas','Jas'],['rok','Rok'],['tuinbroek','Tuinbroek'],['jurk','Jurk']]};
 const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0',outfit:'shirt',face:'zacht'};
 /* Pixelpoppetje in Stardew-achtige stijl (eigen tekening): groot hoofd, grote ogen met glimlicht, drie tinten per kleur,
@@ -1733,7 +1733,7 @@ function avEditor(box,start,personId,done){const a={...avDefault,...(start||{})}
   const cv=drawAvatar(document.createElement('canvas'),a),opts=document.createElement('div');opts.className='opts';w.append(cv,opts);box.append(w);
   const redraw=()=>{drawAvatar(cv,a);opts.querySelectorAll('[data-k]').forEach(b=>b.classList.toggle('on',a[b.dataset.k]===b.dataset.v))};
   const row=(k,label,vals,isCol)=>{const l=document.createElement('div');l.className='lbl';l.textContent=t(label);const r=document.createElement('div');r.className='swrow';
-    for(const v of vals){const b=document.createElement('button');b.dataset.k=k;b.dataset.v=isCol?v:v[0];if(isCol)b.style.background=v;else{b.className='btn';b.textContent=t(v[1])}
+    for(const v of vals){const b=document.createElement('button');b.dataset.k=k;b.dataset.v=isCol?v:v[0];if(isCol)b.style.background=v;else{b.className='btn';b.textContent=t(v[1]);if(k==='face'){b.setAttribute('aria-label',t(v[0]==='stoer'?'Man':'Vrouw'));b.title=b.getAttribute('aria-label');b.style.fontSize='18px';b.style.minWidth='44px'}}
       b.onclick=()=>{a[k]=b.dataset.v;redraw()};r.append(b)}opts.append(l,r)};
   row('skin','Huid',AV.skin,true);row('face','Gezicht',AV.face,false);row('eyes','Ogen',AV.eyes,true);row('hair','Haar',AV.hair,false);row('hairColor','Haarkleur',AV.hairColor,true);row('outfit','Kleding',AV.outfit,false);row('shirt','Kleur kleding',AV.shirt,true);row('pants','Broek',AV.pants,true);row('extra','Extra',AV.extra,false);
   const save=document.createElement('button');save.className='btn gold';save.style.cssText='width:100%;margin-top:8px';save.textContent=t('Poppetje opslaan');
