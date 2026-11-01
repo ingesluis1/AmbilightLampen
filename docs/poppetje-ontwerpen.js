@@ -180,11 +180,6 @@ def('hats', 'duivel', 'Duivelshoorntjes', 'Twee rode hoorntjes, voor op een fees
   p(3, 0, R); p(3, -1, R); p(2, -2, R); p(4, 0, Rd);
   p(10, 0, R); p(10, -1, R); p(11, -2, R); p(9, 0, Rd);
 });
-def('hats', 'eenhoorn', 'Eenhoornhoorn', 'Gedraaide gouden hoorn midden op je hoofd.', c => {
-  const { p } = c, A = '#fff3b0', Bc = '#f2c84a';
-  [[6, 0], [7, 0], [6, -1], [7, -1], [6, -2], [7, -2], [6, -3], [7, -4]].forEach(([x, y], i) => p(x, y, i % 3 === 1 ? Bc : A));
-  p(5, 1, '#f6a0c8'); p(8, 1, '#a0d8f0');
-});
 def('hats', 'vissershoed', 'Vissershoedje', 'Zacht hoedje met schuine rand.', c => {
   const { rect, p, shade } = c, C = c.C || '#e8dcc0', Cd = shade(C, -.25);
   rect(3, -1, 10, 1, C); rect(4, -2, 9, -2, C); rect(1, 2, 12, 3, C); rect(1, 3, 12, 3, Cd); p(4, 0, shade(C, .2));

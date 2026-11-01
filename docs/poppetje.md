@@ -13,9 +13,9 @@ Instellingen, Mensen, je poppetje. Vijf tabjes met een plaatje per keuze, een gr
 Velden (hub bewaart ze in `People.kt`): `skin`, `face`, `blush` (auto/aan/uit), `freckles`, `eyeStyle` (gewoon, groot, ster, wimpers, slaperig, blij, kat, dicht), `eyes`, `eyes2` (ander oog), `brows`, `mouth`, `hair`, `hairColor`, `beard` (stoppels, snor, vol), `outfit`, `shirt`, `bottom`, `pants`, `shoes` (kleur), `extra` (hoed of oren/strik), `hatColor`, `glasses`, `earrings`, `scarf` (kleur of leeg).
 Oude poppetjes worden bij het tekenen omgezet (`avNorm`): `extra: baard/bril/sjaal` wordt `beard: vol`, `glasses: rond` en een rode sjaal.
 
-## Kledingontwerpen (nog niet in de app)
+## Extra kleding (in de hub sinds 01-11-2026)
 
-40 ontwerpen: 14 bovenkleding, 5 onderkant, 12 op je hoofd, 5 schoenen, 4 op je rug. De code staat in [`poppetje-ontwerpen.js`](poppetje-ontwerpen.js): elk ontwerp is een functie die in `AV_X` past (`tops`, `bottoms`, `hats`, `shoes`, `back`). Nieuw zijn dan de velden `shoeStyle`, `back` en `capeColor`.
+39 ontwerpen: 14 bovenkleding, 5 onderkant, 11 op je hoofd, 5 schoenen, 4 op je rug. Elk stuk is een tekenfunctie in `AV_X` (`tops`, `bottoms`, `hats`, `shoes`, `back`) in `index.html`; de losse ontwerpen staan ook in [`poppetje-ontwerpen.js`](poppetje-ontwerpen.js). Nieuwe velden: `shoeStyle` (Schoenen), `back` (Op je rug) en `capeColor` (Kleur cape).
 
 ![Ontwerpen](img/poppetje/ontwerpen.png)
 
