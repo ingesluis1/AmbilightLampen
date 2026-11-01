@@ -3103,7 +3103,7 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   const AD=(enAll&&enAll.days)||[],lyDay=d=>{const x=new Date(d+'T12:00:00');x.setFullYear(x.getFullYear()-1);const k=x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');return AD.find(z=>z.date===k)},
     dly=ds.map(d=>{const z=lyDay(d.date);return z?z[enKind]??null:null}),hasD=dly.some(v=>v>0);enCmpHint(hasD,t('dag'));
   enBars($('enDays'),ds.map(d=>d[enKind]??null),{color:EN_COL[enKind],labels:lbl,sel,pick,title:t(K.title+' per dag'),pair:hasD&&enCmp?dly:null,pairColor:EN_PAIR[enKind],
-    tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+K.unit+(enKind==='solar'&&ds[i].solarEst?' '+t('(geschat naar zonlicht)'):'')+costTxt(ds[i])+selfTxt(ds[i])+(hasD&&enCmp&&dly[i]!=null?' · '+t('vorig jaar {v}',{v:nl1(dly[i],2)+K.unit}):'')});
+    tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+K.unit+(enKind==='solar'&&ds[i].solarEst?' '+t('(geschat naar zonlicht)'):'')+(ds[i].manual&&enKind!=='solar'?' '+t('(zelf ingevuld)'):'')+costTxt(ds[i])+selfTxt(ds[i])+(hasD&&enCmp&&dly[i]!=null?' · '+t('vorig jaar {v}',{v:nl1(dly[i],2)+K.unit}):'')});
 }
 async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textContent=enDate(d,{weekday:'long',day:'numeric',month:'long'});
   // Bladeren t/m vandaag: stroom en gas komen pas de dag erna (netbeheerder), de opwek (Growatt) is er meteen
