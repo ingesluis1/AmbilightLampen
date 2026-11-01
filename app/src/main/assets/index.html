@@ -412,6 +412,11 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
     <div class="palette" id="palette"></div>
     <div class="hidden" id="itemActions">
       <div class="row"><b class="grow" id="itemName"></b><button class="btn hidden" id="itemFlip">Spiegel</button><button class="btn" id="itemRot">Draai</button><button class="btn red" id="itemDel">Weg</button></div>
+      <div class="hidden" id="doorLinkBox" style="margin-top:8px">
+        <div class="row" style="align-items:center"><span style="min-width:110px">Gaat naar</span><select id="doorTo" class="grow"></select></div>
+        <div class="row hidden" id="doorToDoorRow" style="align-items:center;margin-top:6px"><span style="min-width:110px">Welke deur daar</span><select id="doorToDoor" class="grow"></select></div>
+        <p class="hint" style="margin:4px 0 0">Tik op de kaart op deze deur en je gaat naar die kamer. De deur daar gaat vanzelf terug naar deze kamer.</p>
+      </div>
       <div class="sizes" style="margin-top:8px">
         <div>Breedte <b id="iw"></b> m<div class="row"><button class="btn" data-isize="w,-0.1">-</button><button class="btn" data-isize="w,0.1">+</button></div></div>
         <div style="text-align:right">Diepte <b id="id_"></b> m<div class="row" style="justify-content:flex-end"><button class="btn" data-isize="d,-0.1">-</button><button class="btn" data-isize="d,0.1">+</button></div></div>
@@ -1108,7 +1113,41 @@ function paletteState(){
   if(it){const def=Room.ITEMS[it.type];$('itemName').textContent=t(def.name);
     $('iw').textContent=(it.w||def.w).toFixed(1);$('id_').textContent=(it.d||def.d).toFixed(1);
     $('itemFlip').classList.toggle('hidden',it.type!=='corner'&&it.type!=='door');$('itemFlip').textContent=t(it.type==='door'?'Andere kant op':'Spiegel');$('itemRot').classList.toggle('hidden',!!def.wall)}
+  doorLinkUI(it)
 }
+/* ---------- Deuren koppelen: deur in kamer A gaat naar deur in kamer B (en terug) ----------
+   it.did = vaste id van de deur, it.to = kamer-id, it.toDoor = did van de deur daar. */
+const newDid=()=>'d'+Math.random().toString(36).slice(2,8);
+const WALL_NL={n:'boven',s:'onder',w:'links',e:'rechts'};
+/** Naam van een deur voor in een lijst: "Deur boven", met een nummer als er meer op die muur zitten. */
+function doorLabel(Lr,it){const s=Room.wallSnap(Lr,it.x,it.y),same=(Lr.items||[]).filter(x=>x.type==='door'&&Room.wallSnap(Lr,x.x,x.y).wall===s.wall)
+    .sort((a,b)=>(s.wall==='n'||s.wall==='s')?a.x-b.x:a.y-b.y);
+  const i=same.indexOf(it),n=same.length,hz=s.wall==='n'||s.wall==='s',pos=n===2?(hz?['links','rechts']:['boven','onder'])[i]:n===3?(hz?['links','midden','rechts']:['boven','midden','onder'])[i]:null;
+  return t('Deur {w}',{w:t(WALL_NL[s.wall])})+(n>1?' ('+(pos?t(pos):t('{n}e van {k}',{n:i+1,k:t(hz?'links':'boven')}))+')':'')}
+function doorsIn(id){return ((layouts[id]||{}).items||[]).filter(x=>x.type==='door')}
+/** Koppeling van een deur weghalen, ook aan de andere kant. */
+function doorUnlink(it){if(!it||!it.to)return;const o=doorsIn(it.to).find(x=>x.did&&x.did===it.toDoor);if(o&&o.to===curRoom){delete o.to;delete o.toDoor}delete it.to;delete it.toDoor}
+function doorLink(it,room,did){doorUnlink(it);if(!room)return;it.did=it.did||newDid();it.to=room;
+  const o=did&&doorsIn(room).find(x=>(x.did||'')===did);
+  if(o){if(o.to&&!(o.to===curRoom&&o.toDoor===it.did))doorUnlink(o);
+    // de deur daar kan nog naar een andere deur in deze kamer wijzen
+    for(const x of L.items||[])if(x!==it&&x.type==='door'&&x.to===room&&x.toDoor===o.did){delete x.to;delete x.toDoor}
+    o.did=o.did||newDid();o.to=curRoom;o.toDoor=it.did;it.toDoor=o.did}}
+function doorLinkUI(it){const box=$('doorLinkBox');if(!it||it.type!=='door'||!multi()){box.classList.add('hidden');return}box.classList.remove('hidden');
+  const sel=$('doorTo');sel.innerHTML=`<option value="">${esc(t('Nergens (buiten, kast)'))}</option>`+roomsList().filter(r=>r.id!==curRoom).map(r=>`<option value="${esc(r.id)}">${esc(r.name)}</option>`).join('');
+  sel.value=it.to&&roomById(it.to)?it.to:'';
+  const row=$('doorToDoorRow'),dd=$('doorToDoor');if(!sel.value){row.classList.add('hidden');return}
+  const Lr=layouts[sel.value],ds=doorsIn(sel.value);row.classList.remove('hidden');
+  dd.innerHTML=`<option value="">${esc(t('Geen bepaalde deur'))}</option>`+ds.map((x,i)=>{const other=x.to&&!(x.to===curRoom&&x.toDoor===it.did)&&roomById(x.to);
+    return `<option value="${esc(x.did||'#'+i)}">${esc(doorLabel(Lr,x))}${other?' · '+esc(t('nu naar {r}',{r:other.name})):''}</option>`}).join('');
+  dd.value=it.toDoor&&ds.some(x=>x.did===it.toDoor)?it.toDoor:''}
+$('doorTo').onchange=()=>{const it=L.items[selItem];if(!it)return;const room=$('doorTo').value;
+  // nieuwe kamer: kies vanzelf de enige deur daar die nog vrij is (of terugwijst)
+  let did='';if(room){const free=doorsIn(room).filter(x=>!x.to||(x.to===curRoom&&x.toDoor===it.did)||!roomById(x.to));if(free.length===1){free[0].did=free[0].did||newDid();did=free[0].did}}
+  doorLink(it,room,did);doorLinkUI(it);changed()};
+$('doorToDoor').onchange=()=>{const it=L.items[selItem];if(!it||!it.to)return;let v=$('doorToDoor').value;
+  if(v.startsWith('#')){const o=doorsIn(it.to)[+v.slice(1)];if(o){o.did=o.did||newDid();v=o.did}else v=''}
+  doorLink(it,it.to,v);doorLinkUI(it);changed()};
 function setTool(k){
   tool=k;
   document.querySelectorAll('#tools .btn').forEach(b=>b.classList.toggle('on',b.dataset.tool===k));
@@ -1164,7 +1203,7 @@ function catPath(x,y,tx,ty){const G=catFree(),{gw,gh,free}=G,cl=(v,m)=>Math.max(
   if(prev[t]<0)t=best;const pts=[];for(let i=t;i!==s;i=prev[i]){pts.push([(i%gw+.5)/CAT_G,(Math.floor(i/gw)+.5)/CAT_G]);if(pts.length>400)break}
   pts.reverse();return pts}
 /** Plek net binnen de dichtstbijzijnde deur van deze kamer (of null zonder deur). */
-function catDoor(x,y){let best=null,bd=1e9;for(const it of L.items||[]){if(it.type!=='door')continue;const s=Room.wallSnap(L,it.x,it.y);
+function catDoor(x,y,to){const linked=to&&(L.items||[]).some(it=>it.type==='door'&&it.to===to);let best=null,bd=1e9;for(const it of L.items||[]){if(it.type!=='door'||(linked&&it.to!==to))continue;const s=Room.wallSnap(L,it.x,it.y);
     const p=s.wall==='n'?[s.x,s.y+.25]:s.wall==='s'?[s.x,s.y-.25]:s.wall==='w'?[s.x+.25,s.y]:[s.x-.25,s.y],d=Math.hypot(p[0]-x,p[1]-y);if(d<bd){bd=d;best=p}}
   return best}
 function catsHere(){if(!SRV||!L)return[];const now=Date.now(),box=catAnimState(),out=[];
@@ -1172,9 +1211,9 @@ function catsHere(){if(!SRV||!L)return[];const now=Date.now(),box=catAnimState()
     let c=catSim[name];
     if(!c)c=catSim[name]={room:want,x:0,y:0,tx:0,ty:0,mode:'sit',until:now+3000,face:'E',t:now,seenRoom:''};
     if(c.room!==want&&!c.exiting){
-      if(c.room===curRoom&&c.seenRoom===curRoom){const d=catDoor(c.x,c.y);   // zichtbaar: eerst naar de deur lopen
+      if(c.room===curRoom&&c.seenRoom===curRoom){const d=catDoor(c.x,c.y,want);   // zichtbaar: eerst naar de deur lopen
         if(d){c.exiting=want;Object.assign(c,{tx:d[0],ty:d[1],mode:'walk',path:null})}else c.room=want}
-      else{c.room=want;if(want===curRoom){const d=catDoor(L.w/2,L.h/2),sp=catFloorSpot();   // binnenkomen door de deur
+      else{const from=c.room;c.room=want;if(want===curRoom){const d=catDoor(L.w/2,L.h/2,from),sp=catFloorSpot();   // binnenkomen door de deur
         if(d){Object.assign(c,{x:d[0],y:d[1],tx:sp[0],ty:sp[1],mode:'walk',path:null,seenRoom:curRoom})}else c.seenRoom=''}}}
     if(c.room!==curRoom)continue;
     // kamer net geopend: de kat is er al, ergens op een vrije plek
@@ -1195,6 +1234,14 @@ function catStep(c,now){const dt=Math.min(.5,(now-c.t)/1000);c.t=now;
     if(d<=v){c.x=c.tx;c.y=c.ty;if(!c.box){const r=Math.random();c.mode=r<.45?'sit':r<.7?'lick':r<.85?'sleep':'stand';c.until=now+(c.mode==='sleep'?40000+Math.random()*60000:4000+Math.random()*7000)}}
     else{c.x+=dx/d*v;c.y+=dy/d*v}}
   else if(!c.box&&now>c.until){const sp=catFloorSpot();Object.assign(c,{tx:sp[0],ty:sp[1],mode:'walk'})}}
+/** Bij een gekoppelde deur een klein bordje met de kamer erachter, aan de binnenkant van de muur. */
+function doorTags(g,k,sc){if(!multi())return;g.save();g.setLineDash([]);g.font='600 '+Math.max(10,k*.2)+'px "Pixelify Sans",monospace';g.textBaseline='middle';
+  for(const it of L.items||[]){if(it.type!=='door'||!it.to)continue;const r=roomById(it.to);if(!r)continue;
+    const s=Room.wallSnap(L,it.x,it.y),[x,y]=sc(s.x+(s.wall==='w'?.12:s.wall==='e'?-.12:0),s.y+(s.wall==='n'?.25:s.wall==='s'?-.25:0)),txt=(s.wall==='w'?'‹ ':s.wall==='e'?'':'')+r.name+(s.wall==='e'?' ›':'');
+    const w=g.measureText(txt).width+k*.16,h=Math.max(14,k*.3);g.textAlign=s.wall==='w'?'left':s.wall==='e'?'right':'center';
+    const bx=s.wall==='w'?x:s.wall==='e'?x-w:x-w/2;g.fillStyle='rgba(29,17,36,.78)';g.fillRect(bx,y-h/2,w,h);
+    g.fillStyle='#fff3d6';g.fillText(txt,s.wall==='w'?x+k*.08:s.wall==='e'?x-k*.08:x,y+1)}
+  g.restore()}
 /** Plafondlampen weer over de katten heen tekenen: de kat loopt eronderdoor. */
 function catTops(g){const t=Room.topLayer();if(t&&view){g.save();g.imageSmoothingEnabled=false;g.drawImage(t,0,0,view.W,view.H);g.restore()}}
 function drawCats(g,k,sc){const r=drawCats0(g,k,sc);if(r)catTops(g);return r}
@@ -1273,6 +1320,7 @@ function draw(){
     if(a){const W=view.W,H=view.H,fs=Math.max(15,k*.45);g.save();g.textAlign='right';g.textBaseline='bottom';
       g.font='600 '+fs+'px "Pixelify Sans",monospace';g.fillStyle='#fff3d6';g.fillText(a.inside+' °C',W-k*.25,H-k*.15);
       g.font='600 '+fs*.6+'px "Pixelify Sans",monospace';g.fillStyle='#c9b7d6';g.fillText(t('binnen'),W-k*.25,H-k*.15-fs*1.05);g.restore()}}
+  if(ro)doorTags(g,k,sc);
   g.lineWidth=2;g.setLineDash([6,4]);g.strokeStyle='#ffe08a';
   $('wv').textContent=L.w;$('hv').textContent=L.h;
   if(fullOpen){g.setLineDash([]);g.font='600 '+Math.max(11,k*.22)+'px "Pixelify Sans",monospace';g.textAlign='center';
@@ -1419,7 +1467,7 @@ function lampHit(mx,my){let best=null,bd=1e9;
   for(const l of roomLamps()){if(l.x<0)continue;const b=Room.lampBox(l,L),x0=l.x+b[0],y0=l.y+b[1],x1=l.x+b[2],y1=l.y+b[3];
     if(mx<x0||mx>x1||my<y0||my>y1)continue;const d=Math.hypot((x0+x1)/2-mx,(y0+y1)/2-my);if(d<bd){bd=d;best=l}}
   return best}
-cv.addEventListener('pointerdown',e=>{if(!fullOpen||!view)return;const [mx,my]=pos(e);const l=lampHit(mx,my);if(!l)return;
+cv.addEventListener('pointerdown',e=>{if(!fullOpen||!view)return;const [mx,my]=pos(e);const l=lampHit(mx,my);if(!l){const d=doorHit(mx,my);if(d){e.preventDefault();goRoom(d.to)}return}
   e.preventDefault();if(isDev(l)){openAirSheet(l.id);return}const p={id:l.id,long:false,x:e.clientX,y:e.clientY};press=p;
   p.timer=setTimeout(()=>{if(press!==p)return;p.long=true;if(navigator.vibrate)navigator.vibrate(20);openSheet(p.id)},450)});
 cv.addEventListener('pointermove',e=>{if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>12){clearTimeout(press.timer);press=null}});
@@ -1427,7 +1475,12 @@ cv.addEventListener('pointerup',()=>{if(!fullOpen||!press)return;clearTimeout(pr
   const on=lampOnNow(p.id);if(live[p.id])live[p.id].on=!on;if(S&&S.liveLamps&&S.liveLamps[p.id])S.liveLamps[p.id].bright=on?0:1;draw();liveSend({id:p.id,on:!on})});
 cv.addEventListener('pointercancel',()=>{if(press){clearTimeout(press.timer);press=null}});
 cv.addEventListener('contextmenu',e=>{if(fullOpen)e.preventDefault()});
-cv.addEventListener('click',()=>{if(curTab==='home'&&!fullOpen)openFull()});
+/** Gekoppelde deur onder de vinger (alleen als er geen lamp of apparaat is). */
+function doorHit(mx,my){const i=itemAt(mx,my),it=i>=0&&L.items[i];return it&&it.type==='door'&&it.to&&roomById(it.to)?it:null}
+/** Door een deur naar een andere kamer; de grote kaart blijft open. */
+function goRoom(id){if(!roomById(id))return;const full=fullOpen;homeView=id;try{localStorage.setItem('homeRoom',id)}catch(e){}
+  useRoom(wantRoom());homeUI();if(S)sceneList(S);chips();if(full){closeSheet();closeAirSheet();setTimeout(()=>setZoom(0),0)}else window.scrollTo(0,0);setTimeout(draw,0)}
+cv.addEventListener('click',e=>{if(curTab!=='home'||fullOpen)return;const [mx,my]=pos(e),d=!lampHit(mx,my)&&doorHit(mx,my);if(d){goRoom(d.to);return}openFull()});
 function openSheet(id){const l=lamps.find(x=>x.id===id);if(!l)return;closeAirSheet();const ll=S&&S.liveLamps&&S.liveLamps[id],lv=live[id];
   const shown=lv&&/^#[0-9a-f]{6}$/i.test(lv.color||'')&&lv.color!=='#555555'?lv.color:SHEET_WHITES[1][0];
   sheet={id,colour:ll?ll.colour:shown,bright:ll&&ll.bright>0?ll.bright:1,effect:ll?ll.effect:'none'};
@@ -1496,7 +1549,7 @@ function plankUI(){if(!L)return;document.querySelectorAll('#plankSeg .btn').forE
 document.querySelectorAll('#plankSeg .btn').forEach(b=>b.onclick=()=>{if(!L)return;if(b.dataset.p==='v')L.planks='v';else delete L.planks;plankUI();changed()});
 // deur: vier standen rond (naar binnen links/rechts, naar buiten links/rechts); hoekbank: spiegelen
 $('itemFlip').onclick=()=>{const it=L.items[selItem];if(!it)return;if(it.type==='door'){it.door=((it.door!=null?it.door:it.flip?1:0)+1)%4;delete it.flip;toast(t(['Draait naar binnen, scharnier links','Draait naar binnen, scharnier rechts','Draait naar buiten, scharnier links','Draait naar buiten, scharnier rechts'][it.door]))}else it.flip=!it.flip;changed()};
-$('itemDel').onclick=()=>{if(L.items[selItem]){L.items.splice(selItem,1);selItem=null;paletteState();changed()}};
+$('itemDel').onclick=()=>{if(L.items[selItem]){doorUnlink(L.items[selItem]);L.items.splice(selItem,1);selItem=null;paletteState();changed()}};
 
 /* ---------- tv ---------- */
 const tvInch=()=>L&&L.tv?Math.round(L.tv.w/0.0254/0.8716):65;
