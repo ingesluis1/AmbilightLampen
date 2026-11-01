@@ -3102,12 +3102,14 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   const ds=enData.days;$('enPrev').disabled=!ds.length||d<=ds[0].date;$('enNext').disabled=d>=enToday();
   let r;try{[r]=await Promise.all([api('/api/energy/day?date='+d),api('/api/stekker/all?days=62&date='+d).then(p=>{enPlugs={date:d,list:p.plugs||[]};enPlugsAt=Date.now()}).catch(()=>{})])}catch(e){return}if(enDay!==d||!r.ok)return;
   const plq=((enPlugs&&enPlugs.date===d&&enPlugs.list)||[]).filter(p=>Array.isArray(p.quarters)&&p.quarters.some(v=>v>0)),stack=plq.map((p,i)=>({name:p.name,color:EN_PLUG_COL[i%EN_PLUG_COL.length],vals:p.quarters.map(v=>v*4000)}));
-  const hhmm=k=>String(Math.floor(k/4)%24).padStart(2,'0')+':'+String(k%4*15).padStart(2,'0'),w=r.kwh.map(v=>v==null?null:v*4000);
+  const hhmm=k=>String(Math.floor(k/4)%24).padStart(2,'0')+':'+String(k%4*15).padStart(2,'0'),noMeter=!r.kwh.some(v=>v!=null);
+  // Meter nog niet binnen (vandaag): dan alvast de stekkers, de balk is dan hun som
+  const w=noMeter&&stack.length?r.kwh.map((_,k)=>{const v=stack.reduce((a,st)=>a+(st.vals[k]||0),0);return v>0?v:null}):r.kwh.map(v=>v==null?null:v*4000);
   const bw=(r.back||[]).map(v=>v==null?null:v*4000),hasB=bw.some(v=>v>0);
   enBars($('enDay'),w,{color:EN_COL.kwh,min:100,neg:hasB?bw:null,negColor:EN_COL.back,stack:stack.length?stack:null,labels:w.map((_,k)=>k%4===0?String(k/4):''),title:t('Stroom per kwartier'),
-    tip:(k,v,b)=>hhmm(k)+'–'+hhmm(k+1)+': '+t('verbruik {n} W',{n:nl1(v||0,0)})+(b?' · '+t('terug {n} W',{n:nl1(b,0)}):'')+stack.filter(st=>st.vals[k]>=1).map(st=>' · '+st.name+' '+nl1(st.vals[k],0)+' W').join('')});
+    tip:(k,v,b)=>hhmm(k)+'–'+hhmm(k+1)+': '+t(noMeter?'stekkers samen {n} W':'verbruik {n} W',{n:nl1(v||0,0)})+(b?' · '+t('terug {n} W',{n:nl1(b,0)}):'')+stack.filter(st=>st.vals[k]>=1).map(st=>' · '+st.name+' '+nl1(st.vals[k],0)+' W').join('')});
   const sw=c=>`<i class="ensw" style="background:${c}"></i>`,noE=!r.kwh.some(v=>v!=null);
-  $('enDayLegend').innerHTML=noE?esc(t('Stroom en gas van deze dag komen pas binnen als je netbeheerder ze doorgeeft (meestal de volgende dag).')):sw(EN_COL.kwh)+esc(t('verbruik (omhoog)'))+(hasB?' &nbsp; '+sw(EN_COL.back)+esc(t('teruglevering (omlaag)')):'')+stack.map(st=>' &nbsp; '+sw(st.color)+esc(st.name)).join('');
+  $('enDayLegend').innerHTML=noE&&stack.length?esc(t('Alleen de stekkers: de meter van het hele huis komt meestal de volgende dag.'))+stack.map(st=>' &nbsp; '+sw(st.color)+esc(st.name)).join(''):noE?esc(t('Stroom en gas van deze dag komen pas binnen als je netbeheerder ze doorgeeft (meestal de volgende dag).')):sw(EN_COL.kwh)+esc(t('verbruik (omhoog)'))+(hasB?' &nbsp; '+sw(EN_COL.back)+esc(t('teruglevering (omlaag)')):'')+stack.map(st=>' &nbsp; '+sw(st.color)+esc(st.name)).join('');
   const sol=r.solarW||[],hasS=sol.some(v=>v>0);$('enDaySolar').classList.toggle('hidden',!hasS);$('enDaySolarLbl').classList.toggle('hidden',!hasS);
   if(hasS)enBars($('enDaySolar'),sol,{color:EN_COL.solar,min:100,labels:sol.map((_,k)=>k%4===0?String(k/4):''),title:t('Opwek per kwartier'),tip:(k,v)=>hhmm(k)+'–'+hhmm(k+1)+': '+t('opwek {n} W',{n:nl1(v||0,0)})});
   const g=r.gas||[],hasG=g.some(v=>v!=null);$('enDayGas').classList.toggle('hidden',!hasG);$('enDayGasLbl').classList.toggle('hidden',!hasG);
@@ -3115,7 +3117,8 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   const tot=r.kwh.reduce((a,v)=>a+(v||0),0),peak=Math.max(...w.map(v=>v||0)),pk=w.indexOf(peak),totB=(r.back||[]).reduce((a,v)=>a+(v||0),0),totS=sol.reduce((a,v)=>a+(v||0),0)/4000;
   const dd=ds.find(x=>x.date===d)||{},c=enCostDay(dd);
   enDayTot=r.kwh.some(v=>v!=null)?tot:null;enSplitLoad();
-  $('enDaySum').textContent=t('Totaal {k} kWh. Hoogste kwartier {t}: gemiddeld {w} W.',{k:nl1(tot,2),t:hhmm(pk),w:nl1(peak,0)})
+  const plugTot=plq.reduce((a,p)=>a+p.quarters.reduce((x,v)=>x+(v||0),0),0);
+  $('enDaySum').textContent=(noMeter?(plugTot>0?t('Stekkers samen tot nu toe {k} kWh.',{k:nl1(plugTot,2)}):''):t('Totaal {k} kWh. Hoogste kwartier {t}: gemiddeld {w} W.',{k:nl1(tot,2),t:hhmm(pk),w:nl1(peak,0)}))
     +(totB>0?' '+t('Teruggeleverd {n} kWh.',{n:nl1(totB,2)}):'')+(hasS?' '+t('Opgewekt ongeveer {n} kWh.',{n:nl1(totS,2)}):'')+(c!=null?' '+t('Kosten die dag ≈ {e}.',{e:enEUR(c)}):'')}
 /* ---------- Energie: extra blokken (deze maand, jaarafrekening, apparaten, patronen) ----------
    enAll: dagen van het laatste jaar (voor vergelijken en de jaarafrekening); enMonthsLong: 25 maanden (vorig jaar);
