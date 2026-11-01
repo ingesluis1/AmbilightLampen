@@ -2360,7 +2360,8 @@ function enConRender(){enCon.sort((a,b)=>a.from<b.from?-1:1);const box=$('enCon'
 $('enConAdd').onclick=()=>{const last=enCon[enCon.length-1]||{},P={...JSON.parse(JSON.stringify(last)),name:'',from:enToday()};enCon.push(P);enConOpen.add(P);enConDirty=true;enConRender();
   $('enCon').firstElementChild.scrollIntoView({block:'center'})};
 $('enTarSave').onclick=async()=>{const r=await api('/api/energy/tariffs',{periods:enCon});toast(r.message||'');
-  if(r.ok&&enData){enConDirty=false;enData.tariffs=r.tariffs;enDays();enDayLoad()}};
+  // meteen overal doorvoeren (ook in het pakket van de hub), zodat bv. de jaarafrekening direct je nieuwe voorschot gebruikt
+  if(r.ok&&enData){enConDirty=false;enData.tariffs=r.tariffs;if(enAll)enAll.tariffs=r.tariffs;if(enSnap&&enSnap.days)enSnap.days.tariffs=r.tariffs;if(enMonthsLong)enMonthsLong.tariffs=r.tariffs;enDays();enDayLoad();enMonthUI();enYearUI()}};
 function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d=>enDate(d.date,{day:'numeric',month:'numeric'}));
   $('enStamp').textContent=t('Uit Enelogic, bijgewerkt t/m {d}. Je netbeheerder stuurt de standen één keer per dag.',{d:enDate(r.last,{weekday:'long',day:'numeric',month:'long'})});
   const sum=(k,list)=>list.reduce((a,d)=>a+(d[k]||0),0),month=ds.filter(d=>d.date.slice(0,7)===r.last.slice(0,7)),anyBack=ds.some(d=>d.back>0);
