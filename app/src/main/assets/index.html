@@ -1110,7 +1110,7 @@ function setTool(k){
    Plaatjes alleen op de hub (data/sprites/kat-<naam>.png + .json met de rijen per beweging), niet in deze (openbare) app.
    Elke kat zit ongeveer tien minuten in een kamer en gaat dan naar een andere. In de kamer: lopen naar een plek op de
    vloer, dan zitten, poetsen of een dutje. Meldt de kattenbak die kat, dan loopt hij naar de bak (en zit erbij). */
-const CAT_SPR={},catSim={};
+const CAT_SPR={},catSim={};let catDim=false,catCv=null;
 function catSprite(id){const k=String(id||'').toLowerCase().replace(/[^a-z0-9-]/g,'');if(!k)return null;let s=CAT_SPR[k];if(s)return s.ok?s:null;s=CAT_SPR[k]={ok:false};
   Promise.all([fetch('/api/sprite/kat-'+k+'.json').then(r=>r.ok?r.json():null).catch(()=>null),
     new Promise(res=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>res(null);im.src='/api/sprite/kat-'+k+'.png'})])
@@ -1186,8 +1186,12 @@ function drawCats(g,k,sc){const list=catsHere(),now=Date.now();if(!list.length){
     // zitten: één keer gaan zitten en dan stil blijven zitten; poetsen en slapen herhalen
     if(c.mode!==c.lastMode){c.lastMode=c.mode;c.ms=now}
     const fps=c.mode==='walk'?8:c.mode==='sleep'?1.5:3,fr=Math.floor((now-(c.ms||now))/1000*fps),f=(c.mode==='sit'||c.mode==='stand')?Math.min(an.n-1,fr):fr%an.n,s=k/16*.6,[x,y]=sc(c.x,c.y);
+    // donkere kamer: de kat krijgt dezelfde waas als de kaart (alleen over de kat, niet eromheen)
+    let src=sp.img,sx=f*cw,sy=an.row*ch;
+    if(catDim){catCv=catCv||document.createElement('canvas');catCv.width=cw;catCv.height=ch;const cg=catCv.getContext('2d');cg.clearRect(0,0,cw,ch);
+      cg.drawImage(sp.img,sx,sy,cw,ch,0,0,cw,ch);cg.globalCompositeOperation='source-atop';cg.fillStyle='rgba(16,6,28,.55)';cg.fillRect(0,0,cw,ch);cg.globalCompositeOperation='source-over';src=catCv;sx=0;sy=0}
     g.save();g.imageSmoothingEnabled=false;g.translate(Math.round(x),Math.round(y));if(flip)g.scale(-1,1);
-    g.drawImage(sp.img,f*cw,an.row*ch,cw,ch,Math.round(-cw*s/2),Math.round(-ch*s*.9),Math.round(cw*s),Math.round(ch*s));g.restore();
+    g.drawImage(src,sx,sy,cw,ch,Math.round(-cw*s/2),Math.round(-ch*s*.9),Math.round(cw*s),Math.round(ch*s));g.restore();
     if(c.mode!=='sleep'){g.font='600 '+Math.max(10,k*.18)+'px system-ui,sans-serif';g.textAlign='center';g.lineWidth=3;g.strokeStyle='rgba(29,17,36,.75)';
       g.strokeText(name,x,y-ch*s*.85);g.fillStyle='#fff3d6';g.fillText(name,x,y-ch*s*.85)}}
   return true}
@@ -1229,6 +1233,7 @@ function draw(){
   const key=JSON.stringify(L)+isTv+(rm.color||'')+view34+lamps.map(l=>l.id+(isDev(l)?':'+l.x+','+l.y+','+l.look:'')).join();
   if(key!==baseKey){baseImg=Room.base(LD,lamps);baseKey=key}
   const dim=S&&((isTv&&S.sync)||(hasRooms()?!!rm.scene||!roomAnyOn(curRoom):(!!S.activeScene||S.lampsOff)));
+  catDim=!!dim;
   const img=Room.frame(baseImg,LD,lamps,live,dim,isTv&&S&&S.sync&&S.top);
   const ro=curTab==='home'||fullOpen;
   // Kamer ingezoomd: maat van het vak (niet van de kaart zelf, die groeit mee) maal de zoomstand
