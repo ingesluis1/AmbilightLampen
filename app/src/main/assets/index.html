@@ -2109,7 +2109,7 @@ function drawAvatar(c,a0,sticker=true,opt={}){const a=avNorm(a0);const W=20,Hh=3
   const L='#3a2228',GW='#cfc6cc',st=opt.blink?'dicht':(a.eyeStyle||'gewoon');
   for(const [o,i,d,EE] of [[4,5,-1,E],[9,8,1,E2]]){const EEd=avShade(EE,-.5);
     if(st==='dicht'){p(o,8,L);p(i,8,L);p(o+d,8,L)}
-    else if(st==='blij'){p(o+d,8,L);p(o,7,L);p(i,7,L)}
+    else if(st==='blij'){p(o+d,8,L);p(o,7,L);p(i,8,L)}   // ^ ^ (boogje met de punt boven)
     else if(st==='slaperig'){p(o,6,Sd);p(i,6,Sd);p(o,7,L);p(i,7,L);p(o,8,EE);p(i,8,EEd)}
     else if(st==='groot'){p(o,6,L);p(i,6,L);p(o,7,'#ffffff');p(i,7,EE);p(o,8,EE);p(i,8,EEd)}
     else if(st==='kat'){p(o,6,L);p(i,6,L);p(o,7,EE);p(i,7,'#140c12');p(o,8,avShade(EE,.25));p(i,8,'#140c12')}
