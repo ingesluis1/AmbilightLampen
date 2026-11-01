@@ -649,6 +649,7 @@ class WebServer(private val ctx: Context) {
         private val STATIC = mapOf(
             "/" to "text/html; charset=utf-8", "/index.html" to "text/html; charset=utf-8",
             "/tv.html" to "text/html; charset=utf-8", "/room.js" to "application/javascript; charset=utf-8",
+            "/furniture34.js" to "application/javascript; charset=utf-8",
             "/i18n.js" to "application/javascript; charset=utf-8",
             "/calib.html" to "text/html; charset=utf-8",
             "/ui.css" to "text/css; charset=utf-8", "/pixelify-sans.woff2" to "font/woff2",

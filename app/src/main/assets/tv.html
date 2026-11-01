@@ -167,8 +167,11 @@ h1{margin:0;font-size:2.8vh;font-weight:700}
 <div id="demoCap" class="hidden"></div>
 <div id="toast"></div>
 <script src="/i18n.js"></script>
+<script src="/furniture34.js"></script>
 <script src="/room.js"></script>
 <script>
+// meubels schuin van voren, net als in de app (standaard aan; uit als dit apparaat "van boven" koos)
+try{Room.setView34(localStorage.getItem('view34')!=='0')}catch(e){Room.setView34(true)}
 const $=id=>document.getElementById(id);
 let S=null,L=null,baseImg=null,baseKey='',busy=false,langDone=false,rbBase=null,rbBaseKey='';
 // Langere meldingen blijven langer staan (ongeveer 70 ms per teken, 2,5 tot 10 seconden); tikken sluit hem
