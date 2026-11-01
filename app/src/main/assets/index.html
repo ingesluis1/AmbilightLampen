@@ -2410,7 +2410,7 @@ shoe('klompen', 'Klompen', 'Houten klompen met een rood tulpje.', c => {
 // ---------------- Op je rug (achter het lijf getekend) ----------------
 def('back', 'cape', 'Cape', 'Lange cape die naast je benen uitwaait.', c => {
   const { rect, p, a, shade } = c, C = a.capeColor || '#c0392b', Cd = shade(C, -.3);
-  rect(0, 12, 13, 24, C); rect(-1, 20, 14, 25, C); for (const x of [-1, 2, 5, 8, 11, 14]) p(x, 25, Cd); rect(12, 12, 13, 25, Cd);
+  rect(3, 12, 10, 12, C); rect(1, 13, 12, 13, C); rect(0, 14, 13, 24, C); rect(-1, 20, 14, 25, C);   // ronde schouders for (const x of [-1, 2, 5, 8, 11, 14]) p(x, 25, Cd); p(12, 13, Cd); rect(13, 14, 13, 25, Cd); rect(12, 14, 12, 25, Cd);
 });
 def('back', 'vleugels', 'Engelenvleugels', 'Witte vleugels met veertjes.', c => {
   const { p } = c, W = '#ffffff', D = '#d8dcec';
