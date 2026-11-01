@@ -1123,7 +1123,7 @@ const catSpriteOf=name=>{const c=catList().find(x=>x.name===name);return c&&c.sp
 function catRoom(name,now){const rs=roomsList();if(!rs.length)return '';const p=Math.floor(now/600000);return rs[catHash(name+':'+p)%rs.length].id}
 const CAT_G=4;let catGrid=null,catGridKey='';
 /** Raster (25 cm) van plekken waar een kat kan lopen: vloer, niet onder een meubel (een kleed mag), niet onder de tv. */
-function catFree(){const key=JSON.stringify(L.items||[])+JSON.stringify(L.tv||null)+JSON.stringify(L.floor)+curRoom;if(catGrid&&catGridKey===key)return catGrid;
+function catFree(){const key=JSON.stringify(L.items||[])+JSON.stringify(L.tv||null)+JSON.stringify(L.floor)+curRoom+roomLamps().map(l=>l.id+':'+l.x+','+l.y).join();if(catGrid&&catGridKey===key)return catGrid;
   const gw=L.w*CAT_G,gh=L.h*CAT_G,free=new Uint8Array(gw*gh);
   for(let y=0;y<gh;y++)for(let x=0;x<gw;x++)free[y*gw+x]=Room.isFloor(L,Math.floor(x/CAT_G),Math.floor(y/CAT_G))?1:0;
   const block=(cx,cy,w,d)=>{const x0=Math.floor((cx-w/2)*CAT_G),x1=Math.ceil((cx+w/2)*CAT_G),y0=Math.floor((cy-d/2)*CAT_G),y1=Math.ceil((cy+d/2)*CAT_G);
@@ -1131,8 +1131,8 @@ function catFree(){const key=JSON.stringify(L.items||[])+JSON.stringify(L.tv||nu
   for(const it of L.items||[]){const def=Room.ITEMS[it.type];if(!def||def.wall||it.type==='rug'||def.top)continue;const [w,d]=Room.itemDims(it);block(it.x,it.y,w,d)}
   if(L.tv){const [w,d]=Room.itemDims(L.tv);block(L.tv.x,L.tv.y,w,d)}
   // lampen: de voet, en ook de strook erachter (de paal en kap staan op de kaart omhoog; een kat daar zou er doorheen lijken te lopen)
-  for(const l of roomLamps())if(isDev(l)&&l.x>=0&&!isPlug(l)){block(l.x,l.y,.6,.6);block(l.x,l.y-.55,.5,1.1)}
-  catGrid={gw,gh,free};catGridKey=key;return catGrid}
+  for(const l of roomLamps())if(isDev(l)&&l.x>=0&&!isPlug(l)){block(l.x,l.y,.7,.7);block(l.x,l.y-.6,.9,1.3)}
+  catGrid={gw,gh,free};catGridKey=key;for(const n in catSim)catSim[n].path=null;return catGrid}
 function catFloorSpot(){const G=catFree(),pts=[];for(let i=0;i<G.free.length;i++)if(G.free[i])pts.push(i);
   if(!pts.length)return[L.w/2,L.h/2];const i=pts[Math.floor(Math.random()*pts.length)];return[(i%G.gw+.5)/CAT_G,(Math.floor(i/G.gw)+.5)/CAT_G]}
 /** Route van (x,y) naar (tx,ty) over vrije plekken; geeft punten (meters) of null. Staat het doel op een meubel: naar de dichtstbijzijnde vrije plek. */
