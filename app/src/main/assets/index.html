@@ -1810,6 +1810,9 @@ function kbCard(l){const a=kbOf(l.id),d=document.createElement('div');d.classNam
    en voor de hoofdgebruiker: wat de hub mag (mode) en wat hij doet na een stroomstoring. */
 const stOf=id=>{const x=S&&(S.lamps||[]).find(q=>q.id===id);return x&&x.plug};
 const ST_MODE=[['vrij','Vrij aan en uit'],['meten','Alleen meten'],['standby','Alleen uit in stand-by'],['wasmachine','Wasmachine'],['vaatwasser','Vaatwasser']];
+/** Keuzes die bij deze stekker passen: hangt hij aan de tv of een ander meubel, dan geen Wasmachine/Vaatwasser (behalve bij dat meubel). De huidige keuze blijft altijd staan. */
+function stModes(l,p){const Lr=(roomById(l.room)||{}).layout,it=Lr&&Room.plugItem(Lr,l),fits={wasmachine:'washer',vaatwasser:'dishwasher'};
+  return ST_MODE.filter(([v])=>!fits[v]||p.mode===v||!it||it.type===fits[v])}
 const ST_OUT=[['off','Uit'],['on','Aan'],['memory','Zoals hij was']];
 const stW=w=>w==null?'–':(w>=100?Math.round(w):nl1(w,1))+' W';
 const stKwh=k=>nl1(k||0,k>=10?1:2)+' kWh';
@@ -1827,7 +1830,7 @@ function stCard(l){const p=stOf(l.id),d=document.createElement('div');d.classNam
     ${(p.faults||[]).length?`<div class="hint" style="color:#a02a1a;font-weight:700">⚠ ${esc(t('Storing: {f}',{f:p.faults.join(', ')}))}</div>`:''}
     <div class="lbl">${esc(t('Vandaag'))}</div><div><b>${esc(stKwh(p.today))}</b>${pr!=null?' · ≈ '+esc(enEUR(p.today*pr)):''}${(p.mode==='wasmachine'||p.mode==='vaatwasser')?' · '+esc(stLine(p).split(' · ').filter(x=>/bezig|klaar|running|done/.test(x)).join('')||t('niet bezig')):''}</div>
     <button class="btn${p.on?' on':''}" data-on="1" style="width:100%;margin-top:10px">${esc(t(p.on?'Uitzetten':'Aanzetten'))}</button>
-    ${own?`<div class="lbl">${esc(t('Wat mag de hub'))}</div><div class="seg" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${ST_MODE.map(([v,n])=>`<button class="btn${p.mode===v?' on':''}" data-mode="${v}">${esc(t(n))}</button>`).join('')}</div>
+    ${own?`<div class="lbl">${esc(t('Wat mag de hub'))}</div><div class="seg" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${stModes(l,p).map(([v,n])=>`<button class="btn${p.mode===v?' on':''}" data-mode="${v}">${esc(t(n))}</button>`).join('')}</div>
       <div class="lbl">${esc(t('Na een stroomstoring'))}</div><div class="seg">${ST_OUT.map(([v,n])=>`<button class="btn${p.afterOutage===v?' on':''}" data-out="${v}">${esc(t(n))}</button>`).join('')}</div>`:''}`;
   d.querySelector('[data-on]').onclick=()=>stSet(l.id,{on:!p.on});
   d.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>stSet(l.id,{mode:b.dataset.mode}));
