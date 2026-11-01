@@ -364,7 +364,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 <!-- Tabblad: Kamers -->
 <div class="page hidden" id="page-room">
 <section class="panel hidden" id="roomListPanel">
-  <div class="row" style="margin:0 0 8px"><button class="btn" id="roomsHome">&lsaquo; Bediening</button></div>
+  <div class="row srvonly" style="margin:0 0 8px"><button class="btn" id="roomsHome">&lsaquo; Bediening</button></div>
   <h2>Kamers</h2>
   <p data-dev>Elke kamer heeft een eigen plattegrond en eigen lampen. De volgorde hier is ook de volgorde bij Bediening.</p>
   <p class="tvonly">De tv synct alleen de kamer waar hij staat.</p>
@@ -883,7 +883,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 
 <nav class="tabbar">
   <button class="btn" data-tab="home"><span class="ic">▶</span>Bediening</button>
-  <button class="btn hidden" data-tab="room"><span class="ic">▦</span>Kamers</button>
+  <button class="btn tvonly" data-tab="room"><span class="ic">▦</span>Kamers</button>
   <button class="btn" data-tab="lamps"><span class="ic">✺</span><span data-dev>Lampen</span></button>
   <button class="btn srvonly" data-tab="energy"><span class="ic">&#991;</span>Energie</button>
   <button class="btn" data-tab="settings"><span class="ic">⚙</span><span class="long">Instellingen</span><span class="short">Opties</span></button>
