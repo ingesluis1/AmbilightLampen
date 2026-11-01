@@ -1234,13 +1234,16 @@ function catStep(c,now){const dt=Math.min(.5,(now-c.t)/1000);c.t=now;
     if(d<=v){c.x=c.tx;c.y=c.ty;if(!c.box){const r=Math.random();c.mode=r<.45?'sit':r<.7?'lick':r<.85?'sleep':'stand';c.until=now+(c.mode==='sleep'?40000+Math.random()*60000:4000+Math.random()*7000)}}
     else{c.x+=dx/d*v;c.y+=dy/d*v}}
   else if(!c.box&&now>c.until){const sp=catFloorSpot();Object.assign(c,{tx:sp[0],ty:sp[1],mode:'walk'})}}
-/** Bij een gekoppelde deur een klein bordje met de kamer erachter, aan de binnenkant van de muur. */
-function doorTags(g,k,sc){if(!multi())return;g.save();g.setLineDash([]);g.font='600 '+Math.max(10,k*.2)+'px "Pixelify Sans",monospace';g.textBaseline='middle';
-  for(const it of L.items||[]){if(it.type!=='door'||!it.to)continue;const r=roomById(it.to);if(!r)continue;
-    const s=Room.wallSnap(L,it.x,it.y),[x,y]=sc(s.x+(s.wall==='w'?.12:s.wall==='e'?-.12:0),s.y+(s.wall==='n'?.25:s.wall==='s'?-.25:0)),txt=(s.wall==='w'?'‹ ':s.wall==='e'?'':'')+r.name+(s.wall==='e'?' ›':'');
-    const w=g.measureText(txt).width+k*.16,h=Math.max(14,k*.3);g.textAlign=s.wall==='w'?'left':s.wall==='e'?'right':'center';
-    const bx=s.wall==='w'?x:s.wall==='e'?x-w:x-w/2;g.fillStyle='rgba(29,17,36,.78)';g.fillRect(bx,y-h/2,w,h);
-    g.fillStyle='#fff3d6';g.fillText(txt,s.wall==='w'?x+k*.08:s.wall==='e'?x-k*.08:x,y+1)}
+/** Plek (meters) van het pijltje buiten de muur bij een gekoppelde deur, en de richting. */
+function doorArrow(Lr,it){const s=Room.wallSnap(Lr,it.x,it.y);
+  return s.wall==='e'?{x:s.x+.38,y:s.y,d:'e'}:s.wall==='w'?{x:s.x-.38,y:s.y,d:'w'}:s.wall==='s'?{x:s.x,y:s.y+.38,d:'s'}:{x:s.x,y:s.y-.78,d:'n'}}
+/** Gekoppelde deuren: een pijltje naar buiten (mensen in huis kennen de weg, dus geen naam). */
+function doorTags(g,k,sc){if(!multi())return;g.save();g.setLineDash([]);
+  for(const it of L.items||[]){if(it.type!=='door'||!it.to||!roomById(it.to))continue;const a=doorArrow(L,it),[x,y]=sc(a.x,a.y),p=Math.max(2,Math.round(k*.06));
+    // pixel-chevron: 4 stapjes heen en terug, donkere rand eromheen
+    const pts=[];for(let i=-3;i<=3;i++){const along=i*p,out=(3-Math.abs(i))*p;pts.push(a.d==='e'?[x+out-p,y+along]:a.d==='w'?[x-out,y+along]:a.d==='s'?[x+along,y+out-p]:[x+along,y-out])}
+    g.fillStyle='rgba(29,17,36,.85)';for(const [px,py] of pts)g.fillRect(px-p,py-p,p*3,p*3);
+    g.fillStyle='#ffe08a';for(const [px,py] of pts)g.fillRect(px,py,p,p)}
   g.restore()}
 /** Plafondlampen weer over de katten heen tekenen: de kat loopt eronderdoor. */
 function catTops(g){const t=Room.topLayer();if(t&&view){g.save();g.imageSmoothingEnabled=false;g.drawImage(t,0,0,view.W,view.H);g.restore()}}
@@ -1476,7 +1479,9 @@ cv.addEventListener('pointerup',()=>{if(!fullOpen||!press)return;clearTimeout(pr
 cv.addEventListener('pointercancel',()=>{if(press){clearTimeout(press.timer);press=null}});
 cv.addEventListener('contextmenu',e=>{if(fullOpen)e.preventDefault()});
 /** Gekoppelde deur onder de vinger (alleen als er geen lamp of apparaat is). */
-function doorHit(mx,my){const i=itemAt(mx,my),it=i>=0&&L.items[i];return it&&it.type==='door'&&it.to&&roomById(it.to)?it:null}
+function doorHit(mx,my){const i=itemAt(mx,my),it=i>=0&&L.items[i];if(it&&it.type==='door'&&it.to&&roomById(it.to))return it;
+  // ook op het pijltje buiten de muur
+  return (L.items||[]).find(x=>x.type==='door'&&x.to&&roomById(x.to)&&(a=>Math.hypot(a.x-mx,a.y-my)<.35)(doorArrow(L,x)))||null}
 /** Door een deur naar een andere kamer; de grote kaart blijft open. */
 function goRoom(id){if(!roomById(id))return;const full=fullOpen;homeView=id;try{localStorage.setItem('homeRoom',id)}catch(e){}
   useRoom(wantRoom());homeUI();if(S)sceneList(S);chips();if(full){closeSheet();closeAirSheet();setTimeout(()=>setZoom(0),0)}else window.scrollTo(0,0);setTimeout(draw,0)}
