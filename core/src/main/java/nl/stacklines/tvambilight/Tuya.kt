@@ -604,6 +604,11 @@ class TuyaLamp(val lamp: Lamp, private val keepOpen: Boolean = false) {
 
     private fun connect() {
         close()
+        // Op de hub: elke verbinding met een lamp loggen (met reden), om strijd met de tv op te sporen
+        if (Platform.idleCloseMs > 0 && !keepOpen) {
+            val why = synchronized(lock) { listOfNotNull(if (pending.isNotEmpty()) "opdracht" else null, if (layerPending.isNotEmpty()) "laag" else null, if (queryWanted) "stand" else null).joinToString("+").ifEmpty { "start" } }
+            println(java.time.LocalDateTime.now().withNano(0).toString() + " Lampverbinding: " + lamp.name + " (" + why + ")")
+        }
         val s = Socket()
         s.tcpNoDelay = true
         s.sendBufferSize = 4096   // geen grote achterstand met oude kleuren opbouwen

@@ -225,7 +225,10 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .netrow .meta{font-size:13px;opacity:.75;font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif}
 .netrow .row{flex-wrap:wrap;gap:6px;margin-top:6px}
 .dotg{display:inline-block;width:9px;height:9px;border-radius:50%;background:#4e8a3c;margin-right:5px}
-body.guest .rcard.add{display:none!important}
+body.guest .rcard.add,body.member .rcard.add{display:none!important}
+body.member .tabbar .btn:not([data-tab=home]):not([data-tab=energy]){display:none!important}
+body.member .tabbar{grid-template-columns:1fr 1fr!important}
+body.member .ownonly,body.member .scard .x,body.member #fullSave,body.member #sceneSaveRow,body.member #enTarDet,body.member [data-mode],body.member [data-out]{display:none!important}
 #gate{position:fixed;inset:0;z-index:50;background:var(--void);overflow:auto;padding:0 16px}
 body.gated .tabbar,body.gated main{display:none!important}
 /* Gast: alleen Bediening, niets wat iets instelt of opslaat */
@@ -235,7 +238,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .accrow{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
 .mgrp{border-bottom:2px solid rgba(0,0,0,.15)}.mgrp>div{padding:0 0 10px}
 .apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
-.enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi .down{color:#3a7a2a}
+.enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
 .endev{background:var(--cream);border:3px solid var(--ink);padding:6px 8px;margin-top:8px}.endev .g{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px;font-family:var(--ensans);font-size:13px}.endev .g b{display:block;font-size:15px}
 .ensplit{display:flex;height:16px;border:3px solid var(--ink);margin:6px 0 4px;background:#eee}.ensplit>i{display:block;min-width:2px}
 .asguestbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:8px;background:#e05a8a;color:#fff;border:3px solid var(--ink);padding:6px 10px;margin:0 0 8px;font-weight:700}.asguestbar.hidden{display:none}
@@ -748,10 +751,17 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 </section>
 
 <section class="panel srvonly ownonly" id="mensenPanel">
-  <div class="row" style="align-items:center;margin:0"><h2 class="grow" style="margin:0">Mensen</h2><button class="btn" id="asGuestBtn">Bekijk als gast</button></div>
+  <div class="row" style="align-items:center;margin:0"><h2 class="grow" style="margin:0">Mensen</h2><button class="btn" id="asGuestBtn">Bekijk als gast</button><button class="btn" id="asMemberBtn">Als huisgenoot</button></div>
   <p style="margin:0 0 8px">Per persoon: e-mailadres (om via hub.stacklines.nl in te loggen), apparaten op de wifi en apparaten die de hub gebruiken. Een gast ziet alleen Bediening; een hoofdgebruiker kan alles.</p>
   <div id="mensenList"></div>
   <div class="row" style="margin-top:10px;align-items:center"><input type="text" id="mensenNew" class="grow" placeholder="Naam van een nieuw persoon" maxlength="30" autocomplete="off"><button class="btn gold" id="mensenAdd">+ Persoon</button></div>
+</section>
+
+<section class="panel srvonly ownonly" id="logPanel">
+  <details id="logDet"><summary style="cursor:pointer"><b>Logboek</b> <span class="hint">wie deed wat</span></summary>
+    <div class="row" style="margin-top:8px;align-items:center"><select id="logWho" class="grow"><option value="">Iedereen</option></select></div>
+    <div id="logList"></div>
+  </details>
 </section>
 
 <section class="panel srvonly ownonly" id="apiPanel">
@@ -937,10 +947,10 @@ function devIcon(l,px){if(isAir(l))return airIcon(l.look,16,px);
 function airIcon(look,size,px){const wall=/^airco-wand/.test(look),c=preview(g=>Room.lampFixture(g,{id:'i',x:size/2/Room.PPM-1,y:(wall?size*.72:size*.55)/Room.PPM-1,look},'#fff',null),size);
   c.className='devic';c.style.width=c.style.height=px+'px';return c}
 /* Bekijk als gast (hoofdgebruiker): elk verzoek met X-As-Guest, de hub geeft dan de rechten van een gast */
-let asGuest=false;try{asGuest=localStorage.getItem('asGuest')==='1'}catch(e){}
-function setAsGuest(on){try{if(on)localStorage.setItem('asGuest','1');else localStorage.removeItem('asGuest')}catch(e){}location.hash='home';location.reload()}
+let asGuest='';try{const v=localStorage.getItem('asGuest');asGuest=v==='1'?'guest':(v==='guest'||v==='member'?v:'')}catch(e){}
+function setAsGuest(role){try{if(role)localStorage.setItem('asGuest',role);else localStorage.removeItem('asGuest')}catch(e){}location.hash='home';location.reload()}
 async function api(path, body){
-  const hd=asGuest?{'X-As-Guest':'1'}:{};
+  const hd=asGuest?{'X-As-Guest':asGuest}:{};
   const r = await fetch(path, body===undefined?{headers:hd}:{method:'POST',headers:{'Content-Type':'application/json',...hd},body:JSON.stringify(body)});
   // House hub: dit apparaat heeft (nog) geen toegang -> wachtscherm
   if(r.status===401){accessGate();throw new Error('geen toegang')}
@@ -1752,8 +1762,9 @@ const AV={skin:['#f6d3b3','#e9b48a','#c68a5e','#8d5a3b','#5a3a26'],hairColor:['#
   hair:[['kort','Bob ♀'],['wip','Wip ♀'],['staartjes','Staartjes ♀'],['kortm','Kort ♂'],['zij','Zijscheiding ♂'],['warrig','Warrig'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
   extra:[['geen','Niets'],['pet','Pet'],['muts','Muts'],['heks','Heksenhoed'],['zonnehoed','Zonnehoed'],['sjaal','Sjaal'],['oren','Kattenoren'],['baard','Baard'],['strik','Strik']],
   face:[['zacht','♀'],['stoer','♂']],
-  outfit:[['shirt','Shirt'],['jas','Jas'],['raglan','Raglan'],['ruit','Geruit'],['rok','Rok'],['tuinbroek','Tuinbroek'],['jurk','Jurk']]};
-const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0',outfit:'shirt',face:'zacht'};
+  outfit:[['shirt','Shirt'],['overhemd','Overhemd'],['tanktop','Tanktop'],['jas','Jas'],['raglan','Raglan'],['ruit','Geruit'],['tuinbroek','Tuinbroek'],['jurk','Jurk']],
+  bottom:[['broek','Broek'],['kort','Korte broek'],['rok','Rok']]};
+const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0',outfit:'shirt',bottom:'broek',face:'zacht'};
 /* Pixelpoppetje in Stardew-achtige stijl (eigen tekening): groot hoofd, grote ogen met glimlicht, drie tinten per kleur,
    donkere omlijning en (sticker) een witte rand. Raster 26 x 36; c = canvas. */
 /* Kapsels als pixelraster op het kleine raster (14 breed): [eerste rij, rijen]; H = haarkleur, d = donker/rand, l = glans */
@@ -1775,19 +1786,30 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=20,Hh=
   // heupen, twee benen, schoenen iets breder dan de benen
   const legs=(col,cold)=>{rect(3,20,10,20,col);rect(3,21,5,25,col);rect(8,21,10,25,col);rect(10,20,10,25,cold);p(5,21,cold);
     rect(2,26,5,26,B);rect(8,26,11,26,B);p(2,26,Bd);p(11,26,Bd)};
-  const O=a.outfit||'shirt';
+  // Bovenkant (outfit) en onderkant (bottom) los; oude poppetjes met outfit 'rok' = shirt + rok. Jurk en tuinbroek zijn heel.
+  let O=a.outfit||'shirt',Bt=a.bottom||'broek';if(O==='rok'){O='shirt';Bt='rok'}
   // lijf: schouders, borst, en een smallere taille (zo komen de armen los)
   const torso=(col,cold,coll)=>{rect(3,12,10,16,col);rect(4,17,9,19,col);rect(9,13,10,16,cold);rect(8,17,9,19,cold);rect(4,13,4,16,avShade(col,.3));if(coll){rect(6,12,7,12,Sl);p(6,13,Sl)}};
+  const bottom=()=>{if(Bt==='rok'){for(let y=20;y<=22;y++){const w=(y-20)>>1;rect(3-w,y,10+w,y,P);rect(9,y,10+w,y,Pd)}rect(3,20,10,20,avShade(P,-.45));
+      rect(4,23,5,25,S);rect(8,23,9,25,S);rect(4,26,5,26,B);rect(8,26,9,26,B)}
+    else if(Bt==='kort'){rect(3,20,10,20,P);rect(3,21,5,22,P);rect(8,21,10,22,P);rect(10,20,10,22,Pd);p(5,21,Pd);rect(3,23,5,25,S);rect(8,23,10,25,S);rect(10,23,10,25,Sd);
+      rect(2,26,5,26,B);rect(8,26,11,26,B);p(2,26,Bd);p(11,26,Bd)}
+    else legs(P,Pd)};
   if(O==='jurk'){torso(T,Td,1);arms(T,Td);rect(3,19,10,19,avShade(T,-.45));for(let y=20;y<=23;y++){const w=(y-20)>>1;rect(3-w,y,10+w,y,T);rect(9,y,10+w,y,Td)}rect(4,20,4,22,Tl);
     rect(4,24,5,25,S);rect(8,24,9,25,S);rect(4,26,5,26,B);rect(8,26,9,26,B)}
-  else if(O==='rok'){torso(T,Td,1);arms(T,Td);for(let y=20;y<=22;y++){const w=(y-20)>>1;rect(3-w,y,10+w,y,P);rect(9,y,10+w,y,Pd)}rect(3,20,10,20,avShade(P,-.45));
-    rect(4,23,5,25,S);rect(8,23,9,25,S);rect(4,26,5,26,B);rect(8,26,9,26,B)}
   else if(O==='tuinbroek'){torso(W2,W2d,1);arms(W2,W2d);rect(3,15,10,19,T);rect(4,12,4,14,T);rect(9,12,9,14,T);rect(5,16,8,18,Tl);p(4,15,'#e8c84a');p(9,15,'#e8c84a');rect(10,15,10,19,Td);legs(T,Td)}
-  else if(O==='raglan'){torso(W2,W2d,1);rect(2,12,3,13,T);rect(10,12,11,13,T);arms(T,Td);p(4,15,W2d);p(9,15,W2d);legs(P,Pd)}
-  else if(O==='ruit'){torso(T,Td,0);arms(T,Td);for(let y=12;y<=19;y++)for(let x=1;x<=12;x++){if(G[y+oy]&&G[y+oy][x+ox]&&(x+y)%2===0&&!(x>=6&&x<=7)&&y<19)p(x,y,(x%2)?Td:Tl)}
-    rect(6,12,7,19,W2);p(6,12,Sl);p(7,12,Sl);legs(P,Pd)}
-  else if(O==='jas'){torso(T,Td,0);arms(T,Td);rect(6,12,7,19,W2);p(7,14,W2d);p(5,12,Tl);p(8,12,Td);legs(P,Pd)}
-  else{torso(T,Td,1);arms(T,Td);legs(P,Pd)}
+  else{
+    if(O==='raglan'){torso(W2,W2d,1);rect(2,12,3,13,T);rect(10,12,11,13,T);arms(T,Td);p(4,15,W2d);p(9,15,W2d)}
+    else if(O==='ruit'){torso(T,Td,0);arms(T,Td);for(let y=12;y<=19;y++)for(let x=1;x<=12;x++){if(G[y+oy]&&G[y+oy][x+ox]&&(x+y)%2===0&&!(x>=6&&x<=7)&&y<19)p(x,y,(x%2)?Td:Tl)}
+      rect(6,12,7,19,W2);p(6,12,Sl);p(7,12,Sl)}
+    else if(O==='jas'){torso(T,Td,0);arms(T,Td);rect(6,12,7,19,W2);p(7,14,W2d);p(5,12,Tl);p(8,12,Td)}
+    // overhemd: puntkraag in een lichtere tint, knoopjes in het midden, manchetten
+    else if(O==='overhemd'){torso(T,Td,0);arms(T,Td);p(5,12,Tl);p(6,12,Sl);p(7,12,Sl);p(8,12,Tl);p(5,13,Tl);p(8,13,Tl);rect(6,13,6,19,Td);p(7,15,Tl);p(7,17,Tl);
+      rect(1,18,2,18,Tl);rect(11,18,12,18,Tl)}
+    // tanktop: blote armen, smalle bandjes over de schouders
+    else if(O==='tanktop'){torso(T,Td,0);arms(S,Sd);rect(3,12,3,13,S);rect(10,12,10,13,S);rect(6,12,7,13,S);p(4,12,T);p(9,12,T);p(5,12,Td);p(8,12,Td)}
+    else{torso(T,Td,1);arms(T,Td)}
+    bottom()}
   // nek: het lijf een rij omlaag, zodat er tussen kin en schouders een nek past
   for(let y=Hh-1;y>oy+11;y--)G[y]=G[y-1].slice();G[oy+11]=Array(W).fill(null);
   // hoofd: 12 breed met haar, gezicht 8 breed (x 3..10), rond met kin; nek
@@ -1828,19 +1850,20 @@ async function peopleLoad(force){if(!SRV||!S)return;if(!force&&Date.now()-people
 function peopleRender(){const box=$('peopleRow'),list=peopleData||[];$('homePeople').classList.toggle('hidden',!(SRV&&isHouse()));
   box.innerHTML=list.length?'':`<p class="hint" style="margin:0">${esc(t('Nog niemand. Maak hieronder je poppetje.'))}</p>`;
   const loc=I18N.lang==='en'?'en-GB':'nl-NL';
-  for(const p of list.slice().sort((a,b)=>(b.home-a.home)||a.name.localeCompare(b.name))){const d=document.createElement('div');d.className='person'+(p.home?'':' away');
+  // Thuis eerst, daarna wie het laatst thuis was; nooit gezien achteraan
+  for(const p of list.slice().sort((a,b)=>(b.home-a.home)||((b.last||0)-(a.last||0))||a.name.localeCompare(b.name))){const d=document.createElement('div');d.className='person'+(p.home?'':' away');
     d.append(drawAvatar(document.createElement('canvas'),p.avatar));const n=document.createElement('b');n.textContent=p.name;d.append(n);
     const sm=document.createElement('small');sm.textContent=p.home?t('thuis'):p.last?t('weg sinds {d}',{d:new Date(p.last).toLocaleString(loc,{weekday:'short',hour:'2-digit',minute:'2-digit'})}):t('nog niet gezien');d.append(sm);box.append(d)}
   const me=list.find(p=>p.me);if(!$('myAvatarEd').dataset.done){$('myAvatarEd').dataset.done='1';avEditor($('myAvatarEd'),me?me.avatar:{},null,()=>peopleLoad(true))}
   if(S&&S.role==='owner'&&curTab==='settings')peopleAdmin()}
 /* Editor: voorbeeld + keuzes; opslaan voor jezelf (id null) of voor een persoon (hoofdgebruiker) */
-function avEditor(box,start,personId,done){const a={...avDefault,...(start||{})};box.innerHTML='';const w=document.createElement('div');w.className='aved';
+function avEditor(box,start,personId,done){const a={...avDefault,...(start||{})};if(a.outfit==='rok'){a.outfit='shirt';a.bottom='rok'}box.innerHTML='';const w=document.createElement('div');w.className='aved';
   const cv=drawAvatar(document.createElement('canvas'),a),opts=document.createElement('div');opts.className='opts';w.append(cv,opts);box.append(w);
   const redraw=()=>{drawAvatar(cv,a);opts.querySelectorAll('[data-k]').forEach(b=>b.classList.toggle('on',a[b.dataset.k]===b.dataset.v))};
   const row=(k,label,vals,isCol)=>{const l=document.createElement('div');l.className='lbl';l.textContent=t(label);const r=document.createElement('div');r.className='swrow';
     for(const v of vals){const b=document.createElement('button');b.dataset.k=k;b.dataset.v=isCol?v:v[0];if(isCol)b.style.background=v;else{b.className='btn';b.textContent=t(v[1]);if(k==='face'){b.setAttribute('aria-label',t(v[0]==='stoer'?'Man':'Vrouw'));b.title=b.getAttribute('aria-label');b.style.fontSize='18px';b.style.minWidth='44px'}}
       b.onclick=()=>{a[k]=b.dataset.v;redraw()};r.append(b)}opts.append(l,r)};
-  row('skin','Huid',AV.skin,true);row('face','Gezicht',AV.face,false);row('eyes','Ogen',AV.eyes,true);row('hair','Haar',AV.hair,false);row('hairColor','Haarkleur',AV.hairColor,true);row('outfit','Kleding',AV.outfit,false);row('shirt','Kleur kleding',AV.shirt,true);row('pants','Broek',AV.pants,true);row('extra','Extra',AV.extra,false);
+  row('skin','Huid',AV.skin,true);row('face','Gezicht',AV.face,false);row('eyes','Ogen',AV.eyes,true);row('hair','Haar',AV.hair,false);row('hairColor','Haarkleur',AV.hairColor,true);row('outfit','Kleding',AV.outfit,false);row('bottom','Onderkant',AV.bottom,false);row('shirt','Kleur kleding',AV.shirt,true);row('pants','Broek',AV.pants,true);row('extra','Extra',AV.extra,false);
   const save=document.createElement('button');save.className='btn gold';save.style.cssText='width:100%;margin-top:8px';save.textContent=t('Poppetje opslaan');
   save.onclick=async()=>{const r=await api('/api/people/avatar',{id:personId||'',avatar:a});toast(r.message||'');if(r.people){peopleData=r.people;peopleAt=Date.now()}if(done)done()};
   box.append(save);redraw()}
@@ -1887,7 +1910,8 @@ function mensenRender(r){mensenData=r;const box=$('mensenList'),loc=I18N.lang===
       const b=document.createElement('b');b.textContent=p.name;sm.append(b);const st=document.createElement('span');st.className='hint';st.textContent=p.home?t('thuis'):'';sm.append(st);
       const bd=document.createElement('span');bd.className='badge';bd.style.marginLeft='auto';bd.textContent=t(ACC_ROLE[p.role]||p.role);sm.append(bd)});
     body.innerHTML=`<div class="lbl">${esc(t('Naam'))}</div><input type="text" class="pn" maxlength="30">
-      <div class="lbl">${esc(t('Mag'))}</div><div class="seg"><button class="btn${p.role==='guest'?' on':''}" data-r="guest">${esc(t('Gast'))}</button><button class="btn${p.role==='owner'?' on':''}" data-r="owner">${esc(t('Hoofdgebruiker'))}</button></div>
+      <div class="lbl">${esc(t('Mag'))}</div><div class="seg"><button class="btn${p.role==='guest'?' on':''}" data-r="guest">${esc(t('Gast'))}</button><button class="btn${p.role==='member'?' on':''}" data-r="member">${esc(t('Huisgenoot'))}</button><button class="btn${p.role==='owner'?' on':''}" data-r="owner">${esc(t('Hoofdgebruiker'))}</button></div>
+      <p class="hint" style="margin:4px 0 0">${esc(t(p.role==='guest'?'Gast: alleen Bediening (lampen, scènes, airco), en alleen als hij thuis is.':p.role==='member'?'Huisgenoot: alles bedienen en Energie bekijken, niets instellen of wijzigen.':'Hoofdgebruiker: alles, ook instellen.'))}</p>
       <div class="lbl">${esc(t('E-mail (inloggen via hub.stacklines.nl)'))}</div><div class="pm"></div>
       <div class="row" style="align-items:center"><input type="email" class="grow pe" placeholder="${esc(t('E-mailadres'))}" autocomplete="off"><button class="btn" data-ae="1">${esc(t('Toevoegen'))}</button></div>
       <div class="lbl">${esc(t('Apparaten'))}</div><div class="pd"></div>
@@ -1912,7 +1936,18 @@ function mensenRender(r){mensenData=r;const box=$('mensenList'),loc=I18N.lang===
       el.querySelector('b').textContent=e.email;const ps=el.querySelector('[data-p]');ps.onchange=()=>{if(ps.value)after(api('/api/people/email',{id:ps.value,email:e.email,add:true}),true)};
       el.querySelector('.btn.red').onclick=()=>after(api('/api/people/email',{id:'',email:e.email,add:false}),true);body.append(el)}
     for(const d of fw)body.append(wifiRow(d,false))}}
-$('asGuestBtn').onclick=()=>setAsGuest(true);$('asGuestStop').onclick=()=>setAsGuest(false);$('asGuestBar').classList.toggle('hidden',!asGuest);
+/* Logboek: laatste acties, nieuwste boven, per dag een kopje; filter op persoon */
+async function logLoad(){const who=$('logWho').value;let r;try{r=await api('/api/logboek?n=300'+(who?'&who='+encodeURIComponent(who):''))}catch(e){return}
+  const loc=I18N.lang==='en'?'en-GB':'nl-NL',items=r.items||[],box=$('logList');
+  if(!who){const names=[...new Set(items.map(x=>x.who))].sort(),sel=$('logWho'),cur=sel.value;sel.innerHTML=`<option value="">${esc(t('Iedereen'))}</option>`+names.map(n=>`<option>${esc(n)}</option>`).join('');sel.value=cur}
+  if(!items.length){box.innerHTML=`<p class="hint">${esc(t('Nog niets.'))}</p>`;return}
+  let day='',h='';for(const x of items){const d=new Date(x.t),dk=d.toLocaleDateString(loc,{weekday:'long',day:'numeric',month:'long'});
+    if(dk!==day){day=dk;h+=`<div class="lbl" style="margin-top:8px">${esc(dk)}</div>`}
+    h+=`<div class="kbrow"><span>${esc(d.toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'}))} · <b>${esc(x.who)}</b></span><span style="text-align:right">${esc(x.what)}</span></div>`}
+  box.innerHTML=h}
+$('logDet').ontoggle=()=>{if($('logDet').open)logLoad()};$('logWho').onchange=logLoad;
+$('asGuestBtn').onclick=()=>setAsGuest('guest');$('asMemberBtn').onclick=()=>setAsGuest('member');$('asGuestStop').onclick=()=>setAsGuest('');$('asGuestBar').classList.toggle('hidden',!asGuest);
+if(asGuest==='member')$('asGuestBar').querySelector('span').textContent=t('Je bekijkt de hub als huisgenoot');
 $('mensenAdd').onclick=async()=>{const v=$('mensenNew').value.trim();if(!v)return;await api('/api/people/save',{id:'',name:v});$('mensenNew').value='';peopleLoad(true);peopleAdmin()};
 $('cfSave').onclick=async()=>{const v=$('cfToken').value.trim();if(!v)return;toast(t('Bezig...'));const r=await api('/api/cloudflare/save',{token:v});$('cfToken').value='';toast(r.message||'');peopleAdmin()};
 async function poLoad(){try{const r=await api('/api/pushover');$('poState').textContent='· '+t(r.configured?'ingevuld':'nog niet ingevuld')}catch(e){}}
@@ -1949,12 +1984,12 @@ async function gateCheck(){let st;try{st=await (await fetch('/api/access/status'
 $('gateAsk').onclick=async()=>{const n=$('gateName').value.trim();if(!n){$('gateName').focus();return}
   try{const r=await (await fetch('/api/access/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})})).json();toast(r.message||'')}catch(e){}gateCheck()};
 /* Rol toepassen: gast ziet alleen Bediening */
-function roleUI(s){const g=s&&s.role==='guest';$('notHomeBar').classList.toggle('hidden',!(g&&s.canControl===false));document.body.classList.toggle('guest',g);if(g&&curTab!=='home')showTab('home');
+function roleUI(s){const g=s&&s.role==='guest',mb=s&&s.role==='member';document.body.classList.toggle('member',mb);if(mb&&curTab!=='home'&&curTab!=='energy')showTab('home');$('notHomeBar').classList.toggle('hidden',!(g&&s.canControl===false));document.body.classList.toggle('guest',g);if(g&&curTab!=='home')showTab('home');
   const n=s&&s.role==='owner'?s.accessPending||0:0;$('accBanner').classList.toggle('hidden',!n);
   if(n)$('accBanner').textContent=t('{n} apparaat vraagt toegang. Tik om te bekijken.',{n})}
 $('houseScene').onclick=()=>{houseSceneOpen=!houseSceneOpen;homeUI();if(houseSceneOpen)setTimeout(()=>$('scenePanel').scrollIntoView({block:'start',behavior:'smooth'}),50)};
 $('accBanner').onclick=()=>{showTab('settings');setTimeout(()=>$('mensenPanel').scrollIntoView({block:'start'}),50)};
-const ACC_ROLE={owner:'Hoofdgebruiker',guest:'Gast',pending:'Wacht op goedkeuring',denied:'Geweigerd'};
+const ACC_ROLE={owner:'Hoofdgebruiker',member:'Huisgenoot',guest:'Gast',pending:'Wacht op goedkeuring',denied:'Geweigerd'};
 async function accLoad(){}
 /* Opnieuw tekenen alleen als er iets veranderd is (anders verspringen knoppen onder je vinger) */
 function airFill(box,list){const key=JSON.stringify(list.map(l=>[l.id,l.name,airOf(l.id),kbOf(l.id),stOf(l.id)]))+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;
@@ -2227,7 +2262,7 @@ const enDate=(s,opt)=>new Date(s+'T12:00:00').toLocaleDateString(I18N.lang==='en
 function niceStep(x){const p=Math.pow(10,Math.floor(Math.log10(x||1))),m=x/p;return (m<=1?1:m<=2?2:m<=5?5:10)*p}
 /* Staafgrafiek als SVG: waarden (null = geen gegevens), labels voor de as, tooltip per staaf, optioneel een gekozen staaf */
 function enBars(el,vals,o){const W=Math.max(200,el.clientWidth),H=el.clientHeight,padL=42,padB=18,padT=6,w=W-padL,h=H-padB-padT;
-  const neg=o.neg||null,maxP=Math.max(o.min||0,...vals.map(v=>v||0))*1.08||1,maxN=neg?Math.max(0,...neg.map(v=>v||0))*1.08:0;
+  const neg=o.neg||null,maxP=Math.max(o.min||0,...vals.map(v=>v||0),...(o.ghost||[]).map(v=>v||0))*1.08||1,maxN=neg?Math.max(0,...neg.map(v=>v||0))*1.08:0;
   const tot=maxP+maxN,step=niceStep(tot/(neg&&maxN?4:3)),n=vals.length,bw=w/n,gap=n>60?1:2,y0=padT+h*maxP/tot,sc=v=>v/tot*h;
   const fmt=y=>nl1(y,step<1?(step<0.1?2:1):0);
   let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title||'')}">`;
@@ -2240,6 +2275,9 @@ function enBars(el,vals,o){const W=Math.max(200,el.clientWidth),H=el.clientHeigh
     if(sel){const bh=Math.max(1,sc(v)),x=padL+i*bw+gap/2;s+=`<rect x="${x-1}" y="${y0-bh-1}" width="${Math.max(1,bw-gap)+2}" height="${bh+1}" fill="none" stroke="var(--ink)" stroke-width="2"/>`}});
   if(neg)neg.forEach((v,i)=>{if(v!=null&&v>0)s+=bar(i,v,o.negColor,true,false)});
   // Stapel: delen van een balk in een eigen kleur (bv. wat de stekkers verbruikten), van onderen af, nooit hoger dan de balk
+  // Vergelijking (bv. vorig jaar): een streepje op die hoogte in elke balk
+  if(o.ghost)o.ghost.forEach((v,i)=>{if(v==null||v<=0)return;const x=padL+i*bw+gap/2,bwid=Math.max(1,bw-gap),py=y0-sc(Math.min(v,maxP));
+    s+=`<rect x="${x-1}" y="${py-1.5}" width="${bwid+2}" height="3" fill="var(--ink)" opacity=".75"/>`});
   if(o.stack)vals.forEach((v,i)=>{if(v==null||v<=0)return;let acc=0;const x=padL+i*bw+gap/2,bwid=Math.max(1,bw-gap);
     for(const st of o.stack){const sv=Math.min(+st.vals[i]||0,v-acc);if(sv<=0)continue;const y1=y0-sc(acc),y2=y0-sc(acc+sv);s+=`<rect x="${x}" y="${y2}" width="${bwid}" height="${Math.max(.5,y1-y2)}" fill="${st.color}"/>`;acc+=sv}});
   s+=`<line x1="${padL}" x2="${W}" y1="${y0}" y2="${y0}" stroke="var(--ink)" stroke-width="2"/>`;
@@ -2328,7 +2366,7 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   enTarUI();
   const sel=ds.findIndex(d=>d.date===enDay),pick=i=>{enDay=ds[i].date;enDays();enDayLoad()};
   // Een grafiek met een knop Stroom/Gas (geen twee assen in een grafiek)
-  $('enPerTitle').textContent=t(enN==='m12'?'Per maand':'Per dag');$('enPerHint').classList.toggle('hidden',enN==='m12');
+  $('enPerTitle').textContent=t(enN==='m12'?'Per maand':'Per dag');$('enPerHint').textContent=t('Tik op een dag voor het verloop per kwartier.');$('enPerHint').classList.toggle('hidden',enN==='m12');
   // Soort: stroom, gas of teruglevering (opbrengst = kWh x terugleververgoeding)
   const hasBack=ds.some(d=>d.back>0)||(enMonths&&enMonths.ok&&enMonths.months.some(m=>m.back>0));
   if((!r.gas&&enKind==='gas')||(!hasBack&&enKind==='back'))enKind='kwh';
@@ -2344,8 +2382,12 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   if(enN==='m12'){
     const ms=enMonths&&enMonths.ok?enMonths.months:[],ml=ms.map(m=>new Date(m.month+'-15T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{month:'short'})),
       src=m=>m.source==='enelogic'?'Enelogic':m.source,full=m=>new Date(m.month+'-15T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{month:'long',year:'numeric'});
-    enBars($('enDays'),ms.map(m=>m[enKind]??null),{color:EN_COL[enKind],labels:ml,title:t(K.title+' per maand'),
-      tip:(i,v)=>full(ms[i])+': '+nl1(v,0)+K.unit+costTxt(ms[i])+selfTxt(ms[i])+(ms[i].source?' ('+src(ms[i])+(ms[i].partial?', '+t('nog niet compleet'):'')+')':'')});
+    // Vorig jaar: dezelfde maand een jaar eerder (uit de 25 maanden), als streepje in de balk
+    const LY=(enMonthsLong&&enMonthsLong.months)||[],lyOf=m=>LY.find(x=>x.month===(+m.month.slice(0,4)-1)+m.month.slice(4)),ghost=ms.map(m=>{const x=lyOf(m);return x?x[enKind]??null:null});
+    const hasG=ghost.some(v=>v>0);$('enPerHint').classList.toggle('hidden',!hasG);if(hasG)$('enPerHint').textContent=t('Het streepje is dezelfde maand een jaar eerder.');
+    enBars($('enDays'),ms.map(m=>m[enKind]??null),{color:EN_COL[enKind],labels:ml,title:t(K.title+' per maand'),ghost:hasG?ghost:null,
+      tip:(i,v)=>full(ms[i])+': '+nl1(v,0)+K.unit+costTxt(ms[i])+selfTxt(ms[i])+(ms[i].source?' ('+src(ms[i])+(ms[i].partial?', '+t('nog niet compleet'):'')+')':'')
+        +(ghost[i]!=null?' · '+t('vorig jaar {v}',{v:nl1(ghost[i],0)+K.unit})+(v&&ghost[i]?' ('+(v>ghost[i]?'+':'')+Math.round((v-ghost[i])/ghost[i]*100)+'%)':''):'')});
     return}
   enBars($('enDays'),ds.map(d=>d[enKind]??null),{color:EN_COL[enKind],labels:lbl,sel,pick,title:t(K.title+' per dag'),
     tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+K.unit+costTxt(ds[i])+selfTxt(ds[i])});
@@ -2386,25 +2428,37 @@ async function enExtraLoad(){
   if(enAll){enMonthUI();enYearUI()}
   const tasks=[];
   if(!enAll||Date.now()-enAllAt>30*60e3)tasks.push(api('/api/energy?days=400').then(r=>{if(r&&r.ok){enAll=r;enAllAt=Date.now()}}).catch(()=>{}));
-  if(!enMonthsLong)tasks.push(api('/api/energy/months?n=25').then(r=>{if(r&&r.ok)enMonthsLong=r}).catch(()=>{}));
+  if(!enMonthsLong)tasks.push(api('/api/energy/months?n=25').then(r=>{if(r&&r.ok){enMonthsLong=r;if(enN==='m12'&&enData)enDays()}}).catch(()=>{}));
   if(tasks.length){await Promise.all(tasks);enMonthUI();enYearUI()}}
 const enCostL=l=>l.reduce((a,d)=>a+(enCostDay(d)||0),0),enSumL=(l,k)=>l.reduce((a,d)=>a+(d[k]||0),0);
 
+/* Uitleg bij een vakje: data-info = regels "label|waarde" gescheiden door ";;" (of gewone tekst). Tikken = open/dicht. */
+const enInfo=rows=>esc(rows.map(r=>Array.isArray(r)?r.join('|'):r).join(';;'));
+function enInfoWire(box){box.querySelectorAll('.enkpi>div[data-info]').forEach(d=>d.onclick=()=>{const g=d.parentElement,open=d.classList.contains('open');
+  g.querySelectorAll('.eninfo').forEach(x=>x.remove());g.querySelectorAll('.open').forEach(x=>x.classList.remove('open'));if(open)return;
+  const el=document.createElement('div');el.className='eninfo';el.innerHTML=d.dataset.info.split(';;').map(r=>{const [a,b]=r.split('|');return b==null?`<p style="margin:2px 0">${esc(a)}</p>`:`<div><span>${esc(a)}</span><b>${esc(b)}</b></div>`}).join('');
+  let after=d;const cols=getComputedStyle(g).gridTemplateColumns.split(' ').length,kids=[...g.children],i=kids.indexOf(d),endRow=Math.min(kids.length-1,i+(cols-1-(i%cols)));after=kids[endRow];
+  after.after(el);d.classList.add('open')})}
 /* Deze maand: tot nu, verwachting, en vergelijken met vorige maand (zelfde dagen) en dezelfde maand vorig jaar */
 function enMonthUI(){const A=enAll,box=$('enMonth');if(!A||!enData){box.innerHTML='';return}
   const last=enData.last,mk=last.slice(0,7),ds=A.days.filter(d=>d.date.slice(0,7)===mk&&d.kwh!=null),n=ds.length,dim=enDim(mk),T=enHasT();
   if(!n){box.innerHTML='';return}
   const cNow=enCostL(ds),kNow=enSumL(ds,'kwh'),gNow=enSumL(ds,'gas'),f=dim/n;
+  const cS=ds.reduce((a,d)=>a+(enCostStroom(d)||0),0),cG=ds.reduce((a,d)=>a+(enCostGas(d)||0),0),cF=ds.reduce((a,d)=>a+enFixed(d),0),bk=enSumL(ds,'back');
+  const iNow=enInfo([[t('Stroom')+' '+nl1(kNow,1)+' kWh',enEUR(cS)],...(enData.gas?[[t('Gas')+' '+nl1(gNow,1)+' m³',enEUR(cG)]]:[]),[t('Vaste kosten en korting ({n} dagen)',{n}),enEUR(cF)],...(bk>0?[t('Teruglevering {k} kWh is al verrekend in stroom.',{k:nl1(bk,1)})]:[]),[t('Samen'),enEUR(cNow)],t('Gemiddeld {e} per dag.',{e:enEUR(cNow/n)})]);
+  const iExp=enInfo([t('Gemiddeld per dag tot nu, keer {d} dagen in {m}.',{d:dim,m:enMonName(mk)}),[t('Per dag'),enEUR(cNow/n)+' · '+nl1(kNow/n,1)+' kWh'],[t('Hele maand'),enEUR(cNow*f)]]);
   const pm=enAddMonth(mk,-1),pds=A.days.filter(d=>d.date.slice(0,7)===pm&&+d.date.slice(8)<=n&&d.kwh!=null);
   const ly=(+mk.slice(0,4)-1)+mk.slice(4),lm=enMonthsLong&&enMonthsLong.months.find(m=>m.month===ly&&m.kwh!=null);
   const hasG=enData.gas;
   let h=`<div class="enkpi">
-    <div><small>${esc(t('{m} tot nu ({n} dagen)',{m:enMonName(mk),n}))}</small><b>${T?esc(enEUR0(cNow,true)):esc(nl1(kNow,0)+' kWh')}</b><small>${esc(nl1(kNow,0)+' kWh'+(hasG?' · '+nl1(gNow,0)+' m³':''))}</small></div>
-    <div><small>${esc(t('Verwachting hele maand'))}</small><b>${T?esc(enEUR0(cNow*f,true)):esc(nl1(kNow*f,0)+' kWh')}</b><small>${esc(nl1(kNow*f,0)+' kWh'+(hasG?' · '+nl1(gNow*f,0)+' m³':''))}</small></div>`;
+    <div data-info="${iNow}"><small>${esc(t('{m} tot nu ({n} dagen)',{m:enMonName(mk),n}))}</small><b>${T?esc(enEUR0(cNow,true)):esc(nl1(kNow,0)+' kWh')}</b><small>${esc(nl1(kNow,0)+' kWh'+(hasG?' · '+nl1(gNow,0)+' m³':''))}</small></div>
+    <div data-info="${iExp}"><small>${esc(t('Verwachting hele maand'))}</small><b>${T?esc(enEUR0(cNow*f,true)):esc(nl1(kNow*f,0)+' kWh')}</b><small>${esc(nl1(kNow*f,0)+' kWh'+(hasG?' · '+nl1(gNow*f,0)+' m³':''))}</small></div>`;
   if(pds.length===n){const pk=enSumL(pds,'kwh'),pg=enSumL(pds,'gas');
-    h+=`<div><small>${esc(t('t.o.v. {m}, eerste {n} dagen',{m:enMonName(pm),n}))}</small><b>${enDelta(enPct(kNow,pk))||'–'}</b><small>${esc(t('stroom'))}${hasG?' · '+esc(t('gas'))+' '+(enDelta(enPct(gNow,pg))||'–'):''}</small></div>`}
-  if(lm){h+=`<div><small>${esc(t('t.o.v. {m}',{m:enMonName(ly,{month:'long',year:'numeric'})}))}</small><b>${enDelta(enPct(kNow*f,lm.kwh))||'–'}</b><small>${esc(t('stroom, verwacht vs. toen'))}${hasG&&lm.gas?' · '+esc(t('gas'))+' '+(enDelta(enPct(gNow*f,lm.gas))||'–'):''}</small></div>`}
-  box.innerHTML=h+'</div>'}
+    const iP=enInfo([[t('Stroom nu / toen'),nl1(kNow,1)+' / '+nl1(pk,1)+' kWh'],...(hasG?[[t('Gas nu / toen'),nl1(gNow,1)+' / '+nl1(pg,1)+' m³']]:[]),[t('Kosten nu / toen'),enEUR(cNow)+' / '+enEUR(enCostL(pds))],t('Telkens de eerste {n} dagen van de maand.',{n})]);
+    h+=`<div data-info="${iP}"><small>${esc(t('t.o.v. {m}, eerste {n} dagen',{m:enMonName(pm),n}))}</small><b>${enDelta(enPct(kNow,pk))||'–'}</b><small>${esc(t('stroom'))}${hasG?' · '+esc(t('gas'))+' '+(enDelta(enPct(gNow,pg))||'–'):''}</small></div>`}
+  if(lm){const iL=enInfo([[t('Stroom verwacht / toen'),nl1(kNow*f,0)+' / '+nl1(lm.kwh,0)+' kWh'],...(hasG&&lm.gas?[[t('Gas verwacht / toen'),nl1(gNow*f,0)+' / '+nl1(lm.gas,0)+' m³']]:[]),t('Verwacht = je gemiddelde per dag tot nu, keer de hele maand.')]);
+    h+=`<div data-info="${iL}"><small>${esc(t('t.o.v. {m}',{m:enMonName(ly,{month:'long',year:'numeric'})}))}</small><b>${enDelta(enPct(kNow*f,lm.kwh))||'–'}</b><small>${esc(t('stroom, verwacht vs. toen'))}${hasG&&lm.gas?' · '+esc(t('gas'))+' '+(enDelta(enPct(gNow*f,lm.gas))||'–'):''}</small></div>`}
+  box.innerHTML=h+'</div>';enInfoWire(box)}
 
 /* Jaarafrekening: contractjaar vanaf het begin van het huidige contract; tot nu (uit de meter) + rest (zelfde maanden
    vorig jaar, met de prijzen van nu; zonder vorig jaar het gemiddelde tot nu) tegenover 12 x het voorschot. */
@@ -2421,16 +2475,19 @@ function enYearUI(){const box=$('enYear'),A=enAll;if(!A||!enData||!enHasT()){box
     if(m)usedLY++;return m?{date:d,kwh:m.kwh/dim,gas:m.gas!=null?m.gas/dim:avg('gas'),back:(m.back||0)/dim}:{date:d,kwh:avg('kwh'),gas:avg('gas'),back:avg('back')}};
   for(let d=S;d<=last;d=enAddDay(d,1))if(!have.has(d)){cGap+=enCostDay(est(d))||0;gapDays++}
   for(let d=enAddDay(last,1);d<=E;d=enAddDay(d,1)){cRest+=enCostDay(est(d))||0;restDays++}
+  const iSo=enInfo([[t('Gemeten ({n} dagen)',{n:sofar.length}),enEUR(cSo)],...(gapDays?[[t('Geschat, van voor de meter ({n} dagen)',{n:gapDays}),enEUR(cGap)]]:[]),[t('Stroom'),enEUR(sofar.reduce((a,d)=>a+(enCostStroom(d)||0),0))],[t('Gas'),enEUR(sofar.reduce((a,d)=>a+(enCostGas(d)||0),0))],[t('Vaste kosten en korting'),enEUR(sofar.reduce((a,d)=>a+enFixed(d),0))]]);
+  const iTot=enInfo([[t('Tot nu'),enEUR(cSo+cGap)],[t('Nog te gaan ({n} dagen, geschat)',{n:restDays}),enEUR(cRest)],[t('Hele contractjaar'),enEUR(cSo+cGap+cRest)]]);
   const total=cSo+cGap+cRest,vs=P.voorschot,paid=vs!=null?vs*12:null,diff=paid!=null?total-paid:null;
   const months=Math.max(0,Math.min(12,Math.round((new Date(last+'T12:00:00')-new Date(S+'T12:00:00'))/(30.44*864e5))));
   let h=`<p class="hint" style="margin:0 0 8px">${esc(t('Contractjaar {a} t/m {b}{n}.',{a:enLong(S),b:enLong(E),n:P.name?' ('+base(P)+')':''}))}</p><div class="enkpi">
-    <div><small>${esc(t('Kosten tot nu ({n} dagen)',{n:sofar.length+gapDays}))}</small><b>${esc(enEUR0(cSo+cGap,true))}</b>${gapDays?`<small>${esc(t('waarvan {n} dagen geschat (voor de meter)',{n:gapDays}))}</small>`:''}${vs!=null?`<small>${esc(t('betaald ≈ {e} ({n} termijnen)',{e:enEUR0(vs*months,true),n:months}))}</small>`:''}</div>
-    <div><small>${esc(t('Verwachte kosten hele jaar'))}</small><b>${esc(enEUR0(total,true))}</b><small>${esc(t('≈ {e} per maand',{e:enEUR0(total/12,true)}))}</small></div>`;
-  if(diff!=null)h+=`<div style="grid-column:1/-1"><small>${esc(t('Verwachte jaarafrekening'))}</small><b class="${diff>0?'up':'down'}">${esc(diff>0?t('bijbetalen ≈ {e}',{e:enEUR0(diff,true)}):t('terugkrijgen ≈ {e}',{e:enEUR0(-diff,true)}))}</b><small>${esc(t('Voorschot {a} per maand; passend voorschot ≈ {b}.',{a:enEUR0(vs,true),b:enEUR0(total/12,true)}))}</small></div>`;
+    <div data-info="${iSo}"><small>${esc(t('Kosten tot nu ({n} dagen)',{n:sofar.length+gapDays}))}</small><b>${esc(enEUR0(cSo+cGap,true))}</b>${gapDays?`<small>${esc(t('waarvan {n} dagen geschat (voor de meter)',{n:gapDays}))}</small>`:''}${vs!=null?`<small>${esc(t('betaald ≈ {e} ({n} termijnen)',{e:enEUR0(vs*months,true),n:months}))}</small>`:''}</div>
+    <div data-info="${iTot}"><small>${esc(t('Verwachte kosten hele jaar'))}</small><b>${esc(enEUR0(total,true))}</b><small>${esc(t('≈ {e} per maand',{e:enEUR0(total/12,true)}))}</small></div>`;
+  if(diff!=null)h+=`<div style="grid-column:1/-1" data-info="${enInfo([[t('Verwachte kosten'),enEUR(total)],[t('Voorschot 12 × {e}',{e:enEUR(vs)}),enEUR(paid)],[diff>0?t('Bijbetalen'):t('Terugkrijgen'),enEUR(Math.abs(diff))]])}"><small>${esc(t('Verwachte jaarafrekening'))}</small><b class="${diff>0?'up':'down'}">${esc(diff>0?t('bijbetalen ≈ {e}',{e:enEUR0(diff,true)}):t('terugkrijgen ≈ {e}',{e:enEUR0(-diff,true)}))}</b><small>${esc(t('Voorschot {a} per maand; passend voorschot ≈ {b}.',{a:enEUR0(vs,true),b:enEUR0(total/12,true)}))}</small></div>`;
   h+='</div>';
   if(vs==null)h+=`<p class="hint" style="margin:0">${esc(t('Vul bij Contracten je voorschot per maand in, dan zie je wat je terugkrijgt of moet bijbetalen.'))}</p>`;
+  h+='';
   h+=`<p class="ennote">${esc(restDays?t('Schatting: de rest van het jaar met je verbruik van dezelfde maanden vorig jaar{x}, tegen de prijzen van nu. Een koude winter of een ander contract verandert de uitkomst.',{x:usedLY<restDays?t(' (waar die ontbreken: je gemiddelde tot nu)'):''}):t('Het contractjaar is voorbij.'))}</p>`;
-  box.innerHTML=h}
+  box.innerHTML=h;enInfoWire(box)}
 
 /* Apparaten: per stekker vandaag, 7 dagen, deze maand, laagste stand en wat het per jaar kost; wasbeurten */
 function enDevUI(){const list=enPlugsAll||[],box=$('enDev');$('enDevPanel').classList.toggle('hidden',!list.length);if(!list.length)return;
@@ -2451,12 +2508,13 @@ function enDevUI(){const list=enPlugsAll||[],box=$('enDev');$('enDevPanel').clas
 async function enPatLoad(){let r;try{r=await api('/api/energy/profile')}catch(e){return}enProfile=r;enPatUI();if(r.busy&&!r.hourW)setTimeout(()=>{if(curTab==='energy')enPatLoad()},15000)}
 function enPatUI(){const r=enProfile,box=$('enPat');if(!r||!r.hourW){box.innerHTML=`<p class="hint" style="margin:0">${esc(t('De hub rekent je patronen uit de afgelopen 4 weken uit. Even geduld...'))}</p>`;return}
   const pr=enTP(enToday()).stroom,bw=r.baseW,loc=I18N.lang==='en'?'en-GB':'nl-NL';
-  let h=`<div class="enkpi"><div style="grid-column:1/-1"><small>${esc(t('Sluipverbruik: wat je huis altijd verbruikt (laagste stand \'s nachts)'))}</small><b>${bw!=null?esc(nl1(bw,0)+' W'):'–'}</b>${bw!=null?`<small>${esc(t('≈ {k} kWh per jaar',{k:nl1(bw*8.76,0)}))}${pr!=null?' · ≈ '+esc(enEUR0(bw*8.76*pr,true))+' '+esc(t('per jaar')):''}</small>`:''}</div></div>
+  const iB=enInfo([t('Per nacht het laagste kwartier tussen 1 en 5 uur; daarvan het middelste getal over {n} dagen.',{n:r.days}),t('Meestal: koelkast, router, server, apparaten op stand-by, laders.'),...(bw!=null&&pr!=null?[[t('Per jaar'),nl1(bw*8.76,0)+' kWh · '+enEUR0(bw*8.76*pr,true)],[t('10 W minder scheelt'),enEUR0(10*8.76*pr,true)+' '+t('per jaar')]]:[])]);
+  let h=`<div class="enkpi"><div style="grid-column:1/-1" data-info="${iB}"><small>${esc(t('Sluipverbruik: wat je huis altijd verbruikt (laagste stand \'s nachts)'))}</small><b>${bw!=null?esc(nl1(bw,0)+' W'):'–'}</b>${bw!=null?`<small>${esc(t('≈ {k} kWh per jaar',{k:nl1(bw*8.76,0)}))}${pr!=null?' · ≈ '+esc(enEUR0(bw*8.76*pr,true))+' '+esc(t('per jaar')):''}</small>`:''}</div></div>
     <div class="row" style="align-items:center"><div class="enlbl grow" style="margin:0">${esc(t('Gemiddeld per uur van de dag'))}</div><div class="seg" id="enPatSeg"><button class="btn" data-m="all">${esc(t('Alles'))}</button><button class="btn" data-m="wd">${esc(t('Werkdag'))}</button><button class="btn" data-m="we">${esc(t('Weekend'))}</button></div></div>
     <div class="enchart small" id="enPatHour"></div>${(r.gasHour||[]).some(v=>v>0)?`<div class="enlbl">${esc(t('Gas per uur van de dag (gemiddeld)'))}</div><div class="enchart small" id="enPatGas"></div>`:''}
     <div class="enlbl">${esc(t('Gemiddeld per dag van de week'))}</div><div class="enchart small" id="enPatWk"></div>
     <p class="ennote">${esc(t('Over {n} dagen: {a} t/m {b}.',{n:r.days,a:enLong(r.from),b:enLong(r.to)}))}</p>`;
-  box.innerHTML=h;
+  box.innerHTML=h;enInfoWire(box);
   const vals=enPatMode==='wd'&&r.hourWorkday.length?r.hourWorkday:enPatMode==='we'&&r.hourWeekend.length?r.hourWeekend:r.hourW;
   box.querySelectorAll('#enPatSeg .btn').forEach(b=>{b.classList.toggle('on',b.dataset.m===enPatMode);b.onclick=()=>{enPatMode=b.dataset.m;enPatUI()}});
   const hh=k=>String(k).padStart(2,'0')+':00';
@@ -2792,12 +2850,12 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();poLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(n==='energy')enLoad();
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();poLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(document.body.classList.contains('member')&&n!=='home'&&n!=='energy'){showTab('home');return}if(n==='energy')enLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
 $('roomLampSettings').onclick=()=>{showTab('lamps');selectLamp(selLamp);setTimeout(()=>{const r=[...$('lampList').children].find(r=>r.dataset.id===selLamp);(r||$('lampDetailPanel')).scrollIntoView({block:'start'})},50)};
-(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang);hostMode(s);document.body.classList.toggle('guest',s.role==='guest')}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';homeView='house';showTab(tb);load()})();
+(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang);hostMode(s);document.body.classList.toggle('guest',s.role==='guest');document.body.classList.toggle('member',s.role==='member')}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';homeView='house';showTab(tb);load()})();
 const fast=()=>S&&(S.sync||S.activeScene||(S.rooms||[]).some(r=>r.scene));
 setInterval(()=>{if(fast())poll()},500);
 setInterval(()=>{if(!fast())poll()},1500);
