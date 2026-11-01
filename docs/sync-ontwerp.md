@@ -58,3 +58,15 @@ Sleutels van lampen gaan alleen over het thuisnetwerk, en alleen naar een hub di
 2. hub: `/api/sync`, koppelverzoeken, sleutels; pagina: koppelverzoek toestaan.
 3. tv: ruil-lus in `SyncService`, koppelen in Instellingen, status ("Gekoppeld met hub, laatst bijgewerkt 12:03").
 4. Testen met de echte tv en hub.
+
+## Zo is het gebouwd (01-11-2026)
+
+- **core `HubLink.kt`**: `Shared.view()` maakt het gedeelde beeld (sleutel naar JSON met gesorteerde sleutels), `Shared.apply()` neemt
+  één wijziging over. Een eigen wijziging = het beeld verschilt van de vingerafdruk die tv en hub het laatst afspraken; geen
+  vuil-lijst per knop nodig. Lamp in een andere kamer = `{"away":true}`; de tv onthoudt die lampen (`away`) en laat ze ongeplaatst.
+  Groepje (`group`) blijft per kant. Tv-stand in `hubsync.json` naast config.json (niet in de backup).
+- **Tv**: ruilt elke 5 s en binnen 1 s na een eigen wijziging (`Store.version`). Koppelen: Instellingen, House hub (`/api/hublink`).
+- **Hub `TvSync.kt`**: grootboek met volgnummers en grafstenen in `data/tvsync.json`; `/api/tvsync/pair` en `/api/tvsync` alleen
+  vanaf het thuisnetwerk (niet via Cloudflare), met sleutel in `X-Sync-Key`. Toestaan bij Instellingen, Tv's (banner bovenaan).
+- Getest 01-11 met de echte tv: kamerkleur beide kanten op, lampplek tv naar hub in 0,4 s. Reservekopieën van vóór de koppeling:
+  hub `~/lampen/data/config-voor-tvsync.json`, tv `Documents\Lampen\tv-backup-voor-tvsync.json` (met sleutels).
