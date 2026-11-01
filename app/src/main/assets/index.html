@@ -1177,7 +1177,10 @@ function catStep(c,now){const dt=Math.min(.5,(now-c.t)/1000);c.t=now;
     if(d<=v){c.x=c.tx;c.y=c.ty;if(!c.box){const r=Math.random();c.mode=r<.45?'sit':r<.7?'lick':r<.85?'sleep':'stand';c.until=now+(c.mode==='sleep'?40000+Math.random()*60000:4000+Math.random()*7000)}}
     else{c.x+=dx/d*v;c.y+=dy/d*v}}
   else if(!c.box&&now>c.until){const sp=catFloorSpot();Object.assign(c,{tx:sp[0],ty:sp[1],mode:'walk'})}}
-function drawCats(g,k,sc){const list=catsHere(),now=Date.now();if(!list.length){return drawCatsOld(g,k,sc,catAnimState())}
+/** Plafondlampen weer over de katten heen tekenen: de kat loopt eronderdoor. */
+function catTops(g){const t=Room.topLayer();if(t&&view){g.save();g.imageSmoothingEnabled=false;g.drawImage(t,0,0,view.W,view.H);g.restore()}}
+function drawCats(g,k,sc){const r=drawCats0(g,k,sc);if(r)catTops(g);return r}
+function drawCats0(g,k,sc){const list=catsHere(),now=Date.now();if(!list.length){return drawCatsOld(g,k,sc,catAnimState())}
   for(const {name,c} of list.sort((a,b)=>a.c.y-b.c.y)){catStep(c,now);const sp=catSprite(catSpriteOf(name));
     if(!sp){drawCatsOld(g,k,sc,catAnimState().filter(a=>a.cat===name));continue}
     const m=sp.meta,A=m.anims,[cw,ch]=m.cell;

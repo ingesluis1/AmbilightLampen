@@ -1425,15 +1425,29 @@ const Room = (() => {
     }
     g.globalAlpha = 1; g.globalCompositeOperation = 'source-over';
     drawFixtures(g, L, lamps);
+    const tops = [];
     for (const l of lamps) {
       if (l.x < 0) continue;
       if (VIEW34 && dev34(l)) continue;   // al op volgorde met de meubels getekend (base)
       const lv = live[l.id] || {};
       // Lamp en kap in dezelfde heldere kleur als de gloed (een gedimde lamp zou er anders uit lijken te staan)
-      lampFixture(g, l, !lv.online || lv.on === false || (sync && lv.color === '#555555') ? '#55505a' : lv.color && lv.color !== '#555555' ? glowOf(lv.color)[0] : '#ffe2a8', L);
+      const fc = !lv.online || lv.on === false || (sync && lv.color === '#555555') ? '#55505a' : lv.color && lv.color !== '#555555' ? glowOf(lv.color)[0] : '#ffe2a8';
+      lampFixture(g, l, fc, L);
+      if (isCeiling(l)) { tops.push([l, fc]); }
     }
+    // Plafondlampen apart op een doorzichtige laag: die gaat over de katten heen (de kat loopt eronderdoor)
+    const t = topCv || (topCv = document.createElement('canvas'));
+    if (t.width !== c.width) t.width = c.width;
+    if (t.height !== c.height) t.height = c.height;
+    const tg = t.getContext('2d'); tg.clearRect(0, 0, t.width, t.height); tg.imageSmoothingEnabled = false;
+    for (const [l, fc] of tops) lampFixture(tg, l, fc, L);
+    topHas = tops.length > 0;
     return c;
   }
+  let topCv = null, topHas = false;
+  const isCeiling = l => !l.kind || l.kind === 'light' ? (l.height === 'ceiling' || l.look === 'pendant') : false;
+  /** Laag met alleen de plafondlampen van het laatste frame (of null), om over de katten te tekenen. */
+  function topLayer() { return topHas ? topCv : null; }
 
   /** Schaalt het pixelbeeld scherp naar een zichtbaar canvas. Geeft schaal en verschuiving terug. */
   function present(view, img, maxW, maxH, integer) {
@@ -1472,5 +1486,5 @@ const Room = (() => {
   // Plek in halve banden (0 = onderste band, 0.5 = tussen de onderste twee), of 'above'/'below'/null
   const bandPos = (y, n) => y == null ? null : y > 1.05 ? 'above' : y < -1.05 ? 'below' : Math.min(n - 1, Math.max(0, Math.round(((y + 1) / 2 * n - 0.5) * 2) / 2));
 
-  return { setView34, isView34: () => VIEW34, viewOf, plugItem, itemDims, PPM, ITEMS, CATS, catForRoom, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandPos, presetFor, lampBox, wallSnap, AIRCO_LOOKS, isAircoLook, FIXTURES, fixtureSpots, drawFixtures, stripOf, aimOf, tiltOf };
+  return { topLayer, setView34, isView34: () => VIEW34, viewOf, plugItem, itemDims, PPM, ITEMS, CATS, catForRoom, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandPos, presetFor, lampBox, wallSnap, AIRCO_LOOKS, isAircoLook, FIXTURES, fixtureSpots, drawFixtures, stripOf, aimOf, tiltOf };
 })();
