@@ -738,6 +738,13 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
   <div class="row" style="margin-top:10px"><select id="appAdd" class="grow"><option value="">App toevoegen...</option></select></div>
 </section>
 
+<section class="panel" id="viewPanel">
+  <h2>Weergave</h2>
+  <div class="lbl">Meubels op de kaart</div>
+  <div class="seg" id="viewSeg"><button class="btn" data-v="top">Van boven</button><button class="btn" data-v="34">Schuin van voren</button></div>
+  <p class="hint" style="margin:6px 0 0">Alleen op dit apparaat. De plek van je meubels blijft hetzelfde.</p>
+</section>
+
 <section class="panel srvonly ownonly" id="autoPanel">
   <h2>Automatisch</h2>
   <label class="s"><input type="checkbox" id="awEnabled"> Alles uit als ik weg ben</label>
@@ -881,6 +888,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 <div id="toast"></div>
 
 <script src="/i18n.js"></script>
+<script src="/furniture34.js"></script>
 <script src="/room.js"></script>
 <script>
 const $ = id => document.getElementById(id);
@@ -1016,12 +1024,19 @@ function useRoom(id){id=layouts[id]?id:Object.keys(layouts)[0];if(!id)return;
   if(tool==='tv'&&!isTv)setTool('floor')}
 
 /* ---------- gereedschap ---------- */
+/* Weergave van de meubels: van boven (oud) of schuin van voren (nieuw). Per apparaat onthouden. */
+let view34=false;try{view34=localStorage.getItem('view34')==='1'}catch(e){}
+Room.setView34(view34);
+function setView34(on){view34=!!on;try{localStorage.setItem('view34',on?'1':'0')}catch(e){}Room.setView34(view34);baseKey='';
+  document.querySelectorAll('#viewSeg .btn').forEach(b=>b.classList.toggle('on',(b.dataset.v==='34')===view34));document.querySelectorAll('#palette .btn').forEach(b=>{const c=b.querySelector('canvas');if(c)c.replaceWith(spriteThumb(b.dataset.type))});draw()}
 function preview(draw, size){
   const c=document.createElement('canvas');c.width=size;c.height=size;const g=c.getContext('2d');draw(g);
   c.style.width=size*2+'px';c.style.height=size*2+'px';return c;
 }
 function spriteThumb(type){
   const def=Room.ITEMS[type], s=Math.max(def.w,def.d), size=18;
+  if(view34&&!def.wall&&window.Furniture34&&Furniture34.F[type]){const r=Furniture34.renderItem(type,def.w,def.d,'S',type==='rug'?{tf:1}:{hf:.75});
+    return preview(g=>{const k=Math.min(size/r.canvas.width,size/r.canvas.height);g.imageSmoothingEnabled=false;g.drawImage(r.canvas,(size-r.canvas.width*k)/2,(size-r.canvas.height*k)/2,r.canvas.width*k,r.canvas.height*k)},size)}
   return preview(g=>{const t=document.createElement('canvas');const w=Math.round(def.w*16),d=Math.round((def.thumbD||def.d)*16);t.width=w+2;t.height=d+2;
     Room.SPRITES[type](t.getContext('2d'),w,d);const k=Math.min(size/(w+2),size/(d+2));g.imageSmoothingEnabled=false;
     g.drawImage(t,(size-(w+2)*k)/2,(size-(d+2)*k)/2,(w+2)*k,(d+2)*k)},size);
@@ -1103,19 +1118,55 @@ function catNames(){return catList().map(c=>c.name)}
 const catSpriteOf=name=>{const c=catList().find(x=>x.name===name);return c&&c.sprite||''};
 /** Kamer van een kat: per tien minuten een andere (vast patroon per naam, dus op elk scherm dezelfde). */
 function catRoom(name,now){const rs=roomsList();if(!rs.length)return '';const p=Math.floor(now/600000);return rs[catHash(name+':'+p)%rs.length].id}
-function catFloorSpot(name){const pts=[];for(let y=0;y<L.h;y++)for(let x=0;x<L.w;x++)if(Room.isFloor(L,x,y))pts.push([x+.5,y+.5]);
-  if(!pts.length)return[L.w/2,L.h/2];const p=pts[Math.floor(Math.random()*pts.length)];return[p[0]+(Math.random()-.5)*.6,p[1]+(Math.random()-.5)*.6]}
+const CAT_G=4;let catGrid=null,catGridKey='';
+/** Raster (25 cm) van plekken waar een kat kan lopen: vloer, niet onder een meubel (een kleed mag), niet onder de tv. */
+function catFree(){const key=JSON.stringify(L.items||[])+JSON.stringify(L.tv||null)+JSON.stringify(L.floor)+curRoom;if(catGrid&&catGridKey===key)return catGrid;
+  const gw=L.w*CAT_G,gh=L.h*CAT_G,free=new Uint8Array(gw*gh);
+  for(let y=0;y<gh;y++)for(let x=0;x<gw;x++)free[y*gw+x]=Room.isFloor(L,Math.floor(x/CAT_G),Math.floor(y/CAT_G))?1:0;
+  const block=(cx,cy,w,d)=>{const x0=Math.floor((cx-w/2)*CAT_G),x1=Math.ceil((cx+w/2)*CAT_G),y0=Math.floor((cy-d/2)*CAT_G),y1=Math.ceil((cy+d/2)*CAT_G);
+    for(let y=Math.max(0,y0);y<Math.min(gh,y1);y++)for(let x=Math.max(0,x0);x<Math.min(gw,x1);x++)free[y*gw+x]=0};
+  for(const it of L.items||[]){const def=Room.ITEMS[it.type];if(!def||def.wall||it.type==='rug'||def.top)continue;const [w,d]=Room.itemDims(it);block(it.x,it.y,w,d)}
+  if(L.tv){const [w,d]=Room.itemDims(L.tv);block(L.tv.x,L.tv.y,w,d)}
+  for(const l of roomLamps())if(isDev(l)&&l.x>=0&&!isPlug(l))block(l.x,l.y,.6,.6);
+  catGrid={gw,gh,free};catGridKey=key;return catGrid}
+function catFloorSpot(){const G=catFree(),pts=[];for(let i=0;i<G.free.length;i++)if(G.free[i])pts.push(i);
+  if(!pts.length)return[L.w/2,L.h/2];const i=pts[Math.floor(Math.random()*pts.length)];return[(i%G.gw+.5)/CAT_G,(Math.floor(i/G.gw)+.5)/CAT_G]}
+/** Route van (x,y) naar (tx,ty) over vrije plekken; geeft punten (meters) of null. Staat het doel op een meubel: naar de dichtstbijzijnde vrije plek. */
+function catPath(x,y,tx,ty){const G=catFree(),{gw,gh,free}=G,cl=(v,m)=>Math.max(0,Math.min(m-1,v));
+  const s=cl(Math.floor(y*CAT_G),gh)*gw+cl(Math.floor(x*CAT_G),gw);let t=cl(Math.floor(ty*CAT_G),gh)*gw+cl(Math.floor(tx*CAT_G),gw);
+  const prev=new Int32Array(gw*gh).fill(-1),q=[s];prev[s]=s;let best=s,bd=1e9;
+  for(let h=0;h<q.length;h++){const i=q[h];const d=Math.abs(i%gw-t%gw)+Math.abs(Math.floor(i/gw)-Math.floor(t/gw));if(d<bd){bd=d;best=i}if(i===t)break;
+    const ix=i%gw,iy=Math.floor(i/gw);for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=ix+dx,ny=iy+dy;if(nx<0||ny<0||nx>=gw||ny>=gh)continue;const j=ny*gw+nx;
+      if(prev[j]>=0||(!free[j]&&j!==t))continue;prev[j]=i;q.push(j)}}
+  if(prev[t]<0)t=best;const pts=[];for(let i=t;i!==s;i=prev[i]){pts.push([(i%gw+.5)/CAT_G,(Math.floor(i/gw)+.5)/CAT_G]);if(pts.length>400)break}
+  pts.reverse();return pts}
+/** Plek net binnen de dichtstbijzijnde deur van deze kamer (of null zonder deur). */
+function catDoor(x,y){let best=null,bd=1e9;for(const it of L.items||[]){if(it.type!=='door')continue;const s=Room.wallSnap(L,it.x,it.y);
+    const p=s.wall==='n'?[s.x,s.y+.25]:s.wall==='s'?[s.x,s.y-.25]:s.wall==='w'?[s.x+.25,s.y]:[s.x-.25,s.y],d=Math.hypot(p[0]-x,p[1]-y);if(d<bd){bd=d;best=p}}
+  return best}
 function catsHere(){if(!SRV||!L)return[];const now=Date.now(),box=catAnimState(),out=[];
-  for(const name of catNames()){const at=box.find(b=>b.cat===name),room=at?lampRoom(at.l):catRoom(name,now);
-    let c=catSim[name];if(!c||c.room!==room){const sp=room===curRoom?catFloorSpot(name):[0,0];c=catSim[name]={room,x:sp[0],y:sp[1],tx:sp[0],ty:sp[1],mode:'sit',until:now+3000,face:'E',t:now,seen:false}}
-    if(room!==curRoom)continue;
-    if(!c.seen){const sp=catFloorSpot(name);Object.assign(c,{x:sp[0],y:sp[1],tx:sp[0],ty:sp[1],seen:true})}
+  for(const name of catNames()){const at=box.find(b=>b.cat===name),want=at?lampRoom(at.l):catRoom(name,now);
+    let c=catSim[name];
+    if(!c)c=catSim[name]={room:want,x:0,y:0,tx:0,ty:0,mode:'sit',until:now+3000,face:'E',t:now,seenRoom:''};
+    if(c.room!==want&&!c.exiting){
+      if(c.room===curRoom&&c.seenRoom===curRoom){const d=catDoor(c.x,c.y);   // zichtbaar: eerst naar de deur lopen
+        if(d){c.exiting=want;Object.assign(c,{tx:d[0],ty:d[1],mode:'walk',path:null})}else c.room=want}
+      else{c.room=want;if(want===curRoom){const d=catDoor(L.w/2,L.h/2),sp=catFloorSpot();   // binnenkomen door de deur
+        if(d){Object.assign(c,{x:d[0],y:d[1],tx:sp[0],ty:sp[1],mode:'walk',path:null,seenRoom:curRoom})}else c.seenRoom=''}}}
+    if(c.room!==curRoom)continue;
+    // kamer net geopend: de kat is er al, ergens op een vrije plek
+    if(c.seenRoom!==curRoom){const sp=catFloorSpot();Object.assign(c,{x:sp[0],y:sp[1],tx:sp[0],ty:sp[1],mode:'sit',until:now+2000+Math.random()*4000,path:null,seenRoom:curRoom})}
     c.box=at||null;out.push({name,c})}
   return out}
 function catStep(c,now){const dt=Math.min(.5,(now-c.t)/1000);c.t=now;
   if(c.box){const l=c.box.l,st=c.box.st;
     if(st==='cat_out'){if(c.mode!=='walk'||!c.leaving){const sp=catFloorSpot();Object.assign(c,{tx:sp[0],ty:sp[1],mode:'walk',leaving:true})}}
     else{c.leaving=false;const bx=l.x+(c.x<l.x?-.35:.35),by=l.y+.35;c.tx=bx;c.ty=by;const d=Math.hypot(bx-c.x,by-c.y);c.mode=d>.08?'walk':(st==='cat_in'?'sit':'stand')}}
+  if(c.mode==='walk'&&(!c.path||c.pathT!==c.tx+','+c.ty)){c.path=catPath(c.x,c.y,c.tx,c.ty);c.pathT=c.tx+','+c.ty}
+  if(c.mode==='walk'&&c.path&&c.path.length){const [wx,wy]=c.path[0],ddx=wx-c.x,ddy=wy-c.y,dd=Math.hypot(ddx,ddy),vv=.55*dt;
+    if(Math.abs(ddx)>Math.abs(ddy)*.8)c.face=ddx>0?'E':'W';else c.face=ddy>0?'S':'N';
+    if(dd<=vv){c.x=wx;c.y=wy;c.path.shift()}else{c.x+=ddx/dd*vv;c.y+=ddy/dd*vv}
+    if(c.path.length)return;c.tx=c.x;c.ty=c.y;if(c.exiting){c.room=c.exiting;c.exiting=null;c.seenRoom='';return}}
   if(c.mode==='walk'){const dx=c.tx-c.x,dy=c.ty-c.y,d=Math.hypot(dx,dy),v=.55*dt;
     if(Math.abs(dx)>Math.abs(dy)*.8)c.face=dx>0?'E':'W';else c.face=dy>0?'S':'N';
     if(d<=v){c.x=c.tx;c.y=c.ty;if(!c.box){const r=Math.random();c.mode=r<.45?'sit':r<.7?'lick':r<.85?'sleep':'stand';c.until=now+(c.mode==='sleep'?40000+Math.random()*60000:4000+Math.random()*7000)}}
@@ -1170,7 +1221,7 @@ function draw(){
   if(!L)return;
   // Alleen de lampen van deze kamer; de tv alleen in de tv-kamer
   const rm=roomById(curRoom)||{},isTv=!!rm.tv,LD={...L,tv:isTv?L.tv:null,wallColor:rm.color||''},lamps=roomLamps();
-  const key=JSON.stringify(L)+isTv+(rm.color||'')+lamps.map(l=>l.id).join();
+  const key=JSON.stringify(L)+isTv+(rm.color||'')+view34+lamps.map(l=>l.id).join();
   if(key!==baseKey){baseImg=Room.base(LD,lamps);baseKey=key}
   const dim=S&&((isTv&&S.sync)||(hasRooms()?!!rm.scene||!roomAnyOn(curRoom):(!!S.activeScene||S.lampsOff)));
   const img=Room.frame(baseImg,LD,lamps,live,dim,isTv&&S&&S.sync&&S.top);
@@ -2017,6 +2068,7 @@ async function logLoad(){const who=$('logWho').value;let r;try{r=await api('/api
     h+=`<div class="kbrow"><span>${esc(d.toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'}))} · <b>${esc(x.who)}</b></span><span style="text-align:right">${esc(x.what)}</span></div>`}
   box.innerHTML=h}
 $('logDet').ontoggle=()=>{if($('logDet').open)logLoad()};$('logWho').onchange=logLoad;
+document.querySelectorAll('#viewSeg .btn').forEach(b=>{b.classList.toggle('on',(b.dataset.v==='34')===view34);b.onclick=()=>setView34(b.dataset.v==='34')});
 $('asGuestBtn').onclick=()=>setAsGuest('guest');$('asMemberBtn').onclick=()=>setAsGuest('member');$('asGuestStop').onclick=()=>setAsGuest('');$('asGuestBar').classList.toggle('hidden',!asGuest);
 if(asGuest==='member')$('asGuestBar').querySelector('span').textContent=t('Je bekijkt de hub als huisgenoot');
 $('mensenAdd').onclick=async()=>{const v=$('mensenNew').value.trim();if(!v)return;await api('/api/people/save',{id:'',name:v});$('mensenNew').value='';peopleLoad(true);peopleAdmin()};

@@ -174,6 +174,7 @@ const Room = (() => {
     // Kleden eerst, dan meubels van achter naar voren; kleine spullen die op een tafel of bureau staan (top) als laatste
     const onTop = it => (ITEMS[it.type] || {}).top ? 1 : 0;
     const items = (L.items || []).slice().sort((a, b) => (a.type === 'rug' ? -1 : 0) - (b.type === 'rug' ? -1 : 0) || onTop(a) - onTop(b) || a.y - b.y);
+    if (VIEW34 && window.Furniture34) { draw34All(g, L, items); return c; }
     for (const it of items) drawItem(g, it);
     if (L.tv) drawTv(g, L.tv);
     return c;
@@ -911,6 +912,37 @@ const Room = (() => {
     }
   }
 
+  // ---------- Meubels schuin van voren (Furniture34), naast de oude weergave van boven ----------
+  let VIEW34 = false;
+  function setView34(v) { VIEW34 = !!v; }
+  /** Kijkrichting bij een draaiing: 90 = voorkant naar je toe (zoals de plaatjes van boven, die 90 graden als standaard hebben). */
+  function viewOf(dir) { const q = ((Math.round(((dir == null ? 90 : dir) - 90) / 90) % 4) + 4) % 4; return ['S', 'W', 'N', 'E'][q]; }
+  /** Teken één meubel schuin van voren op zijn plek: de onderkant van het plaatje is de voorrand van de voetafdruk. */
+  function draw34(g, type, x, y, W, D, dir, opt = {}) {
+    const v = viewOf(dir), side = v === 'W' || v === 'E', sd = side ? W : D, frontY = (y + 1 + sd / 2) * PPM;
+    let r = window.Furniture34.renderItem(type, W, D, v, { hf: 0.75, ...opt });
+    if (!r) return false;
+    // past het niet boven in de kaart (hoge kast tegen de achtermuur): dit meubel iets lager tekenen
+    const top = frontY + r.margin - r.canvas.height;
+    if (top < 0 && r.height > 0) r = window.Furniture34.renderItem(type, W, D, v, { ...opt, hf: Math.max(0.3, 0.75 * (r.height + top) / r.height) });
+    g.drawImage(r.canvas, Math.round((x + 1) * PPM - r.fw / 2) - r.margin, Math.round(frontY) - r.canvas.height + r.margin);
+    return true;
+  }
+  function draw34All(g, L, items) {
+    const list = [];
+    for (const it of items) { const def = ITEMS[it.type]; if (!def || def.wall) continue;
+      const W = it.w || def.w, D = it.d || def.d, v = viewOf(it.dir), sd = (v === 'W' || v === 'E') ? W : D;
+      list.push({ it, W, D, front: it.y + sd / 2, rank: it.type === 'rug' ? 0 : def.top ? 2 : 1 }); }
+    if (L.tv) list.push({ tv: L.tv, W: L.tv.w + 0.4, D: 0.45, front: L.tv.y + (viewOf(L.tv.dir) === 'W' || viewOf(L.tv.dir) === 'E' ? L.tv.w + 0.4 : 0.45) / 2, rank: 1 });
+    list.sort((a, b) => a.rank - b.rank || a.front - b.front);
+    for (const e of list) {
+      if (e.tv) { draw34(g, 'tvstand', e.tv.x, e.tv.y, e.W, e.D, e.tv.dir); continue; }
+      const it = e.it, opt = it.type === 'rug' ? { tf: 1 } : ITEMS[it.type].top ? { noShadow: true } : {};
+      if (it.flip) opt.flipX = true;
+      if (!draw34(g, it.type, it.x, it.y, e.W, e.D, it.dir, opt)) drawItem(g, it);   // onbekend: dan de oude tekening
+    }
+  }
+
   function drawItem(g, it) {
     const def = ITEMS[it.type]; if (!def || def.wall) return;
     const sprite = SPRITES[it.type];
@@ -1150,6 +1182,7 @@ const Room = (() => {
   function lampFixture(g, l, color, L) {
     if (isAircoLook(l.look)) { drawAirco(g, l, L); return; }
     // Kattenbak (apparaat): dezelfde tekening als het meubel, gecentreerd op zijn plek
+    if (l.look === 'kattenbak' && VIEW34 && window.Furniture34 && L) { draw34(g, 'litterbox', l.x, l.y, ITEMS.litterbox.w, ITEMS.litterbox.d, 90); return; }
     if (l.look === 'kattenbak') { const w = Math.round(ITEMS.litterbox.w * PPM), d = Math.round(ITEMS.litterbox.d * PPM);
       g.save(); g.translate(Math.round((l.x + 1) * PPM - w / 2), Math.round((l.y + 1) * PPM - d / 2)); SPRITES.litterbox(g, w, d); g.restore(); return; }
     // Slimme stekker (apparaat): wit blokje met twee pennetjes en een lampje (groen = aan)
@@ -1422,5 +1455,5 @@ const Room = (() => {
   // Plek in halve banden (0 = onderste band, 0.5 = tussen de onderste twee), of 'above'/'below'/null
   const bandPos = (y, n) => y == null ? null : y > 1.05 ? 'above' : y < -1.05 ? 'below' : Math.min(n - 1, Math.max(0, Math.round(((y + 1) / 2 * n - 0.5) * 2) / 2));
 
-  return { plugItem, itemDims, PPM, ITEMS, CATS, catForRoom, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandPos, presetFor, lampBox, wallSnap, AIRCO_LOOKS, isAircoLook, FIXTURES, fixtureSpots, drawFixtures, stripOf, aimOf, tiltOf };
+  return { setView34, isView34: () => VIEW34, viewOf, plugItem, itemDims, PPM, ITEMS, CATS, catForRoom, SPRITES, FLOORS, LOOKS, lampFixture, floorPixel, base, frame, present, migrate, isFloor, rotated, calibColors, bandY, bandPos, presetFor, lampBox, wallSnap, AIRCO_LOOKS, isAircoLook, FIXTURES, fixtureSpots, drawFixtures, stripOf, aimOf, tiltOf };
 })();
