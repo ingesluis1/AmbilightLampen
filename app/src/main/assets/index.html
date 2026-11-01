@@ -2956,7 +2956,7 @@ const EN_PAIR={kwh:'#e3bd86',gas:'#a9c2e2',back:'#a8d8d0',solar:'#c6e0a8'};
 let enCmp=false;try{enCmp=localStorage.getItem('enCmp')==='1'}catch(e){}
 function enCmpHint(has,unit){const b=$('enCmp');b.classList.toggle('on',enCmp);b.disabled=!has;b.title=has?t('Vergelijk met vorig jaar'):t('Nog geen gegevens van vorig jaar voor deze periode');
   const h=$('enPerHint');if(enCmp&&has){h.classList.remove('hidden');h.innerHTML=`<i class="ensw" style="background:${EN_PAIR[enKind]}"></i>${esc(t('vorig jaar'))} &nbsp; <i class="ensw" style="background:${EN_COL[enKind]}"></i>${esc(t('dit jaar'))}`}
-  else if(enN==='m12'){h.classList.toggle('hidden',!has);if(has)h.textContent=t('Het streepje is dezelfde maand een jaar eerder.')}
+  else if(enN==='m12'){h.classList.toggle('hidden',!has);if(has)h.textContent=t('Tik op Vergelijk om vorig jaar ernaast te zien.')}
   else{h.classList.remove('hidden');h.textContent=t('Tik op een dag voor het verloop per kwartier.')+(enCmp&&!has?' '+t('Van vorig jaar zijn nog geen dagcijfers; vergelijken kan per maand (12 mnd).'):'')}}
 let enN='m12',enData=null,enDay=null,enKind='kwh',enMonths=null;try{enKind=localStorage.getItem('enKind')||'kwh';const n=localStorage.getItem('enN');if(n)enN=n==='m12'?n:+n}catch(e){}
 const nl1=(v,d)=>v==null?'–':v.toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL',{minimumFractionDigits:d,maximumFractionDigits:d});
@@ -3093,10 +3093,10 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   if(enN==='m12'){
     const ms=enMonths&&enMonths.ok?enMonths.months:[],ml=ms.map(m=>new Date(m.month+'-15T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{month:'short'})),
       src=m=>m.source==='enelogic'?'Enelogic':m.source,full=m=>new Date(m.month+'-15T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{month:'long',year:'numeric'});
-    // Vorig jaar: dezelfde maand een jaar eerder (uit de 25 maanden), als streepje in de balk
+    // Vorig jaar: dezelfde maand een jaar eerder (uit de 25 maanden); alleen met Vergelijk als staafje ernaast, verder in het tiplabel
     const LY=(enMonthsLong&&enMonthsLong.months)||[],lyOf=m=>LY.find(x=>x.month===(+m.month.slice(0,4)-1)+m.month.slice(4)),ghost=ms.map(m=>{const x=lyOf(m);return x?x[enKind]??null:null});
     const hasG=ghost.some(v=>v>0);enCmpHint(hasG,t('maand'));
-    enBars($('enDays'),ms.map(m=>m[enKind]??null),{color:EN_COL[enKind],labels:ml,title:t(K.title+' per maand'),ghost:hasG&&!enCmp?ghost:null,pair:hasG&&enCmp?ghost:null,pairColor:EN_PAIR[enKind],
+    enBars($('enDays'),ms.map(m=>m[enKind]??null),{color:EN_COL[enKind],labels:ml,title:t(K.title+' per maand'),pair:hasG&&enCmp?ghost:null,pairColor:EN_PAIR[enKind],
       tip:(i,v)=>full(ms[i])+': '+nl1(v,0)+K.unit+(enKind==='solar'&&ms[i].solarEst?' '+t('(geschat naar zonlicht)'):'')+costTxt(ms[i])+selfTxt(ms[i])+(ms[i].source?' ('+src(ms[i])+(ms[i].partial?', '+t('nog niet compleet'):'')+')':'')
         +(ghost[i]!=null?' · '+t('vorig jaar {v}',{v:nl1(ghost[i],0)+K.unit})+(v&&ghost[i]?' ('+(v>ghost[i]?'+':'')+Math.round((v-ghost[i])/ghost[i]*100)+'%)':''):'')});
     return}
