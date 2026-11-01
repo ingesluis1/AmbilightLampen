@@ -414,6 +414,14 @@ class WebServer(private val ctx: Context) {
                         }
                         Store.save(); Engine.syncWorkers(); msg(true, tr("Lamp verwijderd", "Lamp removed"))
                     }
+                    // Koppeling met de House hub: tv-kamer, lampen en eigen scènes gelijk houden
+                    method == "GET" && path == "/api/hublink" -> json(HubLink.statusJson().put("ok", true))
+                    path == "/api/hublink" && method == "POST" -> {
+                        val a = JSONObject(req).optString("addr").trim().removePrefix("http://").trimEnd('/')
+                        if (!a.matches(Regex("[A-Za-z0-9.-]{1,63}(:[0-9]{1,5})?"))) msg(false, tr("Vul het adres van de hub in, bv. 192.168.1.177:8790", "Enter the hub address, e.g. 192.168.1.177:8790"))
+                        else { HubLink.connect(if (':' in a) a else "$a:8790"); msg(true, tr("Koppelen gevraagd. Sta de tv toe op de hub (Instellingen).", "Pairing requested. Allow the TV on the hub (Settings).")) }
+                    }
+                    path == "/api/hublink/off" && method == "POST" -> { HubLink.disconnect(); msg(true, tr("Ontkoppeld van de hub", "Unpaired from the hub")) }
                     path == "/api/lamp/forget" && method == "POST" -> {
                         val id = JSONObject(req).getString("id")
                         synchronized(Store) { Store.hidden.remove(id)?.let { Store.forgotten[id] = it } }

@@ -312,6 +312,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="row" style="margin-top:12px"><button class="btn gold grow" id="houseOff">Hele huis uit</button><button class="btn grow" id="houseOn">Alles aan</button><button class="btn grow" id="houseScene">Scène</button></div>
   <div class="hint" id="houseHint"></div>
   <div class="banner hidden ownonly" id="accBanner" style="margin-top:10px;cursor:pointer"></div>
+  <div class="banner hidden ownonly srvonly" id="tvBanner" style="margin-top:10px;cursor:pointer">Een tv wil koppelen. Tik om te bekijken.</div>
   <div id="houseDevWrap" class="hidden"><h2 style="margin-top:14px">Apparaten</h2><div id="houseDevs"></div></div>
 </section>
 
@@ -746,6 +747,20 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="lbl">Meubels op de kaart</div>
   <div class="seg" id="viewSeg"><button class="btn" data-v="top">Van boven</button><button class="btn" data-v="34">Schuin van voren</button></div>
   <p class="hint" style="margin:6px 0 0">Alleen op dit apparaat. De plek van je meubels blijft hetzelfde.</p>
+</section>
+
+<section class="panel tvonly" id="hubLinkPanel">
+  <h2>House hub</h2>
+  <p class="hint" style="margin:0 0 6px">Heb je een House hub? Dan blijven de kamer met de tv, de lampen daarin en je eigen scènes op de tv en de hub hetzelfde. De eerste keer neemt de tv alles van de hub over.</p>
+  <div class="row" style="align-items:center"><input type="text" class="grow" id="hubAddr" placeholder="192.168.1.177:8790" autocomplete="off"><button class="btn gold" id="hubConnect">Koppelen</button></div>
+  <p class="hint" id="hubStatus" style="margin:6px 0 0"></p>
+  <div class="row hidden" id="hubOffRow" style="margin-top:6px"><button class="btn red" id="hubOff">Ontkoppelen</button></div>
+</section>
+
+<section class="panel srvonly ownonly" id="tvSyncPanel">
+  <h2>Tv's</h2>
+  <p class="hint" style="margin:0 0 6px">Een gekoppelde tv houdt de kamer met de tv, de lampen daarin en de eigen scènes gelijk met de hub. Koppelen begin je op de tv (Instellingen, House hub).</p>
+  <div id="tvSyncList"></div>
 </section>
 
 <section class="panel srvonly ownonly" id="autoPanel">
@@ -1190,9 +1205,9 @@ function drawCats0(g,k,sc){const list=catsHere(),now=Date.now();if(!list.length)
     let an,flip=false;const side=c.face==='E'||c.face==='W';
     if(c.mode==='walk'){an=A['walk'+c.face]||A.walkE;if(!A['walk'+c.face])flip=c.face==='W'||(!side&&c.lastSide==='W');if(side)c.lastSide=c.face}
     else{an=A[c.mode]||A.sit;flip=!A.walkS&&c.lastSide==='W'}
-    // zitten: één keer gaan zitten en dan stil blijven zitten; poetsen en slapen herhalen
+    // zitten: één keer gaan zitten en dan stil blijven zitten (met blink in het plaatje: de laatste twee beelden = ogen open/dicht, af en toe knipperen); poetsen en slapen herhalen
     if(c.mode!==c.lastMode){c.lastMode=c.mode;c.ms=now}
-    const fps=c.mode==='walk'?8:c.mode==='sleep'?1.5:3,fr=Math.floor((now-(c.ms||now))/1000*fps),f=(c.mode==='sit'||c.mode==='stand')?Math.min(an.n-1,fr):fr%an.n,s=k/16*.6,[x,y]=sc(c.x,c.y);
+    const fps=c.mode==='walk'?8:c.mode==='sleep'?1.5:3,fr=Math.floor((now-(c.ms||now))/1000*fps),f=(c.mode==='sit'||c.mode==='stand')?(an.blink&&fr>=an.n-2?an.n-2+(((now+catHash(name)%3000)%3200)<180?1:0):Math.min(an.n-1,fr)):fr%an.n,s=k/16*.6,[x,y]=sc(c.x,c.y);
     // donkere kamer: de kat krijgt dezelfde waas als de kaart (alleen over de kat, niet eromheen)
     let src=sp.img,sx=f*cw,sy=an.row*ch;
     if(catDim){catCv=catCv||document.createElement('canvas');catCv.width=cw;catCv.height=ch;const cg=catCv.getContext('2d');cg.clearRect(0,0,cw,ch);
@@ -2131,7 +2146,27 @@ $('gateAsk').onclick=async()=>{const n=$('gateName').value.trim();if(!n){$('gate
 /* Rol toepassen: gast ziet alleen Bediening */
 function roleUI(s){const g=s&&s.role==='guest',mb=s&&s.role==='member';document.body.classList.toggle('member',mb);if(mb&&curTab!=='home'&&curTab!=='energy')showTab('home');$('notHomeBar').classList.toggle('hidden',!(g&&s.canControl===false));document.body.classList.toggle('guest',g);if(g&&curTab!=='home')showTab('home');
   const n=s&&s.role==='owner'?s.accessPending||0:0;$('accBanner').classList.toggle('hidden',!n);
-  if(n)$('accBanner').textContent=t('{n} apparaat vraagt toegang. Tik om te bekijken.',{n})}
+  if(n)$('accBanner').textContent=t('{n} apparaat vraagt toegang. Tik om te bekijken.',{n});
+  $('tvBanner').classList.toggle('hidden',!(s&&s.role==='owner'&&s.tvPending>0))}
+$('tvBanner').onclick=()=>{showTab('settings');setTimeout(()=>$('tvSyncPanel').scrollIntoView({block:'start'}),50)};
+/* Koppeling tv <-> House hub. Op de tv: adres invullen en koppelen. Op de hub: tv toestaan of ontkoppelen. */
+const tvAgo=ms=>{if(!ms)return t('nog nooit');const m=Math.round((Date.now()-ms)/60000);return m<1?t('net'):m<60?t('{n} min geleden',{n:m}):new Date(ms).toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})};
+let hubTimer=null;
+async function hubLoad(){if(SRV)return;clearTimeout(hubTimer);try{const h=await api('/api/hublink');if(document.activeElement!==$('hubAddr'))$('hubAddr').value=h.addr||'';
+    const st=!h.addr?t('Niet gekoppeld.'):h.status==='ok'?t('Gekoppeld met {a}. Laatst bijgewerkt: {w}.',{a:h.addr,w:tvAgo(h.lastOk)}):h.status==='pending'?t("Wacht op de hub: sta de tv toe bij Instellingen, Tv's."):h.status==='unpaired'?t('De hub heeft de tv geweigerd of ontkoppeld.'):t('Hub niet bereikbaar ({e}). De tv werkt gewoon door.',{e:h.error||'?'});
+    $('hubStatus').textContent=st;$('hubOffRow').classList.toggle('hidden',!h.addr)}catch(e){}
+  if(curTab==='settings')hubTimer=setTimeout(hubLoad,5000)}
+$('hubConnect').onclick=async()=>{const r=await api('/api/hublink',{addr:$('hubAddr').value});toast(r.message);hubLoad()};
+$('hubOff').onclick=async()=>{if(!confirm(t('Ontkoppelen van de hub? De tv houdt alles wat hij nu heeft.')))return;const r=await api('/api/hublink/off',{});toast(r.message);hubLoad()};
+async function tvSyncLoad(){if(!SRV||!S||S.role!=='owner')return;try{const r=await api('/api/tvsync/list'),box=$('tvSyncList');box.innerHTML='';
+    if(!r.tvs.length){box.innerHTML=`<p class="hint">${esc(t('Nog geen tv gekoppeld.'))}</p>`;return}
+    for(const tv of r.tvs){const el=document.createElement('div');el.className='devrow';
+      const st=tv.approved?t('Gekoppeld · laatst gezien: {w}',{w:tvAgo(tv.lastSeen)}):tv.denied?t('Geweigerd'):t('Wil koppelen');
+      el.innerHTML=`<div class="row" style="margin:0;align-items:center"><div class="grow"><b>${esc(tv.name)}</b><div class="hint">${esc(tv.ip||'')} · ${esc(st)}</div></div></div><div class="row" style="margin-top:6px"></div>`;
+      const row=el.lastElementChild,btn=(txt,cls,fn)=>{const b=document.createElement('button');b.className='btn '+cls;b.textContent=txt;b.onclick=fn;row.append(b)};
+      if(!tv.approved&&!tv.denied){btn(t('Toestaan'),'gold grow',async()=>{toast((await api('/api/tvsync/approve',{id:tv.id})).message);tvSyncLoad();poll()});btn(t('Weigeren'),'red',async()=>{toast((await api('/api/tvsync/remove',{id:tv.id,deny:true})).message);tvSyncLoad();poll()})}
+      else btn(tv.approved?t('Ontkoppelen'):t('Weghalen'),'red',async()=>{if(tv.approved&&!confirm(t('Tv ontkoppelen? Hij blijft werken, maar blijft niet meer gelijk met de hub.')))return;toast((await api('/api/tvsync/remove',{id:tv.id})).message);tvSyncLoad();poll()});
+      box.append(el)}}catch(e){}}
 $('houseScene').onclick=()=>{houseSceneOpen=!houseSceneOpen;homeUI();if(houseSceneOpen)setTimeout(()=>$('scenePanel').scrollIntoView({block:'start',behavior:'smooth'}),50)};
 $('accBanner').onclick=()=>{showTab('settings');setTimeout(()=>$('mensenPanel').scrollIntoView({block:'start'}),50)};
 const ACC_ROLE={owner:'Hoofdgebruiker',member:'Huisgenoot',guest:'Gast',pending:'Wacht op goedkeuring',denied:'Geweigerd'};
@@ -3017,7 +3052,7 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();poLoad();catLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(document.body.classList.contains('member')&&n!=='home'&&n!=='energy'){showTab('home');return}if(n==='energy')enLoad();
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();poLoad();catLoad();hubLoad();tvSyncLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(document.body.classList.contains('member')&&n!=='home'&&n!=='energy'){showTab('home');return}if(n==='energy')enLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
