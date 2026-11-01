@@ -1261,10 +1261,10 @@ function draw(){
   // Kamer ingezoomd: maat van het vak (niet van de kaart zelf, die groeit mee) maal de zoomstand
   const rz=curTab==='room'&&!fullOpen?ZOOMS[roomZoom]:1;
   const baseW=Math.min(rz>1?$('roomMapSlot').clientWidth:$('mapwrap').clientWidth,document.documentElement.clientWidth-56)-20;
-  const maxW=fullOpen?(document.documentElement.clientWidth-44)*ZOOMS[fullZoom]:baseW*rz;
+  const maxW=fullOpen?(document.documentElement.clientWidth-24)*ZOOMS[fullZoom]:baseW*rz;
   const maxH=fullOpen?Math.max(160,$('fullMapSlot').clientHeight-24)*ZOOMS[fullZoom]:ro?window.innerHeight*0.42:Math.max(window.innerHeight*0.8,baseW*0.75)*rz;
   // Ingezoomd geen afronding op hele pixels, anders wordt de stap naar 1,5x bijna niets
-  view=Room.present($("map"),img,maxW,maxH,!(fullOpen&&fullZoom>0)&&rz===1);
+  view=Room.present($("map"),img,maxW,maxH,!fullOpen&&rz===1);   // groot scherm: niet afronden op hele pixels, dan vult de kaart de breedte
   const g=view.g,k=view.scale;
   const sc=(x,y)=>[(x+1)*k,(y+1)*k];
   // Temperatuur binnen (gemeten door de airco in deze kamer) rechtsonder in de rand
