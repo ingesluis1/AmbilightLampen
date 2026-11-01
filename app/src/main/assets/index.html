@@ -2297,7 +2297,13 @@ function enBars(el,vals,o){const W=Math.max(200,el.clientWidth),H=el.clientHeigh
     tip.textContent=o.tip(i,vals[i],neg?neg[i]:null);tip.classList.remove('hidden');tip.style.left=Math.min(r.width-70,Math.max(70,(padL+i*bw+bw/2)*r.width/W))+'px';tip.style.top=Math.max(14,(y0-sc(v))*r.height/H-4)+'px'};
   el.onpointerleave=()=>tip.classList.add('hidden');
   el.onclick=e=>{const i=at(e);if(i>=0&&o.pick)o.pick(i)}}
-async function enLoad(){if(!SRV)return;let r;try{[r,enMonths]=await Promise.all([api('/api/energy?days='+(enN==='m12'?30:enN)),api('/api/energy/months?n=12').catch(()=>null)])}catch(e){return}
+/* Eén pakket van de hub (elke 15 minuten klaargezet): 400 dagen, 25 maanden, patronen, stekkers. Hieruit knippen we de periode. */
+let enSnap=null,enSnapAt=0;
+async function enLoad(){if(!SRV)return;let r;
+  try{if(!enSnap||Date.now()-enSnapAt>5*60e3){enSnap=await api('/api/energy/snapshot');enSnapAt=Date.now()}}catch(e){return}
+  if(!enSnap||!enSnap.ok){r=enSnap||{};enMonths=null}
+  else{const D=enSnap.days,n=enN==='m12'?30:enN;r={...D,days:D.days.slice(-n)};const M=enSnap.months;enMonths=M&&M.ok?{...M,months:M.months.slice(-12)}:null;
+    enAll=D;enAllAt=Date.now();enMonthsLong=M&&M.ok?M:null;enPlugsAll=enSnap.plugs||[];if(enSnap.profile&&enSnap.profile.hourW)enProfile=enSnap.profile}
   const ok=!!(r&&r.ok);$('enSetup').classList.toggle('hidden',ok||!(r&&r.setup));document.querySelectorAll('.enneeds').forEach(x=>x.classList.toggle('hidden',!ok));
   if(!ok){$('enTiles').innerHTML='';$('enStamp').textContent=r&&!r.setup?t('Fout: {e}',{e:r.message}):'';return}
   enData=r;if(!enDay||(!r.days.some(d=>d.date===enDay)&&enDay>enToday()))enDay=r.last;enDays();enDayLoad();enExtraLoad()}
@@ -2434,8 +2440,8 @@ const enPct=(a,b)=>b>0?Math.round((a-b)/b*100):null;
 const enDelta=p=>p==null?'':`<span class="${p>0?'up':'down'}">${p>0?'▲ +':'▼ '}${p}%</span>`;
 async function enExtraLoad(){
   // Elk blok zodra zijn eigen gegevens er zijn: de stekkers (snel) wachten niet op het jaaroverzicht (Enelogic, langzamer)
-  api('/api/stekker/all?days=62').then(r=>{enPlugsAll=r.plugs||[];enDevUI()}).catch(()=>{});
-  enPatLoad();
+  if(enPlugsAll)enDevUI();api('/api/stekker/all?days=62').then(r=>{enPlugsAll=r.plugs||[];enDevUI()}).catch(()=>{});
+  if(enProfile&&enProfile.hourW)enPatUI();else enPatLoad();
   if(enAll){enMonthUI();enYearUI()}
   const tasks=[];
   if(!enAll||Date.now()-enAllAt>30*60e3)tasks.push(api('/api/energy?days=400').then(r=>{if(r&&r.ok){enAll=r;enAllAt=Date.now()}}).catch(()=>{}));
