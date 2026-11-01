@@ -277,7 +277,7 @@
       B(W * 0.3, W * 0.7, D - 0.3, D, 0, 0.48, '#3a3640')],
     beanbag: (W, D) => [B(0.05, W - 0.05, 0.1, D - 0.05, 0, 0.32, '#d8743a', { round: true }), B(0.15, W - 0.12, 0.05, D * 0.55, 0.25, 0.62, '#e0844a', { round: true })],
     pouf: (W, D) => [B(0.02, W - 0.02, 0.02, D - 0.02, 0, 0.42, '#d8c8a8', { round: true, draw: (g, r) => { g.fillStyle = '#b8a888'; g.fillRect(Math.round((r.x0 + r.x1) / 2), r.yTopBack + 2, 1, r.yTopFront - r.yTopBack - 3); } })],
-    fridge: (W, D) => [B(0, W, 0, D, 0, 1.85, WHITE), front(W, D, 0.03, W - 0.03, 0.62, 1.82, '#f6f6f2'), front(W, D, 0.03, W - 0.03, 0.04, 0.6, '#f6f6f2'),
+    fridge: (W, D) => [B(0, W, 0, D, 0, 1.85, WHITE, { top: '#a4aab3' }), front(W, D, 0.03, W - 0.03, 0.62, 1.82, '#f6f6f2'), front(W, D, 0.03, W - 0.03, 0.04, 0.6, '#f6f6f2'),
       front(W, D, 0.06, 0.1, 1.2, 1.6, STEEL), front(W, D, 0.06, 0.1, 0.3, 0.52, STEEL)],
     stove: (W, D) => [B(0, W, 0, D, 0, 0.9, WHITE), ...hobTop(0.04, W - 0.04, 0.04, D - 0.04, 0.9), front(W, D, 0.06, W - 0.06, 0.1, 0.62, '#3a3a42'),
       front(W, D, 0.14, W - 0.14, 0.2, 0.5, '#e89040'), front(W, D, 0.06, W - 0.06, 0.7, 0.86, '#d8d8d2', { draw: knobs })],
