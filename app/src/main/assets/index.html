@@ -1134,7 +1134,9 @@ function catFree(){const key=JSON.stringify(L.items||[])+JSON.stringify(L.tv||nu
   for(const l of roomLamps()){if(!(l.x>=0)||isPlug(l)||l.height==='ceiling')continue;   // lampen én apparaten (plafondlamp hangt erboven)
     if(isDev(l))block(l.x,l.y,.6,.6);else{block(l.x,l.y,.7,.7);block(l.x,l.y-.6,.9,1.3)}}
   catGrid={gw,gh,free};catGridKey=key;for(const n in catSim)catSim[n].path=null;return catGrid}
-function catFloorSpot(){const G=catFree(),pts=[];for(let i=0;i<G.free.length;i++)if(G.free[i])pts.push(i);
+/** Vrije plek om te stoppen (zitten, slapen): ook de 50 cm erachter is vrij. Anders lijkt de kat op of in het meubel erachter te liggen. Langslopen mag wel. */
+function catFloorSpot(){const G=catFree(),pts=[],all=[];for(let i=0;i<G.free.length;i++)if(G.free[i]){all.push(i);const y=Math.floor(i/G.gw);if(y>=2&&G.free[i-G.gw]&&G.free[i-2*G.gw])pts.push(i)}
+  if(!pts.length)pts.push(...all);
   if(!pts.length)return[L.w/2,L.h/2];const i=pts[Math.floor(Math.random()*pts.length)];return[(i%G.gw+.5)/CAT_G,(Math.floor(i/G.gw)+.5)/CAT_G]}
 /** Route van (x,y) naar (tx,ty) over vrije plekken; geeft punten (meters) of null. Staat het doel op een meubel: naar de dichtstbijzijnde vrije plek. */
 function catPath(x,y,tx,ty){const G=catFree(),{gw,gh,free}=G,cl=(v,m)=>Math.max(0,Math.min(m-1,v));
