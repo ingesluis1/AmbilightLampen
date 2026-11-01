@@ -740,7 +740,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 <section class="panel srvonly ownonly" id="autoPanel">
   <h2>Automatisch</h2>
   <label class="s"><input type="checkbox" id="awEnabled"> Alles uit als ik weg ben</label>
-  <div class="lbl">Wie</div><div class="seg" id="awPerson"></div>
+  <div class="lbl">Wie</div><select id="awPerson" style="width:100%"></select>
   <div class="lbl">Weg als de telefoon zo lang niet gezien is</div><div class="seg" id="awMin"></div>
   <label class="s" style="margin-top:6px"><input type="checkbox" id="awLamps"> Lampen uit (alle kamers)</label>
   <label class="s"><input type="checkbox" id="awAirco"> Airco uit</label>
@@ -1963,7 +1963,9 @@ async function autoLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await
   const c=r.awayOff||{},ppl=peopleData||[],sel=$('awPerson'),mn=$('awMin');
   const seg=(box,opts,val)=>{box.innerHTML=opts.map(([v,n])=>`<button class="btn${String(v)===String(val)?' on':''}" data-v="${esc(v)}">${esc(n)}</button>`).join('');box.dataset.v=val??'';
     box.querySelectorAll('button').forEach(b=>b.onclick=()=>{box.dataset.v=b.dataset.v;box.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))})};
-  seg(sel,ppl.map(p=>[p.id,p.name]),c.person||(ppl[0]&&ppl[0].id));seg(mn,[[10,'10 min'],[15,'15 min'],[30,'30 min'],[60,t('1 uur')]],c.minutes||15);
+  // Keuzelijst op naam (met veel mensen past een rij knoppen niet)
+  const srt=ppl.slice().sort((a,b)=>a.name.localeCompare(b.name));sel.innerHTML=srt.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
+  sel.value=c.person||(ppl.find(p=>p.me)||srt[0]||{}).id||'';sel.dataset.v=sel.value;sel.onchange=()=>{sel.dataset.v=sel.value};seg(mn,[[10,'10 min'],[15,'15 min'],[30,'30 min'],[60,t('1 uur')]],c.minutes||15);
   $('awEnabled').checked=!!c.enabled;
   $('awLamps').checked=c.lamps!==false;$('awAirco').checked=!!c.airco;$('awPlugs').checked=c.plugs!==false;$('awEmpty').checked=c.onlyIfEmpty!==false;
   const loc=I18N.lang==='en'?'en-GB':'nl-NL',f=ms=>new Date(ms).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
