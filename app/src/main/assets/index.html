@@ -3230,6 +3230,17 @@ function enPatUI(){const r=enProfile,box=$('enPat');if(!r||!r.hourW){box.innerHT
     <div class="enchart small" id="enPatHour"></div>${(r.gasHour||[]).some(v=>v>0)?`<div class="enlbl">${esc(t('Gas per uur van de dag (gemiddeld)'))}</div><div class="enchart small" id="enPatGas"></div>`:''}
     <div class="enlbl">${esc(t('Gemiddeld per dag van de week'))}</div><div class="enchart small" id="enPatWk"></div>
     <p class="ennote">${esc(t('Over {n} dagen: {a} t/m {b}.',{n:r.days,a:enLong(r.from),b:enLong(r.to)}))}</p>`;
+  // Per apparaat: wat de stekkers 's nachts gemiddeld gebruiken; de rest van het sluipverbruik zit niet aan een stekker
+  const nw=(enPlugsAll||[]).filter(p=>p.nightW!=null).sort((x,y)=>y.nightW-x.nightW);
+  // vergelijken met het gemiddelde van de meter tussen 1 en 5 uur (niet het laagste kwartier: een koelkast slaat aan en uit)
+  const hw=r.hourW||[],nightAvg=[1,2,3,4].map(k=>hw[k]).filter(v=>v!=null),na=nightAvg.length?nightAvg.reduce((a,v)=>a+v,0)/nightAvg.length:bw;
+  if(nw.length&&na!=null){const sum=nw.reduce((a,p)=>a+p.nightW,0),rest=Math.max(0,na-sum),yr=w=>pr!=null?' · ≈ '+enEUR0(w*8.76*pr,true)+' '+t('per jaar'):'';
+    const rows=nw.map(p=>({n:p.name,w:p.nightW,c:enPlugCol(p.id)})).concat([{n:t('Rest van het huis (router, server, laders, ...)'),w:rest,c:'#c8bca8'}]),tot=Math.max(na,sum);
+    h=h.replace('<div class="row" style="align-items:center"><div class="enlbl grow"',`<div class="enlbl">${esc(t("Waar zit het sluipverbruik? (gemiddeld tussen 1 en 5 uur 's nachts)"))}</div>
+      <div class="ensplit">${rows.map(x=>x.w>0?`<i style="flex:${x.w};background:${x.c}" title="${esc(x.n)}"></i>`:'').join('')}</div>
+      ${rows.map(x=>`<div class="kbrow"><span><i class="ensw" style="background:${x.c}"></i>${esc(x.n)}</span><span>${esc(nl1(x.w,x.w<10?1:0)+' W')}${tot>0?' · '+Math.round(x.w/tot*100)+'%':''}${esc(yr(x.w))}</span></div>`).join('')}
+      <p class="hint" style="margin:4px 0 0">${esc(t('Het huis gebruikt dan gemiddeld {w} W.',{w:nl1(na,0)}))}</p>
+      <div class="row" style="align-items:center"><div class="enlbl grow"`)}
   box.innerHTML=h;enInfoWire(box);
   const vals=enPatMode==='wd'&&r.hourWorkday.length?r.hourWorkday:enPatMode==='we'&&r.hourWeekend.length?r.hourWeekend:r.hourW;
   box.querySelectorAll('#enPatSeg .btn').forEach(b=>{b.classList.toggle('on',b.dataset.m===enPatMode);b.onclick=()=>{enPatMode=b.dataset.m;enPatUI()}});
