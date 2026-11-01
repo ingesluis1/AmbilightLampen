@@ -174,7 +174,7 @@ const Room = (() => {
     // Kleden eerst, dan meubels van achter naar voren; kleine spullen die op een tafel of bureau staan (top) als laatste
     const onTop = it => (ITEMS[it.type] || {}).top ? 1 : 0;
     const items = (L.items || []).slice().sort((a, b) => (a.type === 'rug' ? -1 : 0) - (b.type === 'rug' ? -1 : 0) || onTop(a) - onTop(b) || a.y - b.y);
-    if (VIEW34 && window.Furniture34) { draw34All(g, L, items); return c; }
+    if (VIEW34 && window.Furniture34) { draw34All(g, L, items, lamps); return c; }
     for (const it of items) drawItem(g, it);
     if (L.tv) drawTv(g, L.tv);
     return c;
@@ -890,7 +890,7 @@ const Room = (() => {
       const s = wallSnap(L, it.x, it.y), len = Math.max(6, Math.round((it.w || def.w) * PPM));
       if (s.wall === 'n') {
         const X = Math.round((s.x + 1) * PPM - len / 2), Y = Math.round(s.y * PPM);   // muurvak direct boven de vloer
-        if (it.type === 'door') doorFront(g, X, Y + 2, len, 14, it.flip);
+        if (it.type === 'door') doorFront(g, X, Y + 2, len, 14, (it.door != null ? it.door : it.flip ? 1 : 0) & 1);
         else windowFront(g, X, Y + 6, len, 5, it.type === 'windowsill');
         continue;
       }
@@ -898,10 +898,12 @@ const Room = (() => {
       const vert = s.wall === 'w' || s.wall === 'e', a = vert ? [0, 1] : [1, 0], r = s.wall === 'w' ? [1, 0] : s.wall === 'e' ? [-1, 0] : [0, -1];
       const B = Math.round(((vert ? s.x : s.y) + 1) * PPM), A = Math.round(((vert ? s.y : s.x) + 1) * PPM - len / 2);
       // deur gespiegeld (flip): de scharnieren aan de andere kant, dus de deur draait de andere kant op
-      const px = (along0, into) => { const along = it.type === 'door' && it.flip ? len - 1 - along0 : along0; return vert ? [B + r[0] * into, A + along] : [A + along, B + r[1] * into]; };
+      const ds = it.type === 'door' ? (it.door != null ? it.door : it.flip ? 1 : 0) : 0, hingeR = ds & 1, outward = ds & 2;
+      const px = (along0, into) => { const along = hingeR ? len - 1 - along0 : along0; return vert ? [B + r[0] * into, A + along] : [A + along, B + r[1] * into]; };
       const cap = (into0, into1, col) => { g.fillStyle = col; for (let i = 0; i < len; i++) for (let k = into0; k < into1; k++) { const [x, y] = px(i, k); g.fillRect(x, y, 1, 1); } };
       if (it.type === 'door') {
         cap(-5, 0, '#6a5446');                                                     // deuropening in de muur
+        if (outward) { cap(-1, 1, '#3a2214'); continue; }                           // draait naar buiten: alleen het deurblad als streepje in de muur
         g.fillStyle = '#3a2214'; for (let k = 0; k < len; k++) { const [x, y] = px(0, k); g.fillRect(x, y, 2, 2); }   // deurblad, open
         g.fillStyle = 'rgba(58,34,20,.75)';
         for (let i = 0; i <= 28; i++) { const t = i / 28 * Math.PI / 2, [x, y] = px(Math.round(Math.sin(t) * (len - 1)), Math.round(Math.cos(t) * (len - 1))); g.fillRect(x, y, 1, 1); }
@@ -930,14 +932,25 @@ const Room = (() => {
     g.drawImage(r.canvas, Math.round((x + 1) * PPM - r.fw / 2) - r.margin, Math.round(frontY) - r.canvas.height + r.margin);
     return true;
   }
-  function draw34All(g, L, items) {
+  /** Apparaten die schuin van voren met de meubels mee op volgorde gaan (niet in frame over alles heen). */
+  const dev34 = l => l && l.x >= 0 && (isAircoLook(l.look) || l.look === 'kattenbak');
+  function draw34All(g, L, items, lamps) {
     const list = [];
     for (const it of items) { const def = ITEMS[it.type]; if (!def || def.wall) continue;
       const W = it.w || def.w, D = it.d || def.d, v = viewOf(it.dir), sd = (v === 'W' || v === 'E') ? W : D;
       list.push({ it, W, D, front: it.y + sd / 2, rank: it.type === 'rug' ? 0 : def.top ? 2 : 1 }); }
     if (L.tv) list.push({ tv: L.tv, W: L.tv.w + 0.4, D: 0.45, front: L.tv.y + (viewOf(L.tv.dir) === 'W' || viewOf(L.tv.dir) === 'E' ? L.tv.w + 0.4 : 0.45) / 2, rank: 1 });
+    for (const l of lamps || []) if (dev34(l)) {
+      const mob = isAircoLook(l.look) && !aircoWall(l), D = l.look === 'kattenbak' ? ITEMS.litterbox.d : mob ? 0.4 : 0.3;
+      list.push({ dev: l, front: l.y + (aircoWall(l) ? 0.1 : D / 2), rank: 1 });
+    }
     list.sort((a, b) => a.rank - b.rank || a.front - b.front);
     for (const e of list) {
+      if (e.dev) { const l = e.dev;
+        if (l.look === 'kattenbak') draw34(g, 'litterbox', l.x, l.y, ITEMS.litterbox.w, ITEMS.litterbox.d, 90);
+        else if (aircoWall(l)) drawAirco(g, l, L);
+        else draw34(g, /zwart/.test(l.look) ? 'aircoMobileZwart' : 'aircoMobile', l.x, l.y, 0.45, 0.4, 90);
+        continue; }
       if (e.tv) { draw34(g, 'tvstand', e.tv.x, e.tv.y, e.W, e.D, e.tv.dir); continue; }
       const it = e.it, opt = it.type === 'rug' ? { tf: 1 } : ITEMS[it.type].top ? { noShadow: true } : {};
       if (it.flip) opt.flipX = true;
@@ -1414,6 +1427,7 @@ const Room = (() => {
     drawFixtures(g, L, lamps);
     for (const l of lamps) {
       if (l.x < 0) continue;
+      if (VIEW34 && dev34(l)) continue;   // al op volgorde met de meubels getekend (base)
       const lv = live[l.id] || {};
       // Lamp en kap in dezelfde heldere kleur als de gloed (een gedimde lamp zou er anders uit lijken te staan)
       lampFixture(g, l, !lv.online || lv.on === false || (sync && lv.color === '#555555') ? '#55505a' : lv.color && lv.color !== '#555555' ? glowOf(lv.color)[0] : '#ffe2a8', L);

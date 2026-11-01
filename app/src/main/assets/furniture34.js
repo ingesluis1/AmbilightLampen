@@ -356,6 +356,15 @@
       }
       return p;
     },
+    // mobiele airco: kast met rooster bovenop, bedieningsstrook voor, rooster opzij en de slang achter
+    aircoMobile: (W, D, dark) => {
+      const C = dark ? '#3a3a42' : '#ecebe6', G = dark ? '#24222a' : '#b8bcc4';
+      return [B(0.02, W - 0.02, 0.02, D - 0.02, 0, 0.04, '#5a5a62'), B(0, W, 0, D, 0.04, 0.76, C, { round: true }),
+        B(0.06, W - 0.06, 0.06, D - 0.12, 0.76, 0.77, G, { noOutline: true }),
+        front(W, D, 0.06, W - 0.06, 0.62, 0.72, dark ? '#24222a' : '#d8dade', { draw: (g, r) => { g.fillStyle = '#5ac06a'; g.fillRect(r.x1 - 4, r.yTopFront + 1, 1, 1); } }),
+        front(W, D, 0.08, W - 0.08, 0.2, 0.52, G, { noOutline: true, draw: (g, r) => { g.fillStyle = dark ? '#3a3a42' : '#9aa0a8'; for (let y = r.yTopFront + 1; y < r.yBot - 1; y += 2) g.fillRect(r.x0 + 1, y, r.x1 - r.x0 - 2, 1); } }),
+        B(W / 2 - 0.06, W / 2 + 0.06, -0.0, 0.05, 0.3, 0.42, '#9aa0a8', { round: true })];
+    },
     tvstand: (W, D) => {
       const tw = W - 0.4, th = tw * 0.56;
       return [B(0, W, 0, D, 0.06, 0.48, '#6b4430'), B(0.04, W - 0.04, 0.04, D - 0.04, 0, 0.06, '#3a2418'),
@@ -459,6 +468,7 @@
   }
 
   const FRONT_ONLY = new Set(['shower']);
+  F.aircoMobileZwart = (W, D) => F.aircoMobile(W, D, true);
   /** Een meubel tekenen in een richting; sommige meubels hebben alleen een voorkant (eventueel gespiegeld). */
   function renderItem(k, W, D, v, opt = {}) {
     if (!F[k]) return null;

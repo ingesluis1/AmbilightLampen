@@ -1226,7 +1226,7 @@ function draw(){
   if(!L)return;
   // Alleen de lampen van deze kamer; de tv alleen in de tv-kamer
   const rm=roomById(curRoom)||{},isTv=!!rm.tv,LD={...L,tv:isTv?L.tv:null,wallColor:rm.color||''},lamps=roomLamps();
-  const key=JSON.stringify(L)+isTv+(rm.color||'')+view34+lamps.map(l=>l.id).join();
+  const key=JSON.stringify(L)+isTv+(rm.color||'')+view34+lamps.map(l=>l.id+(isDev(l)?':'+l.x+','+l.y+','+l.look:'')).join();
   if(key!==baseKey){baseImg=Room.base(LD,lamps);baseKey=key}
   const dim=S&&((isTv&&S.sync)||(hasRooms()?!!rm.scene||!roomAnyOn(curRoom):(!!S.activeScene||S.lampsOff)));
   const img=Room.frame(baseImg,LD,lamps,live,dim,isTv&&S&&S.sync&&S.top);
@@ -1466,7 +1466,8 @@ document.querySelectorAll('[data-isize]').forEach(b=>b.onclick=()=>{
   it[k]=Math.round(Math.max(0.3,Math.min(8,(it[k]||def[k])+(+dd)))*10)/10;paletteState();changed()});
 function plankUI(){if(!L)return;document.querySelectorAll('#plankSeg .btn').forEach(b=>b.classList.toggle('on',b.dataset.p===(L.planks==='v'?'v':'h')))}
 document.querySelectorAll('#plankSeg .btn').forEach(b=>b.onclick=()=>{if(!L)return;if(b.dataset.p==='v')L.planks='v';else delete L.planks;plankUI();changed()});
-$('itemFlip').onclick=()=>{const it=L.items[selItem];if(it){it.flip=!it.flip;changed()}};
+// deur: vier standen rond (naar binnen links/rechts, naar buiten links/rechts); hoekbank: spiegelen
+$('itemFlip').onclick=()=>{const it=L.items[selItem];if(!it)return;if(it.type==='door'){it.door=((it.door!=null?it.door:it.flip?1:0)+1)%4;delete it.flip;toast(t(['Draait naar binnen, scharnier links','Draait naar binnen, scharnier rechts','Draait naar buiten, scharnier links','Draait naar buiten, scharnier rechts'][it.door]))}else it.flip=!it.flip;changed()};
 $('itemDel').onclick=()=>{if(L.items[selItem]){L.items.splice(selItem,1);selItem=null;paletteState();changed()}};
 
 /* ---------- tv ---------- */
