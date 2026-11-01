@@ -1131,7 +1131,8 @@ function catFree(){const key=JSON.stringify(L.items||[])+JSON.stringify(L.tv||nu
   for(const it of L.items||[]){const def=Room.ITEMS[it.type];if(!def||def.wall||it.type==='rug'||def.top)continue;const [w,d]=Room.itemDims(it);block(it.x,it.y,w,d)}
   if(L.tv){const [w,d]=Room.itemDims(L.tv);block(L.tv.x,L.tv.y,w,d)}
   // lampen: de voet, en ook de strook erachter (de paal en kap staan op de kaart omhoog; een kat daar zou er doorheen lijken te lopen)
-  for(const l of roomLamps())if(isDev(l)&&l.x>=0&&!isPlug(l)){block(l.x,l.y,.7,.7);block(l.x,l.y-.6,.9,1.3)}
+  for(const l of roomLamps()){if(!(l.x>=0)||isPlug(l)||l.height==='ceiling')continue;   // lampen én apparaten (plafondlamp hangt erboven)
+    if(isDev(l))block(l.x,l.y,.6,.6);else{block(l.x,l.y,.7,.7);block(l.x,l.y-.6,.9,1.3)}}
   catGrid={gw,gh,free};catGridKey=key;for(const n in catSim)catSim[n].path=null;return catGrid}
 function catFloorSpot(){const G=catFree(),pts=[];for(let i=0;i<G.free.length;i++)if(G.free[i])pts.push(i);
   if(!pts.length)return[L.w/2,L.h/2];const i=pts[Math.floor(Math.random()*pts.length)];return[(i%G.gw+.5)/CAT_G,(Math.floor(i/G.gw)+.5)/CAT_G]}
