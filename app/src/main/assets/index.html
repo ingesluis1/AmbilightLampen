@@ -2395,13 +2395,13 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
     const LY=(enMonthsLong&&enMonthsLong.months)||[],lyOf=m=>LY.find(x=>x.month===(+m.month.slice(0,4)-1)+m.month.slice(4)),ghost=ms.map(m=>{const x=lyOf(m);return x?x[enKind]??null:null});
     const hasG=ghost.some(v=>v>0);enCmpHint(hasG,t('maand'));
     enBars($('enDays'),ms.map(m=>m[enKind]??null),{color:EN_COL[enKind],labels:ml,title:t(K.title+' per maand'),ghost:hasG&&!enCmp?ghost:null,pair:hasG&&enCmp?ghost:null,pairColor:EN_PAIR[enKind],
-      tip:(i,v)=>full(ms[i])+': '+nl1(v,0)+K.unit+costTxt(ms[i])+selfTxt(ms[i])+(ms[i].source?' ('+src(ms[i])+(ms[i].partial?', '+t('nog niet compleet'):'')+')':'')
+      tip:(i,v)=>full(ms[i])+': '+nl1(v,0)+K.unit+(enKind==='solar'&&ms[i].solarEst?' '+t('(geschat naar zonlicht)'):'')+costTxt(ms[i])+selfTxt(ms[i])+(ms[i].source?' ('+src(ms[i])+(ms[i].partial?', '+t('nog niet compleet'):'')+')':'')
         +(ghost[i]!=null?' · '+t('vorig jaar {v}',{v:nl1(ghost[i],0)+K.unit})+(v&&ghost[i]?' ('+(v>ghost[i]?'+':'')+Math.round((v-ghost[i])/ghost[i]*100)+'%)':''):'')});
     return}
   const AD=(enAll&&enAll.days)||[],lyDay=d=>{const x=new Date(d+'T12:00:00');x.setFullYear(x.getFullYear()-1);const k=x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');return AD.find(z=>z.date===k)},
     dly=ds.map(d=>{const z=lyDay(d.date);return z?z[enKind]??null:null}),hasD=dly.some(v=>v>0);enCmpHint(hasD,t('dag'));
   enBars($('enDays'),ds.map(d=>d[enKind]??null),{color:EN_COL[enKind],labels:lbl,sel,pick,title:t(K.title+' per dag'),pair:hasD&&enCmp?dly:null,pairColor:EN_PAIR[enKind],
-    tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+K.unit+costTxt(ds[i])+selfTxt(ds[i])+(hasD&&enCmp&&dly[i]!=null?' · '+t('vorig jaar {v}',{v:nl1(dly[i],2)+K.unit}):'')});
+    tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+K.unit+(enKind==='solar'&&ds[i].solarEst?' '+t('(geschat naar zonlicht)'):'')+costTxt(ds[i])+selfTxt(ds[i])+(hasD&&enCmp&&dly[i]!=null?' · '+t('vorig jaar {v}',{v:nl1(dly[i],2)+K.unit}):'')});
 }
 async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textContent=enDate(d,{weekday:'long',day:'numeric',month:'long'});
   // Bladeren t/m vandaag: stroom en gas komen pas de dag erna (netbeheerder), de opwek (Growatt) is er meteen
