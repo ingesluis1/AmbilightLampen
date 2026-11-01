@@ -1236,10 +1236,10 @@ function catStep(c,now){const dt=Math.min(.5,(now-c.t)/1000);c.t=now;
   else if(!c.box&&now>c.until){const sp=catFloorSpot();Object.assign(c,{tx:sp[0],ty:sp[1],mode:'walk'})}}
 /** Plek (meters) van het pijltje buiten de muur bij een gekoppelde deur, en de richting. */
 function doorArrow(Lr,it){const s=Room.wallSnap(Lr,it.x,it.y);
-  return s.wall==='e'?{x:s.x+.38,y:s.y,d:'e'}:s.wall==='w'?{x:s.x-.38,y:s.y,d:'w'}:s.wall==='s'?{x:s.x,y:s.y+.38,d:'s'}:{x:s.x,y:s.y-.78,d:'n'}}
+  return s.wall==='e'?{x:s.x+.62,y:s.y,d:'e'}:s.wall==='w'?{x:s.x-.62,y:s.y,d:'w'}:s.wall==='s'?{x:s.x,y:s.y+.55,d:'s'}:{x:s.x,y:s.y-.9,d:'n'}}
 /** Gekoppelde deuren: een pijltje naar buiten (mensen in huis kennen de weg, dus geen naam). */
 function doorTags(g,k,sc){if(!multi())return;g.save();g.setLineDash([]);
-  for(const it of L.items||[]){if(it.type!=='door'||!it.to||!roomById(it.to))continue;const a=doorArrow(L,it),[x,y]=sc(a.x,a.y),p=Math.max(2,Math.round(k*.06));
+  for(const it of L.items||[]){if(it.type!=='door'||!it.to||!roomById(it.to))continue;const a=doorArrow(L,it),p=Math.max(2,Math.round(k*.06)),[x,y0]=sc(a.x,a.y),y=a.d==='n'?Math.max(y0,sc(0,-1)[1]+4*p):y0;
     // pixel-chevron: 4 stapjes heen en terug, donkere rand eromheen
     const pts=[];for(let i=-3;i<=3;i++){const along=i*p,out=(3-Math.abs(i))*p;pts.push(a.d==='e'?[x+out-p,y+along]:a.d==='w'?[x-out,y+along]:a.d==='s'?[x+along,y+out-p]:[x+along,y-out])}
     g.fillStyle='rgba(29,17,36,.85)';for(const [px,py] of pts)g.fillRect(px-p,py-p,p*3,p*3);
@@ -1485,6 +1485,7 @@ function doorHit(mx,my){const i=itemAt(mx,my),it=i>=0&&L.items[i];if(it&&it.type
 /** Door een deur naar een andere kamer; de grote kaart blijft open. */
 function goRoom(id){if(!roomById(id))return;const full=fullOpen;homeView=id;try{localStorage.setItem('homeRoom',id)}catch(e){}
   useRoom(wantRoom());homeUI();if(S)sceneList(S);chips();if(full){closeSheet();closeAirSheet();setTimeout(()=>setZoom(0),0)}else window.scrollTo(0,0);setTimeout(draw,0)}
+$('mapwrap').addEventListener('click',e=>{if(e.target!==cv&&curTab==='home'&&!fullOpen&&!e.target.closest('button'))openFull()});
 cv.addEventListener('click',e=>{if(curTab!=='home'||fullOpen)return;const [mx,my]=pos(e),d=!lampHit(mx,my)&&doorHit(mx,my);if(d){goRoom(d.to);return}openFull()});
 function openSheet(id){const l=lamps.find(x=>x.id===id);if(!l)return;closeAirSheet();const ll=S&&S.liveLamps&&S.liveLamps[id],lv=live[id];
   const shown=lv&&/^#[0-9a-f]{6}$/i.test(lv.color||'')&&lv.color!=='#555555'?lv.color:SHEET_WHITES[1][0];
