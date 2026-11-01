@@ -1025,7 +1025,7 @@ function useRoom(id){id=layouts[id]?id:Object.keys(layouts)[0];if(!id)return;
 
 /* ---------- gereedschap ---------- */
 /* Weergave van de meubels: van boven (oud) of schuin van voren (nieuw). Per apparaat onthouden. */
-let view34=false;try{view34=localStorage.getItem('view34')==='1'}catch(e){}
+let view34=true;try{view34=localStorage.getItem('view34')!=='0'}catch(e){}   // standaard schuin van voren
 Room.setView34(view34);
 function setView34(on){view34=!!on;try{localStorage.setItem('view34',on?'1':'0')}catch(e){}Room.setView34(view34);baseKey='';
   document.querySelectorAll('#viewSeg .btn').forEach(b=>b.classList.toggle('on',(b.dataset.v==='34')===view34));document.querySelectorAll('#palette .btn').forEach(b=>{const c=b.querySelector('canvas');if(c)c.replaceWith(spriteThumb(b.dataset.type))});draw()}
