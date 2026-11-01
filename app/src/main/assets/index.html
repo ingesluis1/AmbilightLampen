@@ -1980,11 +1980,13 @@ const AV={skin:['#f6d3b3','#e9b48a','#c68a5e','#8d5a3b','#5a3a26'],hairColor:['#
   eyes:['#6a4a2a','#4a7ab0','#3a9a6a','#7a8a9a','#2a2a3a'],
   shirt:['#c0392b','#e07a2a','#e8b84a','#4e8a3c','#3a7ad0','#7a4ab0','#d86aa0','#f2f2f2','#3a3a44'],pants:['#2c3e6a','#3a3a44','#6a4a2a','#8a8a92'],
   hair:[['kort','Bob ♀'],['wip','Wip ♀'],['staartjes','Staartjes ♀'],['kortm','Kort ♂'],['zij','Zijscheiding ♂'],['warrig','Warrig'],['lang','Lang'],['knot','Knot'],['staart','Staart'],['krul','Krullen'],['afro','Afro'],['kaal','Kaal']],
-  extra:[['geen','Niets'],['pet','Pet'],['muts','Muts'],['heks','Heksenhoed'],['zonnehoed','Zonnehoed'],['sjaal','Sjaal'],['oren','Kattenoren'],['baard','Baard'],['strik','Strik']],
+  extra:[['geen','Niets'],['pet','Pet'],['muts','Muts'],['heks','Heksenhoed'],['zonnehoed','Zonnehoed'],['sjaal','Sjaal'],['oren','Kattenoren'],['strik','Strik']],
+  beard:[['geen','Geen'],['stoppels','Stoppels'],['snor','Snor'],['vol','Volle baard']],
+  hatColor:['#c0392b','#e07a2a','#e8c06a','#4e8a3c','#3a6aa0','#5a3a7a','#d86aa0','#f2f2f2','#3a3a44','#8a5a35'],
   face:[['zacht','♀'],['stoer','♂']],
   outfit:[['shirt','Shirt'],['overhemd','Overhemd'],['tanktop','Tanktop'],['jas','Jas'],['raglan','Raglan'],['ruit','Geruit'],['tuinbroek','Tuinbroek'],['jurk','Jurk']],
   bottom:[['broek','Broek'],['kort','Korte broek'],['rok','Rok']]};
-const avDefault={skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0',outfit:'shirt',bottom:'broek',face:'zacht'};
+const avDefault={beard:'geen',hatColor:'',skin:'#e9b48a',hair:'kort',hairColor:'#5a3a1e',shirt:'#3a7ad0',pants:'#2c3e6a',extra:'geen',eyes:'#4a7ab0',outfit:'shirt',bottom:'broek',face:'zacht'};
 /* Pixelpoppetje in Stardew-achtige stijl (eigen tekening): groot hoofd, grote ogen met glimlicht, drie tinten per kleur,
    donkere omlijning en (sticker) een witte rand. Raster 26 x 36; c = canvas. */
 /* Kapsels als pixelraster op het kleine raster (14 breed): [eerste rij, rijen]; H = haarkleur, d = donker/rand, l = glans */
@@ -1992,7 +1994,7 @@ const AV_HAIR={"kort": [0, [".....dddddd.....", "....dHHlHHHd....", "...dHlllHHH
 function avShade(hex,f){const n=parseInt(hex.slice(1),16),ch=[n>>16,(n>>8)&255,n&255].map(v=>Math.max(0,Math.min(255,Math.round(f<0?v*(1+f):v+(255-v)*f))));return '#'+ch.map(v=>v.toString(16).padStart(2,'0')).join('')}
 /* Pixelpoppetje in Stardew-achtige maat (eigen tekening): ongeveer 14 x 28 pixels, hoofd 12 breed, gezicht 8 breed,
    ogen 2x2 aan weerskanten, geen mond; omlijning in een donkere tint van elk deel, eromheen een witte stickerrand. */
-function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=20,Hh=36,G=[...Array(Hh)].map(()=>Array(W).fill(null)),ox=3,oy=5;
+function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};if(a.extra==='baard'){a={...a,extra:'geen',beard:a.beard&&a.beard!=='geen'?a.beard:'vol'}}const W=20,Hh=36,G=[...Array(Hh)].map(()=>Array(W).fill(null)),ox=3,oy=5;
   const p=(x,y,col)=>{x+=ox;y+=oy;if(x>=0&&x<W&&y>=0&&y<Hh)G[y][x]=col},rect=(x0,y0,x1,y1,col)=>{for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++)p(x,y,col)};
   const S=a.skin,Sd=avShade(S,-.18),Sl=avShade(S,.25),H=a.hairColor,Hd=avShade(H,-.35),Hl=avShade(H,.35),T=a.shirt,Td=avShade(T,-.3),Tl=avShade(T,.3),P=a.pants,Pd=avShade(P,-.35),E=a.eyes||'#4a7ab0';
   const B='#5a3a26',Bd='#3e281a',W2='#ecebf2',W2d='#c9c8d6',man=a.face==='stoer',hat=['pet','muts','heks','zonnehoed'].includes(a.extra);
@@ -2046,12 +2048,19 @@ function drawAvatar(c,a,sticker=true){a={...avDefault,...(a||{})};const W=20,Hh=
   if(a.hair==='kaal'){rect(4,1,9,1,S);rect(3,2,10,2,S);p(4,2,Sl);p(5,2,Sl)}
   // extra's
   if(a.extra==='bril'){const F='#3a2a2a';for(const x0 of [3,7]){rect(x0,5,x0+3,5,F);rect(x0,9,x0+3,9,F);p(x0,6,F);p(x0,7,F);p(x0,8,F);p(x0+3,6,F);p(x0+3,7,F);p(x0+3,8,F)}}
-  if(a.extra==='pet'){rect(4,-1,9,-1,'#c0392b');rect(3,0,10,0,'#c0392b');rect(2,1,11,3,'#c0392b');rect(4,-1,6,0,'#e05a4a');rect(2,4,13,4,'#8e2a1f');p(6,1,'#f2f2f2');p(7,1,'#f2f2f2')}
-  if(a.extra==='muts'){rect(4,-1,9,-1,'#3a6aa0');rect(3,0,10,0,'#3a6aa0');rect(2,1,11,3,'#3a6aa0');rect(2,4,11,4,'#2a4a7a');for(const x of [3,6,9])p(x,4,'#5a8ac0');rect(5,-2,8,-2,'#e8e8f0')}
-  if(a.extra==='heks'){rect(0,3,13,4,'#4a2a6a');rect(2,1,11,2,'#5a3a7a');rect(4,-1,9,0,'#5a3a7a');rect(5,-3,8,-2,'#5a3a7a');p(8,-4,'#5a3a7a');p(9,-5,'#5a3a7a');rect(2,2,11,2,'#e8b84a')}
-  if(a.extra==='zonnehoed'){rect(-1,2,14,3,'#e8c06a');rect(0,4,13,4,'#c89a3a');rect(3,-1,10,1,'#e8c06a');rect(4,-2,9,-2,'#f2d68a');rect(3,1,10,1,'#c0392b')}
+  const HC=(def)=>a.hatColor&&/^#[0-9a-f]{6}$/i.test(a.hatColor)?a.hatColor:def;
+  if(a.extra==='pet'){const C=HC('#c0392b');rect(4,-1,9,-1,C);rect(3,0,10,0,C);rect(2,1,11,3,C);rect(4,-1,6,0,avShade(C,.25));rect(2,4,13,4,avShade(C,-.3));p(6,1,'#f2f2f2');p(7,1,'#f2f2f2')}
+  if(a.extra==='muts'){const C=HC('#3a6aa0');rect(4,-1,9,-1,C);rect(3,0,10,0,C);rect(2,1,11,3,C);rect(2,4,11,4,avShade(C,-.3));for(const x of [3,6,9])p(x,4,avShade(C,.25));rect(5,-2,8,-2,'#e8e8f0')}
+  if(a.extra==='heks'){const C=HC('#5a3a7a');rect(0,3,13,4,avShade(C,-.2));rect(2,1,11,2,C);rect(4,-1,9,0,C);rect(5,-3,8,-2,C);p(8,-4,C);p(9,-5,C);rect(2,2,11,2,'#e8b84a')}
+  if(a.extra==='zonnehoed'){const C=HC('#e8c06a');rect(-1,2,14,3,C);rect(0,4,13,4,avShade(C,-.2));rect(3,-1,10,1,C);rect(4,-2,9,-2,avShade(C,.25));rect(3,1,10,1,C==='#c0392b'?'#f2f2f2':'#c0392b')}
   if(a.extra==='oren'){for(const [bx,d] of [[3,1],[10,-1]]){p(bx,-2,H);p(bx,-1,H);p(bx+d,-1,H);p(bx,0,H);p(bx+d,0,H);p(bx+d,-1,'#f2a0b0')}}
-  if(a.extra==='baard'){rect(3,9,10,10,H);rect(4,11,9,11,H);rect(9,9,10,10,Hd);p(3,8,H);p(10,8,Hd)}
+  if(a.beard==='vol'){rect(3,9,10,10,H);rect(4,11,9,11,H);rect(9,9,10,10,Hd);p(3,8,H);p(10,8,Hd)}
+  // stoppels: kaaklijn met een stippelpatroon in een mengsel van huid en haar
+  if(a.beard==='stoppels'){const mix=(x,y,f)=>{const A=parseInt(x.slice(1),16),B2=parseInt(y.slice(1),16);return '#'+[16,8,0].map(sh=>Math.round(((A>>sh)&255)*(1-f)+((B2>>sh)&255)*f).toString(16).padStart(2,'0')).join('')},St=mix(S,H,.55),St2=mix(S,H,.3);
+    const jaw=[[3,8],[10,8],...[3,4,5,6,7,8,9,10].map(x=>[x,9]),...[4,5,6,7,8,9].map(x=>[x,10])];
+    for(const [x,y] of jaw){if(!man&&((y===9&&(x===3||x===10))||(y===10&&(x===4||x===9))))continue;if((x+y)%2===0)p(x,y,St);else if(y>=9)p(x,y,St2)}}
+  // snor (met krulletjes omhoog aan de uiteinden)
+  if(a.beard==='snor'){rect(3,9,10,9,H);p(3,8,H);p(10,8,Hd);p(5,9,Hl);p(8,9,Hd);p(6,10,Sd);p(7,10,Sd)}
   if(a.extra==='sjaal'){rect(3,11,10,12,'#b02a2a');rect(4,13,5,17,'#b02a2a');p(5,17,'#7a1a1a');rect(8,11,10,11,'#8a1f1f');p(4,14,'#d04a4a')}
   if(a.hair==='staartjes'){p(0,4,'#e05a8a');p(13,4,'#e05a8a');p(-1,4,'#c0396a');p(14,4,'#c0396a')}
   if(a.extra==='strik'){rect(8,-1,11,0,'#e05a8a');p(9,-1,'#a0305a');p(10,0,'#f28ab0')}
@@ -2077,13 +2086,15 @@ function peopleRender(){const box=$('peopleRow'),list=peopleData||[];$('homePeop
   const me=list.find(p=>p.me);if(!$('myAvatarEd').dataset.done){$('myAvatarEd').dataset.done='1';avEditor($('myAvatarEd'),me?me.avatar:{},null,()=>peopleLoad(true))}
   if(S&&S.role==='owner'&&curTab==='settings')peopleAdmin()}
 /* Editor: voorbeeld + keuzes; opslaan voor jezelf (id null) of voor een persoon (hoofdgebruiker) */
-function avEditor(box,start,personId,done){const a={...avDefault,...(start||{})};if(a.outfit==='rok'){a.outfit='shirt';a.bottom='rok'}box.innerHTML='';const w=document.createElement('div');w.className='aved';
+function avEditor(box,start,personId,done){const a={...avDefault,...(start||{})};if(a.outfit==='rok'){a.outfit='shirt';a.bottom='rok'}if(a.extra==='baard'){a.extra='geen';a.beard='vol'}box.innerHTML='';const w=document.createElement('div');w.className='aved';
   const cv=drawAvatar(document.createElement('canvas'),a),opts=document.createElement('div');opts.className='opts';w.append(cv,opts);box.append(w);
-  const redraw=()=>{drawAvatar(cv,a);opts.querySelectorAll('[data-k]').forEach(b=>b.classList.toggle('on',a[b.dataset.k]===b.dataset.v))};
+  const redraw=()=>{drawAvatar(cv,a);opts.querySelectorAll('[data-k]').forEach(b=>b.classList.toggle('on',a[b.dataset.k]===b.dataset.v));
+    // kleur hoed alleen tonen als er een hoed op staat
+    const hat=['pet','muts','heks','zonnehoed'].includes(a.extra),hr=opts.querySelector('[data-k=hatColor]');if(hr){hr.parentElement.style.display=hat?'':'none';hr.parentElement.previousElementSibling.style.display=hat?'':'none'}};
   const row=(k,label,vals,isCol)=>{const l=document.createElement('div');l.className='lbl';l.textContent=t(label);const r=document.createElement('div');r.className='swrow';
     for(const v of vals){const b=document.createElement('button');b.dataset.k=k;b.dataset.v=isCol?v:v[0];if(isCol)b.style.background=v;else{b.className='btn';b.textContent=t(v[1]);if(k==='face'){b.setAttribute('aria-label',t(v[0]==='stoer'?'Man':'Vrouw'));b.title=b.getAttribute('aria-label');b.style.fontSize='18px';b.style.minWidth='44px'}}
       b.onclick=()=>{a[k]=b.dataset.v;redraw()};r.append(b)}opts.append(l,r)};
-  row('skin','Huid',AV.skin,true);row('face','Gezicht',AV.face,false);row('eyes','Ogen',AV.eyes,true);row('hair','Haar',AV.hair,false);row('hairColor','Haarkleur',AV.hairColor,true);row('outfit','Kleding',AV.outfit,false);row('bottom','Onderkant',AV.bottom,false);row('shirt','Kleur kleding',AV.shirt,true);row('pants','Broek',AV.pants,true);row('extra','Extra',AV.extra,false);
+  row('skin','Huid',AV.skin,true);row('face','Gezicht',AV.face,false);row('eyes','Ogen',AV.eyes,true);row('hair','Haar',AV.hair,false);row('hairColor','Haarkleur',AV.hairColor,true);row('outfit','Kleding',AV.outfit,false);row('bottom','Onderkant',AV.bottom,false);row('shirt','Kleur kleding',AV.shirt,true);row('pants','Broek',AV.pants,true);row('extra','Extra',AV.extra,false);row('hatColor','Kleur hoed',AV.hatColor,true);row('beard','Baard',AV.beard,false);
   const save=document.createElement('button');save.className='btn gold';save.style.cssText='width:100%;margin-top:8px';save.textContent=t('Poppetje opslaan');
   save.onclick=async()=>{const r=await api('/api/people/avatar',{id:personId||'',avatar:a});toast(r.message||'');if(r.people){peopleData=r.people;peopleAt=Date.now()}if(done)done()};
   box.append(save);redraw()}
