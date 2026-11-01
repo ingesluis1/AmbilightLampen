@@ -3165,10 +3165,12 @@ function enMonthUI(){const A=enAll,box=$('enMonth');if(!A||!enData){box.innerHTM
   const iExp=enInfo([t('Gemiddeld per dag tot nu, keer {d} dagen in {m}.',{d:dim,m:enMonName(mk)}),[t('Per dag'),enEUR(cNow/n)+' · '+nl1(kNow/n,1)+' kWh'],[t('Hele maand'),enEUR(cNow*f)]]);
   const pm=enAddMonth(mk,-1),pds=A.days.filter(d=>d.date.slice(0,7)===pm&&+d.date.slice(8)<=n&&d.kwh!=null);
   const ly=(+mk.slice(0,4)-1)+mk.slice(4),lm=enMonthsLong&&enMonthsLong.months.find(m=>m.month===ly&&m.kwh!=null);
-  const hasG=enData.gas;
+  const hasG=enData.gas,past=mk<enToday().slice(0,7),whole=past&&n>=dim;
+  // Maand al voorbij (de meter loopt een dag achter): niet "tot nu", maar hoeveel dagen er binnen zijn
+  const nowLbl=whole?t('{m} (hele maand)',{m:enMonName(mk)}):past?t('{m} ({n} van {d} dagen binnen)',{m:enMonName(mk),n,d:dim}):t('{m} tot nu ({n} dagen)',{m:enMonName(mk),n});
   let h=`<div class="enkpi">
-    <div data-info="${iNow}"><small>${esc(t('{m} tot nu ({n} dagen)',{m:enMonName(mk),n}))}</small><b>${T?esc(enEUR0(cNow,true)):esc(nl1(kNow,0)+' kWh')}</b><small>${esc(nl1(kNow,0)+' kWh'+(hasG?' · '+nl1(gNow,0)+' m³':''))}</small></div>
-    <div data-info="${iExp}"><small>${esc(t('Verwachting hele maand'))}</small><b>${T?esc(enEUR0(cNow*f,true)):esc(nl1(kNow*f,0)+' kWh')}</b><small>${esc(nl1(kNow*f,0)+' kWh'+(hasG?' · '+nl1(gNow*f,0)+' m³':''))}</small></div>`;
+    <div data-info="${iNow}"><small>${esc(nowLbl)}</small><b>${T?esc(enEUR0(cNow,true)):esc(nl1(kNow,0)+' kWh')}</b><small>${esc(nl1(kNow,0)+' kWh'+(hasG?' · '+nl1(gNow,0)+' m³':''))}</small></div>
+    ${whole?'':`<div data-info="${iExp}"><small>${esc(t('Verwachting hele maand'))}</small><b>${T?esc(enEUR0(cNow*f,true)):esc(nl1(kNow*f,0)+' kWh')}</b><small>${esc(nl1(kNow*f,0)+' kWh'+(hasG?' · '+nl1(gNow*f,0)+' m³':''))}</small></div>`}`;
   if(pds.length===n){const pk=enSumL(pds,'kwh'),pg=enSumL(pds,'gas');
     const iP=enInfo([[t('Stroom nu / toen'),nl1(kNow,1)+' / '+nl1(pk,1)+' kWh'],...(hasG?[[t('Gas nu / toen'),nl1(gNow,1)+' / '+nl1(pg,1)+' m³']]:[]),[t('Kosten nu / toen'),enEUR(cNow)+' / '+enEUR(enCostL(pds))],t('Telkens de eerste {n} dagen van de maand.',{n})]);
     h+=`<div data-info="${iP}"><small>${esc(t('t.o.v. {m}, eerste {n} dagen',{m:enMonName(pm),n}))}</small><b>${enDelta(enPct(kNow,pk))||'–'}</b><small>${esc(t('stroom'))}${hasG?' · '+esc(t('gas'))+' '+(enDelta(enPct(gNow,pg))||'–'):''}</small></div>`}
