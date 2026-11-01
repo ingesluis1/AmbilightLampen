@@ -278,6 +278,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .accrow{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
 .mgrp{border-bottom:2px solid rgba(0,0,0,.15)}.mgrp>div{padding:0 0 10px}
 .apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
+.endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
 .endev{background:var(--cream);border:3px solid var(--ink);padding:6px 8px;margin-top:8px}.endev .g{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px;font-family:var(--ensans);font-size:13px}.endev .g b{display:block;font-size:15px}
 .ensplit{display:flex;height:16px;border:3px solid var(--ink);margin:6px 0 4px;background:#eee}.ensplit>i{display:block;min-width:2px}
@@ -675,13 +676,14 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <h2 style="margin:0" id="enPerTitle">Per dag</h2>
   <div class="enctl">
     <div class="seg" id="enKind"><button class="btn on" data-k="kwh" aria-label="Stroom" title="Stroom">&#991; Stroom</button><button class="btn" data-k="gas" aria-label="Gas" title="Gas"><svg class="pxic" viewBox="0 0 7 9" aria-hidden="true"><path d="M3 0h1v1h-1zM3 1h1v1h-1zM4 1h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM1 5h1v1h-1zM2 5h1v1h-1zM4 5h1v1h-1zM5 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM0 7h1v1h-1zM1 7h1v1h-1zM5 7h1v1h-1zM6 7h1v1h-1zM1 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1z" fill="currentColor"/></svg> Gas</button><button class="btn" data-k="back" aria-label="Teruglevering" title="Teruglevering"><svg class="pxic arr" viewBox="0 0 8 7" aria-hidden="true"><path d="M3 0h1v1h-1zM2 1h1v1h-1zM3 1h1v1h-1zM1 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM6 2h1v1h-1zM7 2h1v1h-1zM0 3h1v1h-1zM1 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM7 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM7 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM3 6h1v1h-1z" fill="currentColor"/></svg> Terug</button><button class="btn" data-k="solar" aria-label="Opwek" title="Opwek"><svg class="pxic sun" viewBox="0 0 9 9" aria-hidden="true"><path d="M4 0h1v1h-1zM1 1h1v1h-1zM7 1h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM5 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM6 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM6 4h1v1h-1zM8 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1zM5 5h1v1h-1zM6 5h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM1 7h1v1h-1zM7 7h1v1h-1zM4 8h1v1h-1z" fill="currentColor"/></svg> Opwek</button></div>
-    <div class="seg" id="enRange"><button class="btn" data-n="7">7 d</button><button class="btn" data-n="30">30 d</button><button class="btn" data-n="90">90 d</button><button class="btn" data-n="m12">12 mnd</button></div><button class="btn" id="enCmp" title="Vergelijk met vorig jaar">Vergelijk</button>
+    <select id="enRangeSel" aria-label="Bereik" style="width:auto;flex:1;min-width:0"></select><button class="btn" id="enCmp" title="Vergelijk met vorig jaar">Vergelijk</button>
   </div>
   <div class="enchart" id="enDays"></div>
   <p class="hint" style="margin:4px 0 0" id="enPerHint">Tik op een dag voor het verloop per kwartier.</p>
 </section>
 <section class="panel enneeds">
   <div class="row" style="align-items:center"><button class="btn" id="enPrev" aria-label="Dag eerder">&#9664;</button><h2 class="grow" id="enDayTitle" style="margin:0;text-align:center"></h2><button class="btn" id="enNext" aria-label="Dag later">&#9654;</button></div>
+  <div class="endaysum" id="enDaySum"></div>
   <div class="enlbl">Stroom per kwartier (gemiddeld vermogen)</div>
   <div class="enchart tall" id="enDay"></div>
   <div class="ennote" id="enDayLegend"></div>
@@ -689,7 +691,6 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="enchart small" id="enDayGas"></div>
   <div class="enlbl hidden" id="enDaySolarLbl">Opwek per kwartier (zonnepanelen)</div>
   <div class="enchart small hidden" id="enDaySolar"></div>
-  <p class="hint" id="enDaySum" style="margin:6px 0 0"></p>
   <div id="enSplitBox" class="hidden">
     <div class="row" style="align-items:center;margin-top:10px"><div class="enlbl grow" style="margin:0">Waar ging de stroom heen?</div>
       <div class="seg" id="enSplitSeg"><button class="btn on" data-s="day">Deze dag</button><button class="btn" data-s="month">Deze maand</button></div></div>
@@ -2971,7 +2972,20 @@ function enCmpHint(has,unit){const b=$('enCmp');b.classList.toggle('on',enCmp);b
   const h=$('enPerHint');if(enCmp&&has){h.classList.remove('hidden');h.innerHTML=`<i class="ensw" style="background:${EN_PAIR[enKind]}"></i>${esc(t('vorig jaar'))} &nbsp; <i class="ensw" style="background:${EN_COL[enKind]}"></i>${esc(t('dit jaar'))}`}
   else if(enN==='m12'){h.classList.toggle('hidden',!has);if(has)h.textContent=t('Tik op Vergelijk om vorig jaar ernaast te zien.')}
   else{h.classList.remove('hidden');h.textContent=t('Tik op een dag voor het verloop per kwartier.')+(enCmp&&!has?' '+t('Van vorig jaar zijn nog geen dagcijfers; vergelijken kan per maand (12 mnd).'):'')}}
-let enN='m12',enData=null,enDay=null,enKind='kwh',enMonths=null;try{enKind=localStorage.getItem('enKind')||'kwh';const n=localStorage.getItem('enN');if(n)enN=n==='m12'?n:+n}catch(e){}
+let enN='m12',enData=null,enDay=null,enKind='kwh',enMonths=null;try{enKind=localStorage.getItem('enKind')||'kwh';const n=localStorage.getItem('enN');if(n)enN=n==='m12'||/^[mw]:/.test(n)?n:(+n||30)}catch(e){}
+/** Bereik van een keuze in de uitklaplijst: 'm:2026-10' = die maand, 'w:2026-10-26' = de week vanaf die maandag; anders null. */
+function enRangeOf(v){if(typeof v!=='string')return null;if(v.startsWith('m:')){const m=v.slice(2);return [m+'-01',m+'-31']}
+  if(v.startsWith('w:')){const a=v.slice(2);return [a,enAddDay(a,6)]}return null}
+function enRangeFill(){const sel=$('enRangeSel');if(!sel)return;const loc=I18N.lang==='en'?'en-GB':'nl-NL',today=enToday();
+  const months=[...Array(13)].map((_,i)=>{const d=new Date(today.slice(0,7)+'-15T12:00:00');d.setMonth(d.getMonth()-i);const k=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');return [k,d.toLocaleDateString(loc,{month:'long',year:'numeric'})]});
+  const mon=(()=>{const d=new Date(today+'T12:00:00');const wd=(d.getDay()+6)%7;return enAddDay(today,-wd)})();
+  const wkNo=d=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+3-((x.getDay()+6)%7));const y=new Date(x.getFullYear(),0,4);return 1+Math.round(((x-y)/864e5-3+((y.getDay()+6)%7))/7)};
+  const fmt=d=>new Date(d+'T12:00:00').toLocaleDateString(loc,{day:'numeric',month:'short'});
+  const weeks=[...Array(12)].map((_,i)=>{const a=enAddDay(mon,-7*i);return [a,t('week {n}',{n:wkNo(a)})+' · '+fmt(a)+' – '+fmt(enAddDay(a,6))]});
+  sel.innerHTML=`<option value="30">${esc(t('Laatste 30 dagen'))}</option><option value="m12">${esc(t('12 maanden'))}</option>
+    <optgroup label="${esc(t('Maanden'))}">${months.map(([k,n])=>`<option value="m:${k}">${esc(n)}</option>`).join('')}</optgroup>
+    <optgroup label="${esc(t('Weken'))}">${weeks.map(([k,n])=>`<option value="w:${k}">${esc(n)}</option>`).join('')}</optgroup>`;
+  sel.value=String(enN);if(sel.value!==String(enN)){enN=30;sel.value='30'}}
 const nl1=(v,d)=>v==null?'–':v.toLocaleString(I18N.lang==='en'?'en-GB':'nl-NL',{minimumFractionDigits:d,maximumFractionDigits:d});
 const enDate=(s,opt)=>new Date(s+'T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',opt||{weekday:'short',day:'numeric',month:'short'});
 function niceStep(x){const p=Math.pow(10,Math.floor(Math.log10(x||1))),m=x/p;return (m<=1?1:m<=2?2:m<=5?5:10)*p}
@@ -3010,7 +3024,7 @@ let enSnap=null,enSnapAt=0;
 async function enLoad(){if(!SRV)return;let r;
   try{if(!enSnap||Date.now()-enSnapAt>5*60e3){enSnap=await api('/api/energy/snapshot');enSnapAt=Date.now()}}catch(e){return}
   if(!enSnap||!enSnap.ok){r=enSnap||{};enMonths=null}
-  else{const D=enSnap.days,n=enN==='m12'?30:enN;r={...D,days:D.days.slice(-n)};const M=enSnap.months;enMonths=M&&M.ok?{...M,months:M.months.slice(-12)}:null;
+  else{const D=enSnap.days,rg=enRangeOf(enN);r={...D,days:rg?D.days.filter(d=>d.date>=rg[0]&&d.date<=rg[1]):D.days.slice(-(enN==='m12'?30:enN))};const M=enSnap.months;enMonths=M&&M.ok?{...M,months:M.months.slice(-12)}:null;
     enAll=D;enAllAt=Date.now();enMonthsLong=M&&M.ok?M:null;enPlugsAll=enSnap.plugs||[];if(enSnap.profile&&enSnap.profile.hourW)enProfile=enSnap.profile}
   const ok=!!(r&&r.ok);$('enSetup').classList.toggle('hidden',ok||!(r&&r.setup));document.querySelectorAll('.enneeds').forEach(x=>x.classList.toggle('hidden',!ok));
   if(!ok){$('enTiles').innerHTML='';$('enStamp').textContent=r&&!r.setup?t('Fout: {e}',{e:r.message}):'';return}
@@ -3139,12 +3153,14 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   const dd=ds.find(x=>x.date===d)||{},c=enCostDay(dd);
   enDayTot=r.kwh.some(v=>v!=null)?tot:null;enSplitLoad();
   const plugTot=plq.reduce((a,p)=>a+p.quarters.reduce((x,v)=>x+(v||0),0),0);
-  $('enDaySum').textContent=(noMeter?(plugTot>0?t('Stekkers samen tot nu toe {k} kWh.',{k:nl1(plugTot,2)}):''):t('Totaal {k} kWh. Hoogste kwartier {t}: gemiddeld {w} W.',{k:nl1(tot,2),t:hhmm(pk),w:nl1(peak,0)}))
-    +(totB>0?' '+t('Teruggeleverd {n} kWh.',{n:nl1(totB,2)}):'')+(hasS?' '+t('Opgewekt ongeveer {n} kWh.',{n:nl1(totS,2)}):'')+(c!=null?' '+t('Kosten die dag ≈ {e}.',{e:enEUR(c)}):'')}
+  // samenvatting als kleine vakjes onder de datum (geen lange zin tussen de grafieken)
+  const cell=(k,v)=>`<div><small>${esc(t(k))}</small><b>${esc(v)}</b></div>`;
+  $('enDaySum').innerHTML=noMeter?(plugTot>0?cell('Stekkers tot nu',nl1(plugTot,2)+' kWh'):'')
+    :cell('Totaal',nl1(tot,2)+' kWh')+cell(t('Piek')+' '+hhmm(pk),nl1(peak,0)+' W')+(totB>0?cell('Terug',nl1(totB,2)+' kWh'):'')+(hasS?cell('Opwek',nl1(totS,2)+' kWh'):'')+(c!=null?cell('Kosten','≈ '+enEUR(c)):'')}
 /* ---------- Energie: extra blokken (deze maand, jaarafrekening, apparaten, patronen) ----------
    enAll: dagen van het laatste jaar (voor vergelijken en de jaarafrekening); enMonthsLong: 25 maanden (vorig jaar);
    enPlugsAll: stekkers met kWh per dag; enProfile: patronen (de hub rekent die uit de kwartieren). */
-let enAll=null,enAllAt=0,enMonthsLong=null,enPlugsAll=null,enProfile=null,enPatMode='all';
+let enAll=null,enAllAt=0,enMonthsLong=null,enPlugsAll=null,enProfile=null,enPatMode='all',enPatQ='kwh';try{enPatQ=localStorage.getItem('enPatQ')||'kwh'}catch(e){}
 const enAddMonth=(m,k)=>{const d=new Date(+m.slice(0,4),+m.slice(5,7)-1+k,15);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')};
 const enDim=m=>new Date(+m.slice(0,4),+m.slice(5,7),0).getDate();
 const enMonName=(m,o)=>new Date(m+'-15T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',o||{month:'long'});
@@ -3241,10 +3257,11 @@ function enPatUI(){const r=enProfile,box=$('enPat');if(!r||!r.hourW){box.innerHT
   const pr=enTP(enToday()).stroom,bw=r.baseW,loc=I18N.lang==='en'?'en-GB':'nl-NL';
   const iB=enInfo([t('Per nacht het laagste kwartier tussen 1 en 5 uur; daarvan het middelste getal over {n} dagen.',{n:r.days}),t('Meestal: koelkast, router, server, apparaten op stand-by, laders.'),...(bw!=null&&pr!=null?[[t('Per jaar'),nl1(bw*8.76,0)+' kWh · '+enEUR0(bw*8.76*pr,true)],[t('10 W minder scheelt'),enEUR0(10*8.76*pr,true)+' '+t('per jaar')]]:[])]);
   let h=`<div class="enkpi"><div style="grid-column:1/-1" data-info="${iB}"><small>${esc(t('Sluipverbruik: wat je huis altijd verbruikt (laagste stand \'s nachts)'))}</small><b>${bw!=null?esc(nl1(bw,0)+' W'):'–'}</b>${bw!=null?`<small>${esc(t('≈ {k} kWh per jaar',{k:nl1(bw*8.76,0)}))}${pr!=null?' · ≈ '+esc(enEUR0(bw*8.76*pr,true))+' '+esc(t('per jaar')):''}</small>`:''}</div></div>
-    <div class="row" style="align-items:center"><div class="enlbl grow" style="margin:0">${esc(t('Stroom per uur van de dag'))}</div><div class="seg" id="enPatSeg"><button class="btn" data-m="all">${esc(t('Alles'))}</button><button class="btn" data-m="wd">${esc(t('Werkdag'))}</button><button class="btn" data-m="we">${esc(t('Vrij'))}</button></div></div>
+    <div class="seg" id="enPatQ" style="margin:10px 0 2px"><button class="btn" data-q="kwh">${esc(t('Stroom'))}</button>${(r.gasHour||[]).some(v=>v>0)?`<button class="btn" data-q="gas">${esc(t('Gas'))}</button>`:''}</div>
+    <div class="row" style="align-items:center"><div class="enlbl grow" style="margin:0">${esc(t(enPatQ==='gas'?'Gas per uur van de dag':'Stroom per uur van de dag'))}</div><div class="seg" id="enPatSeg"><button class="btn" data-m="all">${esc(t('Alles'))}</button><button class="btn" data-m="wd">${esc(t('Werkdag'))}</button><button class="btn" data-m="we">${esc(t('Vrij'))}</button></div></div>
     <div class="row ownonly" style="align-items:center;margin:4px 0 6px"><span class="enlbl" style="margin:0">${esc(t('Mijn werkdagen'))}</span><div class="seg" id="enWorkSeg">${[1,2,3,4,5,6,7].map(d=>`<button class="btn${(r.workdays||[1,2,3,4,5]).includes(d)?' on':''}" data-wd="${d}">${esc(new Date(2024,0,d).toLocaleDateString(loc,{weekday:'short'}))}</button>`).join('')}</div></div>
-    <div class="enchart small" id="enPatHour"></div>${(r.gasHour||[]).some(v=>v>0)?`<div class="enlbl">${esc(t('Gas per uur van de dag'))}</div><div class="enchart small" id="enPatGas"></div>`:''}
-    <div class="enlbl">${esc(t('Stroom per dag van de week'))}</div><div class="enchart small" id="enPatWk"></div>${(r.weekdayGas||[]).some(v=>v>0)?`<div class="enlbl">${esc(t('Gas per dag van de week'))}</div><div class="enchart small" id="enPatWkGas"></div>`:''}
+    <div class="enchart small" id="enPatHour"></div>
+    <div class="enlbl">${esc(t(enPatQ==='gas'?'Gas per dag van de week':'Stroom per dag van de week'))}</div><div class="enchart small" id="enPatWk"></div>
     <p class="ennote">${esc(t('Over {n} dagen: {a} t/m {b}.',{n:r.days,a:enLong(r.from),b:enLong(r.to)}))}</p>`;
   // Per apparaat: wat de stekkers 's nachts gemiddeld gebruiken; de rest van het sluipverbruik zit niet aan een stekker
   const nw=(enPlugsAll||[]).filter(p=>p.nightW!=null).sort((x,y)=>y.nightW-x.nightW);
@@ -3252,24 +3269,23 @@ function enPatUI(){const r=enProfile,box=$('enPat');if(!r||!r.hourW){box.innerHT
   const hw=r.hourW||[],nightAvg=[1,2,3,4].map(k=>hw[k]).filter(v=>v!=null),na=nightAvg.length?nightAvg.reduce((a,v)=>a+v,0)/nightAvg.length:bw;
   if(nw.length&&na!=null){const sum=nw.reduce((a,p)=>a+p.nightW,0),rest=Math.max(0,na-sum),yr=w=>pr!=null?' · ≈ '+enEUR0(w*8.76*pr,true)+' '+t('per jaar'):'';
     const rows=nw.map(p=>({n:p.name,w:p.nightW,c:enPlugCol(p.id)})).concat([{n:t('Rest van het huis (router, server, laders, ...)'),w:rest,c:'#c8bca8'}]),tot=Math.max(na,sum);
-    h=h.replace('<div class="row" style="align-items:center"><div class="enlbl grow"',`<div class="enlbl">${esc(t("Waar zit het sluipverbruik? (gemiddeld tussen 1 en 5 uur 's nachts)"))}</div>
+    h=h.replace('<div class="seg" id="enPatQ"',`<div class="enlbl">${esc(t("Waar zit het sluipverbruik? (gemiddeld tussen 1 en 5 uur 's nachts)"))}</div>
       <div class="ensplit">${rows.map(x=>x.w>0?`<i style="flex:${x.w};background:${x.c}" title="${esc(x.n)}"></i>`:'').join('')}</div>
       ${rows.map(x=>`<div class="kbrow"><span><i class="ensw" style="background:${x.c}"></i>${esc(x.n)}</span><span>${esc(nl1(x.w,x.w<10?1:0)+' W')}${tot>0?' · '+Math.round(x.w/tot*100)+'%':''}${esc(yr(x.w))}</span></div>`).join('')}
       <p class="hint" style="margin:4px 0 0">${esc(t('Het huis gebruikt dan gemiddeld {w} W.',{w:nl1(na,0)}))}</p>
-      <div class="row" style="align-items:center"><div class="enlbl grow"`)}
+      <div class="seg" id="enPatQ"`)}
   box.innerHTML=h;enInfoWire(box);
   const vals=enPatMode==='wd'&&r.hourWorkday.length?r.hourWorkday:enPatMode==='we'&&r.hourWeekend.length?r.hourWeekend:r.hourW;
   box.querySelectorAll('#enPatSeg .btn').forEach(b=>{b.classList.toggle('on',b.dataset.m===enPatMode);b.onclick=()=>{enPatMode=b.dataset.m;enPatUI()}});
-  const hh=k=>String(k).padStart(2,'0')+':00';
-  enBars($('enPatHour'),vals,{color:EN_COL.kwh,min:100,labels:vals.map((_,k)=>k%3===0?String(k):''),title:t('Stroom per uur van de dag'),tip:(k,v)=>hh(k)+'–'+hh(k+1)+': '+t('gemiddeld {n} W',{n:nl1(v||0,0)})});
-  const gv=enPatMode==='wd'&&(r.gasWorkday||[]).length?r.gasWorkday:enPatMode==='we'&&(r.gasWeekend||[]).length?r.gasWeekend:r.gasHour;
+  const hh=k=>String(k).padStart(2,'0')+':00',gas=enPatQ==='gas'&&(r.gasHour||[]).some(v=>v>0),wn=[...Array(7)].map((_,i)=>new Date(2024,0,1+i).toLocaleDateString(loc,{weekday:'short'})),gp=enTP(enToday()).gas;
+  box.querySelectorAll('#enPatQ .btn').forEach(b=>{b.classList.toggle('on',b.dataset.q===(gas?'gas':'kwh'));b.onclick=()=>{enPatQ=b.dataset.q;try{localStorage.setItem('enPatQ',enPatQ)}catch(e){}enPatUI()}});
   box.querySelectorAll('#enWorkSeg .btn').forEach(b=>b.onclick=async()=>{const cur=new Set(r.workdays||[1,2,3,4,5]),d=+b.dataset.wd;if(cur.has(d))cur.delete(d);else cur.add(d);
     b.classList.toggle('on');try{const x=await api('/api/energy/workdays',{days:[...cur]});enProfile=x.hourW?x:{...r,workdays:[...cur]};if(!x.hourW||x.busy)setTimeout(()=>{if(curTab==='energy')enPatLoad()},4000);enPatUI()}catch(e){}});
-  if($('enPatGas'))enBars($('enPatGas'),gv,{color:EN_COL.gas,min:.02,labels:r.gasHour.map((_,k)=>k%3===0?String(k):''),title:t('Gas per uur van de dag'),tip:(k,v)=>hh(k)+'–'+hh(k+1)+': '+t('gemiddeld {n}',{n:nl1(v||0,3)+' m³'})});
-  const wn=[...Array(7)].map((_,i)=>new Date(2024,0,1+i).toLocaleDateString(loc,{weekday:'short'}));
-  if($('enPatWkGas')){const gp=enTP(enToday()).gas;enBars($('enPatWkGas'),r.weekdayGas,{color:EN_COL.gas,labels:[...Array(7)].map((_,i)=>new Date(2024,0,1+i).toLocaleDateString(loc,{weekday:'short'})),title:t('Gas per dag van de week'),
-    tip:(i,v)=>new Date(2024,0,1+i).toLocaleDateString(loc,{weekday:'short'})+': '+t('gemiddeld {n}',{n:nl1(v||0,2)+' m³'})+(gp!=null?' ≈ '+enEUR((v||0)*gp):'')})}
-  enBars($('enPatWk'),r.weekday,{color:EN_COL.kwh,labels:wn,title:t('Stroom per dag van de week'),tip:(i,v)=>wn[i]+': '+t('gemiddeld {n}',{n:nl1(v||0,1)+' kWh'})+(pr!=null?' ≈ '+enEUR((v||0)*pr):'')})}
+  if(gas){const gv=enPatMode==='wd'&&(r.gasWorkday||[]).length?r.gasWorkday:enPatMode==='we'&&(r.gasWeekend||[]).length?r.gasWeekend:r.gasHour;
+    enBars($('enPatHour'),gv,{color:EN_COL.gas,min:.02,labels:gv.map((_,k)=>k%3===0?String(k):''),title:t('Gas per uur van de dag'),tip:(k,v)=>hh(k)+'–'+hh(k+1)+': '+t('gemiddeld {n}',{n:nl1(v||0,3)+' m³'})});
+    enBars($('enPatWk'),r.weekdayGas||[],{color:EN_COL.gas,labels:wn,title:t('Gas per dag van de week'),tip:(i,v)=>wn[i]+': '+t('gemiddeld {n}',{n:nl1(v||0,2)+' m³'})+(gp!=null?' ≈ '+enEUR((v||0)*gp):'')})}
+  else{enBars($('enPatHour'),vals,{color:EN_COL.kwh,min:100,labels:vals.map((_,k)=>k%3===0?String(k):''),title:t('Stroom per uur van de dag'),tip:(k,v)=>hh(k)+'–'+hh(k+1)+': '+t('gemiddeld {n} W',{n:nl1(v||0,0)})});
+    enBars($('enPatWk'),r.weekday,{color:EN_COL.kwh,labels:wn,title:t('Stroom per dag van de week'),tip:(i,v)=>wn[i]+': '+t('gemiddeld {n}',{n:nl1(v||0,1)+' kWh'})+(pr!=null?' ≈ '+enEUR((v||0)*pr):'')})}}
 /* Verdeling: wat de slimme stekkers verbruikten, en de rest ("Overig") = totaal van de meter min de stekkers.
    Per dag (gekozen dag) of per maand (die maand, t/m de laatste dag van de meter). Kosten met het tarief van die dag. */
 let enDayTot=null,enSplitMode='day',enPlugs=null,enPlugsAt=0;
@@ -3297,12 +3313,15 @@ function enSplitRender(){const box=$('enSplitBox'),list=(enPlugs&&enPlugs.list)|
 document.querySelectorAll('#enSplitSeg .btn').forEach(b=>b.onclick=()=>{enSplitMode=b.dataset.s;document.querySelectorAll('#enSplitSeg .btn').forEach(x=>x.classList.toggle('on',x===b));enSplitRender()});
 $('enCmp').onclick=()=>{enCmp=!enCmp;try{localStorage.setItem('enCmp',enCmp?'1':'0')}catch(e){}if(enData)enDays()};
 document.querySelectorAll('#enKind .btn').forEach(b=>b.onclick=()=>{enKind=b.dataset.k;try{localStorage.setItem('enKind',enKind)}catch(e){}if(enData)enDays()});
-document.querySelectorAll('#enRange .btn').forEach(b=>b.classList.toggle('on',b.dataset.n===String(enN)));
-document.querySelectorAll('#enRange .btn').forEach(b=>b.onclick=()=>{enN=b.dataset.n==='m12'?'m12':+b.dataset.n;try{localStorage.setItem('enN',String(enN))}catch(e){}document.querySelectorAll('#enRange .btn').forEach(x=>x.classList.toggle('on',x===b));enLoad()});
+$('enRangeSel').onchange=e=>{const v=e.target.value;enN=v==='m12'||/^[mw]:/.test(v)?v:+v;try{localStorage.setItem('enN',String(enN))}catch(x){}
+  // dagblok naar de laatste dag van het gekozen bereik
+  const rg=enRangeOf(enN);if(rg){const ds=((enSnap&&enSnap.days&&enSnap.days.days)||[]).filter(d=>d.date>=rg[0]&&d.date<=rg[1]&&(d.kwh!=null||d.gas!=null));if(ds.length)enDay=ds[ds.length-1].date}
+  enLoad()};
 const enToday=()=>{const n=new Date();return n.getFullYear()+'-'+String(n.getMonth()+1).padStart(2,'0')+'-'+String(n.getDate()).padStart(2,'0')};
 const enAddDay=(d,k)=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+k);return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')};
 $('enPrev').onclick=()=>{if(!enData||!enData.days.length||enDay<=enData.days[0].date)return;enDay=enAddDay(enDay,-1);enDays();enDayLoad()};
 $('enNext').onclick=()=>{if(!enData||enDay>=enToday())return;enDay=enAddDay(enDay,1);enDays();enDayLoad()};
+enRangeFill();   // pas hier: enToday en enAddDay bestaan nu
 window.addEventListener('resize',()=>{if(curTab==='energy'&&enData){enDays();enDayLoad()}});
 /* Enelogic: ingevulde sleutels komen nooit terug; de velden tonen alleen "al ingevuld" */
 function eneUI(s){if(!s)return;const ph=(id,base,set)=>{$(id).placeholder=t(base)+(set?' · '+t('al ingevuld'):'')};
