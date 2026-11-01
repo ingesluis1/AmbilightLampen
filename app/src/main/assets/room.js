@@ -157,7 +157,7 @@ const Room = (() => {
       const cx = Math.floor(px / PPM) - 1, cy = Math.floor(py / PPM) - 1;
       let col = VOID;
       if (isFloor(L, cx, cy)) {
-        col = floorPixel(mat(L, cx, cy), px, py);
+        col = L.planks === 'v' ? floorPixel(mat(L, cx, cy), py, px) : floorPixel(mat(L, cx, cy), px, py);   // staand: patroon een kwartslag
         // schaduw langs muren
         const lx = px % PPM, ly = py % PPM;
         if (!isFloor(L, cx, cy - 1) && ly < 3) col = mul(col, 0.72 + ly * 0.08);
@@ -842,13 +842,13 @@ const Room = (() => {
 
   function wallBg(g, w, d) { g.fillStyle = '#dca18a'; g.fillRect(0, 0, w, d); g.fillStyle = '#8a5238'; g.fillRect(0, d - 2, w, 2); }
   /** Deur van voren: kozijn, houten deur met twee panelen en een klink. */
-  function doorFront(g, x, y, w, h) {
+  function doorFront(g, x, y, w, h, hingeRight) {
     g.fillStyle = '#3a2214'; g.fillRect(x - 1, y - 1, w + 2, h + 1);
     g.fillStyle = '#a8744a'; g.fillRect(x, y, w, h);
     g.fillStyle = '#c98a52'; g.fillRect(x, y, w, 1);
     const ph = Math.floor((h - 5) / 2);
     g.fillStyle = '#8a5a35'; g.fillRect(x + 2, y + 2, w - 4, ph); g.fillRect(x + 2, y + 3 + ph, w - 4, h - 5 - ph);
-    g.fillStyle = '#e0c070'; g.fillRect(x + w - 3, y + Math.floor(h / 2), 2, 1);
+    g.fillStyle = '#e0c070'; g.fillRect(hingeRight ? x + 1 : x + w - 3, y + Math.floor(h / 2), 2, 1);   // klink aan de andere kant dan de scharnieren
   }
   /** Raam van voren: wit kozijn, blauw glas met spijlen, eventueel een vensterbank eronder. */
   function windowFront(g, x, y, w, h, sill) {
@@ -890,14 +890,15 @@ const Room = (() => {
       const s = wallSnap(L, it.x, it.y), len = Math.max(6, Math.round((it.w || def.w) * PPM));
       if (s.wall === 'n') {
         const X = Math.round((s.x + 1) * PPM - len / 2), Y = Math.round(s.y * PPM);   // muurvak direct boven de vloer
-        if (it.type === 'door') doorFront(g, X, Y + 2, len, 14);
+        if (it.type === 'door') doorFront(g, X, Y + 2, len, 14, it.flip);
         else windowFront(g, X, Y + 6, len, 5, it.type === 'windowsill');
         continue;
       }
       // van bovenaf: a = langs de muur, r = de kamer in; B = muurlijn in pixels, de muurkap ligt aan de buitenkant
       const vert = s.wall === 'w' || s.wall === 'e', a = vert ? [0, 1] : [1, 0], r = s.wall === 'w' ? [1, 0] : s.wall === 'e' ? [-1, 0] : [0, -1];
       const B = Math.round(((vert ? s.x : s.y) + 1) * PPM), A = Math.round(((vert ? s.y : s.x) + 1) * PPM - len / 2);
-      const px = (along, into) => vert ? [B + r[0] * into, A + along] : [A + along, B + r[1] * into];
+      // deur gespiegeld (flip): de scharnieren aan de andere kant, dus de deur draait de andere kant op
+      const px = (along0, into) => { const along = it.type === 'door' && it.flip ? len - 1 - along0 : along0; return vert ? [B + r[0] * into, A + along] : [A + along, B + r[1] * into]; };
       const cap = (into0, into1, col) => { g.fillStyle = col; for (let i = 0; i < len; i++) for (let k = into0; k < into1; k++) { const [x, y] = px(i, k); g.fillRect(x, y, 1, 1); } };
       if (it.type === 'door') {
         cap(-5, 0, '#6a5446');                                                     // deuropening in de muur
@@ -920,11 +921,12 @@ const Room = (() => {
   /** Teken één meubel schuin van voren op zijn plek: de onderkant van het plaatje is de voorrand van de voetafdruk. */
   function draw34(g, type, x, y, W, D, dir, opt = {}) {
     const v = viewOf(dir), side = v === 'W' || v === 'E', sd = side ? W : D, frontY = (y + 1 + sd / 2) * PPM;
-    let r = window.Furniture34.renderItem(type, W, D, v, { hf: 0.75, ...opt });
+    let r = window.Furniture34.renderItem(type, W, D, v, { hf: type === 'tvstand' ? 0.9 : 0.75, ...opt });
     if (!r) return false;
     // past het niet boven in de kaart (hoge kast tegen de achtermuur): dit meubel iets lager tekenen
     const top = frontY + r.margin - r.canvas.height;
-    if (top < 0 && r.height > 0) r = window.Furniture34.renderItem(type, W, D, v, { ...opt, hf: Math.max(0.3, 0.75 * (r.height + top) / r.height) });
+    // (de tv mag net als een deur boven de muurrand uitsteken)
+    if (top < 0 && r.height > 0 && type !== 'tvstand') r = window.Furniture34.renderItem(type, W, D, v, { ...opt, hf: Math.max(0.3, 0.75 * (r.height + top) / r.height) });
     g.drawImage(r.canvas, Math.round((x + 1) * PPM - r.fw / 2) - r.margin, Math.round(frontY) - r.canvas.height + r.margin);
     return true;
   }
@@ -1188,7 +1190,8 @@ const Room = (() => {
     // Slimme stekker (apparaat): wit blokje met twee pennetjes en een lampje (groen = aan)
     if (l.look === 'stekker' && plugItem(L, l)) {
       // Aan een meubel of de tv: heel klein stekkertje dat boven de rechterbovenhoek hangt
-      const it = plugItem(L, l), [w, d] = itemDims(it), x = Math.round((it.x + 1 + w / 2) * PPM) - 4, y = Math.round((it.y + 1 - d / 2) * PPM) - 5;
+      // schuin van voren: rechtsvoor op de vloer naast het meubel (zoals een stopcontact); van boven: rechtsboven
+      const it = plugItem(L, l), [w, d] = itemDims(it), x = Math.round((it.x + 1 + w / 2) * PPM) - (VIEW34 ? 1 : 4), y = VIEW34 ? Math.round((it.y + 1 + d / 2) * PPM) - 5 : Math.round((it.y + 1 - d / 2) * PPM) - 5;
       g.fillStyle = '#2a1a2e'; g.fillRect(x, y, 4, 4); g.fillStyle = '#f2efe8'; g.fillRect(x + 1, y + 1, 2, 2);
       g.fillStyle = '#2a1a2e'; g.fillRect(x + 1, y + 4, 1, 1); g.fillRect(x + 2, y + 4, 1, 1); return; }
     if (l.look === 'stekker') { const x = Math.round((l.x + 1) * PPM), y = Math.round((l.y + 1) * PPM);
