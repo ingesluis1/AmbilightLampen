@@ -2950,9 +2950,9 @@ $('pairBtn').onclick=async()=>{const r=await api('/api/pair/request',{host:$('tv
 $('grantBtn').onclick=async()=>{const r=await api('/api/pair/grant',{pin:$('pin').value});toast(r.message);if(r.ok)poll()};
 /* Energie-pagina (hub): verbruik per dag en per kwartier uit /api/energy. Kleuren: stroom amber, gas blauw
    (gevalideerd tegen de creme achtergrond, ook voor kleurenblinden); tekst blijft in de gewone inktkleur. */
-const EN_COL={kwh:'#b8731f',gas:'#3f6fa8',back:'#4e8a3c',solar:'#8a5bb0'};
+const EN_COL={kwh:'#b8731f',gas:'#3f6fa8',back:'#2e8a7a',solar:'#6aa82a'};
 /* Vergelijken met vorig jaar: lichtere tint van dezelfde kleur, links in elk vak */
-const EN_PAIR={kwh:'#e3bd86',gas:'#a9c2e2',back:'#b5d6a8',solar:'#d3bfe4'};
+const EN_PAIR={kwh:'#e3bd86',gas:'#a9c2e2',back:'#a8d8d0',solar:'#c6e0a8'};
 let enCmp=false;try{enCmp=localStorage.getItem('enCmp')==='1'}catch(e){}
 function enCmpHint(has,unit){const b=$('enCmp');b.classList.toggle('on',enCmp);b.disabled=!has;b.title=has?t('Vergelijk met vorig jaar'):t('Nog geen gegevens van vorig jaar voor deze periode');
   const h=$('enPerHint');if(enCmp&&has){h.classList.remove('hidden');h.innerHTML=`<i class="ensw" style="background:${EN_PAIR[enKind]}"></i>${esc(t('vorig jaar'))} &nbsp; <i class="ensw" style="background:${EN_COL[enKind]}"></i>${esc(t('dit jaar'))}`}
