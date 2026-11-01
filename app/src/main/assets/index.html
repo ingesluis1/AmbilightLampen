@@ -1471,12 +1471,17 @@ cv.addEventListener('pointermove',e=>{if(!L||!view)return;const [mx,my]=pos(e);
   else if(drag==='lamp'&&selLamp){const l=lamps.find(l=>l.id===selLamp);l.x=Math.max(0,snap(mx));l.y=Math.max(0,snap(my));airFix(l);changed();showLamp()}
 });
 /* Stekker op een meubel loslaten = hij hoort bij dat meubel (koelkast, wasmachine, tv-meubel...) */
-function plugAttach(l){if(!L||!isPlug(l))return;const before=Room.plugItem(L,l);for(const it of L.items||[])if(it.plug===l.id)delete it.plug;if(L.tv&&L.tv.plug===l.id)delete L.tv.plug;
+function plugAttach(l){if(!L||!isPlug(l))return;const before=Room.plugItem(L,l);for(const it of L.items||[])if(it.plug===l.id)delete it.plug;if(L.tv&&L.tv.plug===l.id)delete L.tv.plug;if(L.devPlugs)delete L.devPlugs[l.id];
   const onTv=()=>{if(!L.tv)return false;const [w,d]=Room.itemDims(L.tv);return Math.abs(l.x-L.tv.x)<=w/2&&Math.abs(l.y-L.tv.y)<=d/2};
   const i=itemAt(l.x,l.y),it0=i>=0?L.items[i]:null,def=it0&&Room.ITEMS[it0.type],it=it0&&def&&!def.wall?it0:onTv()?L.tv:null;
   if(it){it.plug=l.id;l.x=it.x;l.y=it.y;changed();if(before!==it)toast(t('{n} hoort nu bij: {m}',{n:l.name,m:it===L.tv?t('Tv'):t(def.name)}))}
-  else if(before){changed();toast(t('{n} hangt niet meer aan een meubel',{n:l.name}))}}
-const up=()=>{if(drag==='lamp'&&selLamp){const l=lamps.find(x=>x.id===selLamp);if(isPlug(l))plugAttach(l)}painting=false;drag=null};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+  else{// op een apparaat (bv. de airco): de stekker hangt aan dat apparaat
+    const dev=lamps.find(d=>d!==l&&isDev(d)&&!isPlug(d)&&d.x>=0&&lampRoom(d)===curRoom&&(b=>l.x>=d.x+b[0]&&l.x<=d.x+b[2]&&l.y>=d.y+b[1]&&l.y<=d.y+b[3])(Room.lampBox(d,L)));
+    if(dev){L.devPlugs=L.devPlugs||{};L.devPlugs[l.id]={dev:dev.id,x:dev.x,y:dev.y,w:.2};l.x=dev.x;l.y=dev.y;changed();if(!before||before.dev!==dev.id)toast(t('{n} hoort nu bij: {m}',{n:l.name,m:dev.name}))}
+    else if(before){changed();toast(t('{n} hangt niet meer aan een meubel',{n:l.name}))}}}
+/** Apparaat verplaatst: een stekker die eraan hangt gaat mee. */
+function devPlugsFollow(d){if(!L||!L.devPlugs)return;let ch=false;for(const [pid,m] of Object.entries(L.devPlugs))if(m.dev===d.id){m.x=d.x;m.y=d.y;const p=lamps.find(x=>x.id===pid);if(p){p.x=d.x;p.y=d.y}ch=true}if(ch)changed()}
+const up=()=>{if(drag==='lamp'&&selLamp){const l=lamps.find(x=>x.id===selLamp);if(isPlug(l))plugAttach(l);else if(isDev(l))devPlugsFollow(l)}painting=false;drag=null};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
 /* ---------- kamer groot: lampen bedienen op de kaart ----------
    Tikken: lamp aan of uit. Vasthouden: paneel met kleur, helderheid en effect. Samen een "eigen indeling" (scène). */
 let fullOpen=false,press=null,sheet=null,sheetTimer=null,fullZoom=0,roomZoom=0;

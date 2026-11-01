@@ -1088,7 +1088,8 @@ const Room = (() => {
    * Dekt de hele getekende lamp (bij een staande lamp of booglamp dus ook de kap), met wat marge.
    */
   /** Meubel waar een stekker aan hangt (item.plug = id van de stekker), of undefined. */
-  function plugItem(L, l) { return L && ((L.tv && L.tv.plug === l.id && L.tv) || (L.items || []).find(it => it.plug === l.id)); }
+  /** Waar een stekker aan hangt: de tv, een meubel, of een apparaat (L.devPlugs[stekker] = { dev, x, y, w })  */
+  function plugItem(L, l) { return L && ((L.tv && L.tv.plug === l.id && L.tv) || (L.items || []).find(it => it.plug === l.id) || (L.devPlugs && L.devPlugs[l.id]) || null); }
   /** Breedte en diepte van een meubel in meters, rekening houdend met draaien. */
   function itemDims(it) {
     // De tv (L.tv, geen type): tv-meubel van tv.w + 0,4 bij 0,45 m
@@ -1102,7 +1103,8 @@ const Room = (() => {
     if (isAircoLook(look)) { const b = aircoBox(l, L), m = 2; return [(b[0] - m) / PPM, (b[1] - m) / PPM, (b[2] + m) / PPM, (b[3] + m) / PPM]; }
     if (look === 'kattenbak') return [-0.38, -0.4, 0.38, 0.4];
     // Stekker aan een meubel: tikken op het hele meubel (ook het stuk dat schuin van voren omhoog getekend is) en op het stekkertje ernaast
-    if (look === 'stekker') { const it = plugItem(L, l); if (it) { const [w, d] = itemDims(it), up = VIEW34 ? 0.7 : 0.15; return [-w / 2 - 0.15, -d / 2 - up, w / 2 + 0.3, d / 2 + 0.3]; } return [-0.3, -0.3, 0.3, 0.3]; }
+    if (look === 'stekker') { const it = plugItem(L, l); if (it && it.dev) { const [w, d] = itemDims(it); return [w / 2 - 0.1, d / 2 - 0.15, w / 2 + 0.3, d / 2 + 0.3]; }   // aan een apparaat: alleen het stekkertje, het apparaat zelf blijft tikbaar
+    if (it) { const [w, d] = itemDims(it), up = VIEW34 ? 0.7 : 0.15; return [-w / 2 - 0.15, -d / 2 - up, w / 2 + 0.3, d / 2 + 0.3]; } return [-0.3, -0.3, 0.3, 0.3]; }
     let strip = null;
     if (look === 'strip') { const st = stripOf(L, l), a = st.rot * Math.PI / 180, h = st.len * PPM / 2;
       const dx = Math.abs(Math.cos(a)) * h, dy = Math.abs(Math.sin(a)) * h; strip = [-dx - 2, -dy - 2, dx + 2, dy + 2]; }
