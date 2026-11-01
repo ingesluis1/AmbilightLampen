@@ -1101,7 +1101,8 @@ const Room = (() => {
     const look = l.look || '';
     if (isAircoLook(look)) { const b = aircoBox(l, L), m = 2; return [(b[0] - m) / PPM, (b[1] - m) / PPM, (b[2] + m) / PPM, (b[3] + m) / PPM]; }
     if (look === 'kattenbak') return [-0.38, -0.4, 0.38, 0.4];
-    if (look === 'stekker') { const it = plugItem(L, l); if (it) { const [w, d] = itemDims(it); return [-w / 2, -d / 2, w / 2, d / 2]; } return [-0.22, -0.22, 0.22, 0.22]; }
+    // Stekker aan een meubel: tikken op het hele meubel (ook het stuk dat schuin van voren omhoog getekend is) en op het stekkertje ernaast
+    if (look === 'stekker') { const it = plugItem(L, l); if (it) { const [w, d] = itemDims(it), up = VIEW34 ? 0.7 : 0.15; return [-w / 2 - 0.15, -d / 2 - up, w / 2 + 0.3, d / 2 + 0.3]; } return [-0.3, -0.3, 0.3, 0.3]; }
     let strip = null;
     if (look === 'strip') { const st = stripOf(L, l), a = st.rot * Math.PI / 180, h = st.len * PPM / 2;
       const dx = Math.abs(Math.cos(a)) * h, dy = Math.abs(Math.sin(a)) * h; strip = [-dx - 2, -dy - 2, dx + 2, dy + 2]; }
