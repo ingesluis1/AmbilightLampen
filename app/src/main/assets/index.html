@@ -1238,10 +1238,11 @@ function catStep(c,now){const dt=Math.min(.5,(now-c.t)/1000);c.t=now;
   else if(!c.box&&now>c.until){const sp=catFloorSpot();Object.assign(c,{tx:sp[0],ty:sp[1],mode:'walk'})}}
 /** Plek (meters) van het pijltje buiten de muur bij een gekoppelde deur, en de richting. */
 function doorArrow(Lr,it){const s=Room.wallSnap(Lr,it.x,it.y);
-  return s.wall==='e'?{x:s.x+.62,y:s.y,d:'e'}:s.wall==='w'?{x:s.x-.62,y:s.y,d:'w'}:s.wall==='s'?{x:s.x,y:s.y+.55,d:'s'}:{x:s.x,y:s.y-.9,d:'n'}}
+  const top=(Lr.floor||[]).findIndex(r=>/[^0]/.test(r));
+  return s.wall==='e'?{x:s.x+.62,y:s.y,d:'e'}:s.wall==='w'?{x:s.x-.62,y:s.y,d:'w'}:s.wall==='s'?{x:s.x,y:s.y+.55,d:'s'}:{x:s.x,y:s.y-1.05,d:'n',edge:s.y<=Math.max(0,top)}}
 /** Deuren in de achtermuur: het pijltje staat in de rand boven de kaart (op de kaart zelf is daar geen ruimte). */
 let doorUpKey='';
-function doorUps(ro,k){const w=$('mapwrap'),list=ro&&multi()?(L.items||[]).filter(it=>it.type==='door'&&it.to&&roomById(it.to)&&doorArrow(L,it).d==='n'):[];
+function doorUps(ro,k){const w=$('mapwrap'),list=ro&&multi()?(L.items||[]).filter(it=>it.type==='door'&&it.to&&roomById(it.to)&&doorArrow(L,it).edge):[];
   const c=$('map'),wr=w.getBoundingClientRect(),cr=c.getBoundingClientRect(),cs=cr.width/(view?view.W:1);
   const key=list.map(it=>it.did+':'+Math.round(cr.left-wr.left+(doorArrow(L,it).x+1)*k*cs)).join()+'|'+ro;if(key===doorUpKey)return;doorUpKey=key;
   w.querySelectorAll('.doorUp').forEach(b=>b.remove());w.classList.toggle('hasUp',list.length>0);
@@ -1251,7 +1252,7 @@ function doorUps(ro,k){const w=$('mapwrap'),list=ro&&multi()?(L.items||[]).filte
     b.onclick=e=>{e.stopPropagation();goRoom(it.to)};w.append(b)}}
 /** Gekoppelde deuren: een pijltje naar buiten (mensen in huis kennen de weg, dus geen naam). */
 function doorTags(g,k,sc){if(!multi())return;g.save();g.setLineDash([]);
-  for(const it of L.items||[]){if(it.type!=='door'||!it.to||!roomById(it.to))continue;const a=doorArrow(L,it);if(a.d==='n')continue;const p=Math.max(2,Math.round(k*.06)),[x,y0]=sc(a.x,a.y),y=a.d==='n'?Math.max(y0,sc(0,-1)[1]+4*p):y0;
+  for(const it of L.items||[]){if(it.type!=='door'||!it.to||!roomById(it.to))continue;const a=doorArrow(L,it);if(a.edge)continue;const p=Math.max(2,Math.round(k*.06)),[x,y0]=sc(a.x,a.y),y=a.d==='n'?Math.max(y0,sc(0,-1)[1]+4*p):y0;
     // pixel-chevron: 4 stapjes heen en terug, donkere rand eromheen
     const pts=[];for(let i=-3;i<=3;i++){const along=i*p,out=(3-Math.abs(i))*p;pts.push(a.d==='e'?[x+out-p,y+along]:a.d==='w'?[x-out,y+along]:a.d==='s'?[x+along,y+out-p]:[x+along,y-out])}
     g.fillStyle='rgba(29,17,36,.85)';for(const [px,py] of pts)g.fillRect(px-p,py-p,p*3,p*3);
