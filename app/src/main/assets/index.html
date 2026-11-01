@@ -280,6 +280,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
+#houseDevFold>summary{list-style:none;cursor:pointer}#houseDevFold>summary::-webkit-details-marker{display:none}#houseDevFold>summary::after{content:' ▸';opacity:.5}#houseDevFold[open]>summary::after{content:' ▾'}
 .endev{background:var(--cream);border:3px solid var(--ink);padding:6px 8px;margin-top:6px}.endev summary{list-style:none;cursor:pointer;gap:8px}.endev summary::-webkit-details-marker{display:none}.endev summary::after{content:'▸';opacity:.5}.endev[open] summary::after{content:'▾'}.endev .endevk{font-family:var(--ensans);opacity:.75;font-size:13px}.endev[open] .g{margin-top:6px}.endev .g{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px;font-family:var(--ensans);font-size:13px}.endev .g b{display:block;font-size:15px}
 .ensplit{display:flex;height:16px;border:3px solid var(--ink);margin:6px 0 4px;background:#eee}.ensplit>i{display:block;min-width:2px}
 .asguestbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:8px;background:#e05a8a;color:#fff;border:3px solid var(--ink);padding:6px 10px;margin:0 0 8px;font-weight:700}.asguestbar.hidden{display:none}
@@ -354,7 +355,10 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="hint" id="houseHint"></div>
   <div class="banner hidden ownonly" id="accBanner" style="margin-top:10px;cursor:pointer"></div>
   <div class="banner hidden ownonly srvonly" id="tvBanner" style="margin-top:10px;cursor:pointer">Een tv wil koppelen. Tik om te bekijken.</div>
-  <div id="houseDevWrap" class="hidden"><h2 style="margin-top:14px">Apparaten</h2><div id="houseDevs"></div></div>
+</section>
+
+<section class="panel hidden" id="houseDevWrap">
+  <details id="houseDevFold"><summary class="ttl"><h2 style="display:inline;margin:0">Apparaten</h2> <small id="houseDevCnt" style="opacity:.7"></small></summary><div id="houseDevs" style="margin-top:8px"></div></details>
 </section>
 
 <section class="panel srvonly hidden" id="homePeople">
@@ -2010,7 +2014,7 @@ function devSummary(l){if(isPlug(l)){const p=stOf(l.id);return p&&p.known?stLine
   if(isKat(l)){const k=kbOf(l.id);return k&&k.known?kbStatus(k)+' · '+t('{n}× vandaag',{n:k.visits??0})+((k.faults||[]).length?' · ⚠ '+(k.faults||[]).map(x=>t(KB_FAULT[x]||x)).join(', '):''):''}
   const a=airOf(l.id);return a&&a.known?t(a.on?'aan':'uit')+(a.inside!=null?' · '+t('binnen {n} °C',{n:a.inside}):''):''}
 const houseDevOpen=new Set();
-function houseDevs(){const devs=SRV?lamps.filter(l=>isDev(l)&&!isLocked(l)):[],box=$('houseDevs');$('houseDevWrap').classList.toggle('hidden',!devs.length);
+function houseDevs(){const devs=SRV?lamps.filter(l=>isDev(l)&&!isLocked(l)):[],box=$('houseDevs');$('houseDevWrap').classList.toggle('hidden',!devs.length||!isHouse());$('houseDevCnt').textContent=devs.length?'('+devs.length+')':'';
   const key=devs.map(l=>l.id+l.name+l.look+lampRoom(l)).join();
   if(box.dataset.k!==key){box.dataset.k=key;box.innerHTML='';
     for(const l of devs){const d=document.createElement('details');d.className='hdev';d.dataset.id=l.id;d.open=houseDevOpen.has(l.id);
