@@ -220,6 +220,7 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .aved{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap;margin-top:8px}
 /* Maakscherm poppetje */
 .aved2{margin-top:8px}
+#avWelcome{position:fixed;inset:0;z-index:50;background:rgba(29,17,36,.85);overflow-y:auto;padding:max(12px,env(safe-area-inset-top)) 10px 20px}#avWelcome>.panel{max-width:520px;margin:0 auto}
 .avstage{position:relative;height:220px;border:4px solid var(--ink);display:flex;align-items:flex-end;justify-content:center;overflow:hidden;box-shadow:inset 0 0 0 3px rgba(255,255,255,.25)}
 .avstage[data-bg=kamer]{background:linear-gradient(#d8b48a 0 64%,#7a4a2a 64% 66%,#b07a4a 66%);background-color:#b07a4a}
 .avstage[data-bg=kamer]::before{content:'';position:absolute;left:14%;top:14%;width:56px;height:44px;background:#8ecbf0;border:4px solid #7a4a2a;box-shadow:inset 26px 0 0 -24px #7a4a2a,inset 0 20px 0 -18px #7a4a2a}
@@ -2456,8 +2457,20 @@ function peopleRender(){const box=$('peopleRow'),list=peopleData||[];$('homePeop
   for(const p of list.slice().sort((a,b)=>(b.home-a.home)||((b.last||0)-(a.last||0))||a.name.localeCompare(b.name))){const d=document.createElement('div');d.className='person'+(p.home?'':' away');
     const pc=drawAvatar(document.createElement('canvas'),p.avatar);if(p.home){pc.dataset.home='1';pc._av=p.avatar;pc._phase=Math.random()*1400;pc._next=Date.now()+1000+Math.random()*4000}d.append(pc);const n=document.createElement('b');n.textContent=p.name;d.append(n);
     const sm=document.createElement('small');sm.textContent=p.home?t('thuis'):p.last?t('weg sinds {d}',{d:new Date(p.last).toLocaleString(loc,{weekday:'short',hour:'2-digit',minute:'2-digit'})}):t('nog niet gezien');d.append(sm);box.append(d)}
+  avWelcome(list);
   const me=list.find(p=>p.me);if(!$('myAvatarEd').dataset.done){$('myAvatarEd').dataset.done='1';avEditor($('myAvatarEd'),me?me.avatar:{},null,()=>peopleLoad(true))}
   if(S&&S.role==='owner'&&curTab==='settings')peopleAdmin()}
+/* Eerste keer op de hub zonder poppetje: meteen het maakscherm, met "Later" (per apparaat onthouden) */
+let avWelcomeShown=false;
+function avWelcome(list){if(avWelcomeShown||!SRV||!S||!S.role||S.role==='none'||asGuest)return;
+  let later=false;try{later=localStorage.getItem('avLater')==='1'}catch(e){}if(later)return;
+  const me=list.find(p=>p.me);if(me&&me.avatar&&Object.keys(me.avatar).length)return;
+  avWelcomeShown=true;const ov=document.createElement('div');ov.id='avWelcome';
+  ov.innerHTML=`<section class="panel"><h2>${esc(t('Welkom! Maak eerst je poppetje'))}</h2><p class="hint" style="margin:0 0 4px">${esc(t('Zo zie je bij Thuis wie er is. Je kunt het later altijd aanpassen bij Instellingen.'))}</p><div class="avw"></div><button class="btn" id="avLater" style="width:100%;margin-top:8px">${esc(t('Later'))}</button></section>`;
+  document.body.append(ov);document.body.style.overflow='hidden';
+  const close=()=>{ov.remove();document.body.style.overflow=''};
+  avEditor(ov.querySelector('.avw'),me&&me.avatar||{},null,()=>{close();peopleLoad(true)});
+  ov.querySelector('#avLater').onclick=()=>{try{localStorage.setItem('avLater','1')}catch(e){}close()}}
 /* Editor: voorbeeld + keuzes; opslaan voor jezelf (id null) of voor een persoon (hoofdgebruiker) */
 /** Lange samengestelde woorden afbreken op een logische plek (zacht streepje): Voetbal-shirt, Engelen-vleugels. */
 const avBreak=w=>w.split(' ').map(x=>x.length>9?x.replace(/(.{3,}?)(shirt|broek|blouse|hoorntjes|vleugels|staart|hoedje|krans|telefoon|hoed|oren|muts|warmer|pak|sloffen|ogen|scheiding)$/i,'$1­$2'):x).join(' ');
