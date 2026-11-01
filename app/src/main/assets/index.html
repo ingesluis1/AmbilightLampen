@@ -124,6 +124,8 @@ body.srv .tvonly,body:not(.srv) .srvonly{display:none!important}
 /* Kamers: rij met Huis + kamers bovenaan Bediening, kaarten per kamer bij Huis, kamerlijst onder Kamers */
 .roombar{display:flex;gap:6px;overflow-x:auto;padding:12px 0 2px;scrollbar-width:none}
 .roombar::-webkit-scrollbar{display:none}
+/* Met een muis (pc) kun je niet vegen: dan alle kamers zichtbaar, over meer regels als het moet */
+@media (hover:hover) and (pointer:fine){.roombar,.cats{flex-wrap:wrap;overflow-x:visible}}
 .roombar .btn{flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:6px 10px;font-size:15px;white-space:nowrap}
 .rdot{display:inline-block;flex-shrink:0;width:12px;height:12px;border:2px solid var(--ink);vertical-align:-1px}
 .house{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:4px}
