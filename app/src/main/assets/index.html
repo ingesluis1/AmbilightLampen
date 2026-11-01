@@ -2116,9 +2116,9 @@ function drawAvatar(c,a0,sticker=true,opt={}){const a=avNorm(a0);const W=20,Hh=3
   // sproeten, blosjes, mond
   if(a.freckles==='wel'){const F=avMix(S,'#7a3a1a',.42);for(const [x,y] of [[3,8],[10,8],[5,9],[8,9]])p(x,y,F)}
   if(a.blush==='aan'||(a.blush!=='uit'&&!man)){p(4,9,'#f2a0a0');p(9,9,'#ec9a9a')}
-  {const M=avShade(S,-.55),R='#5a1a22',PK='#e07080';
+  {const M=avShade(S,-.42),Mc=avShade(S,-.22),R='#5a1a22',PK='#e07080';
     if(a.mouth==='klein'){p(6,10,M);p(7,10,M)}
-    else if(a.mouth==='glimlach'){p(5,9,M);p(8,9,M);p(6,10,M);p(7,10,M)}
+    else if(a.mouth==='glimlach'){p(5,9,Mc);p(8,9,Mc);p(6,10,M);p(7,10,M)}
     else if(a.mouth==='lach'){p(5,9,M);p(6,9,R);p(7,9,R);p(8,9,M);p(6,10,PK);p(7,10,PK)}
     else if(a.mouth==='tong'){p(6,9,M);p(7,9,M);p(7,10,PK)}
     else if(a.mouth==='oh'){p(6,9,R);p(7,9,R);p(6,10,R);p(7,10,R)}}
