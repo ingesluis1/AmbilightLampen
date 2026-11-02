@@ -835,7 +835,8 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="row" style="align-items:center;margin:0 0 8px"><span>Bekijk als</span><button class="btn grow" id="asGuestBtn">Gast</button><button class="btn grow" id="asMemberBtn">Huisgenoot</button></div>
   <p style="margin:0 0 8px">Per persoon: e-mailadres (om via hub.stacklines.nl in te loggen), apparaten op de wifi en apparaten die de hub gebruiken. Een gast ziet alleen Bediening; een hoofdgebruiker kan alles.</p>
   <div id="mensenList"></div>
-  <div class="row" style="margin-top:10px;align-items:center"><input type="text" id="mensenNew" class="grow" placeholder="Naam van een nieuw persoon" maxlength="30" autocomplete="off"><button class="btn gold" id="mensenAdd">+ Persoon</button></div>
+  <button class="btn gold" id="mensenPlus" style="margin-top:10px">+ Persoon</button>
+  <div class="row hidden" id="mensenNewRow" style="margin-top:10px;align-items:center"><input type="text" id="mensenNew" class="grow" placeholder="Naam" maxlength="30" autocomplete="off"><button class="btn gold" id="mensenAdd">Toevoegen</button><button class="btn" id="mensenCancel" aria-label="Annuleren">✕</button></div>
 </section>
 
 <section class="panel srvonly ownonly" id="catPanel">
@@ -2685,7 +2686,10 @@ $('logDet').ontoggle=()=>{if($('logDet').open)logLoad()};$('logWho').onchange=lo
 document.querySelectorAll('#viewSeg .btn').forEach(b=>{b.classList.toggle('on',(b.dataset.v==='34')===view34);b.onclick=()=>setView34(b.dataset.v==='34')});
 $('asGuestBtn').onclick=()=>setAsGuest('guest');$('asMemberBtn').onclick=()=>setAsGuest('member');$('asGuestStop').onclick=()=>setAsGuest('');$('asGuestBar').classList.toggle('hidden',!asGuest);
 if(asGuest==='member')$('asGuestBar').querySelector('span').textContent=t('Je bekijkt de hub als huisgenoot');
-$('mensenAdd').onclick=async()=>{const v=$('mensenNew').value.trim();if(!v)return;await api('/api/people/save',{id:'',name:v});$('mensenNew').value='';peopleLoad(true);peopleAdmin()};
+const mensenNewShow=on=>{$('mensenNewRow').classList.toggle('hidden',!on);$('mensenPlus').classList.toggle('hidden',on);if(on)$('mensenNew').focus();else $('mensenNew').value=''};
+$('mensenPlus').onclick=()=>mensenNewShow(true);$('mensenCancel').onclick=()=>mensenNewShow(false);
+$('mensenNew').onkeydown=e=>{if(e.key==='Enter')$('mensenAdd').click();if(e.key==='Escape')mensenNewShow(false)};
+$('mensenAdd').onclick=async()=>{const v=$('mensenNew').value.trim();if(!v){$('mensenNew').focus();return}await api('/api/people/save',{id:'',name:v});mensenNewShow(false);peopleLoad(true);peopleAdmin()};
 $('cfSave').onclick=async()=>{const v=$('cfToken').value.trim();if(!v)return;toast(t('Bezig...'));const r=await api('/api/cloudflare/save',{token:v});$('cfToken').value='';toast(r.message||'');peopleAdmin()};
 async function poLoad(){try{const r=await api('/api/pushover');$('poState').textContent='· '+t(r.configured?'ingevuld':'nog niet ingevuld')}catch(e){}}
 const poDone=r=>{toast(r.message||'');$('poState').textContent='· '+t(r.configured?'ingevuld':'nog niet ingevuld')};
