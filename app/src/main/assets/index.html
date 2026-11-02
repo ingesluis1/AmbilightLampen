@@ -282,7 +282,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
-#houseDevFold>summary{list-style:none;cursor:pointer}#houseDevFold>summary::-webkit-details-marker{display:none}#houseDevFold>summary::after{content:' ▸';opacity:.5}#houseDevFold[open]>summary::after{content:' ▾'}
+#houseDevFold>summary,details.fold>summary{list-style:none;cursor:pointer}#houseDevFold>summary::-webkit-details-marker,details.fold>summary::-webkit-details-marker{display:none}#houseDevFold>summary::after,details.fold>summary::after{content:' ▸';opacity:.5}#houseDevFold[open]>summary::after,details.fold[open]>summary::after{content:' ▾'}
 .endev{background:var(--cream);border:3px solid var(--ink);padding:6px 8px;margin-top:6px}.endev summary{list-style:none;cursor:pointer;gap:8px}.endev summary::-webkit-details-marker{display:none}.endev summary::after{content:'▸';opacity:.5}.endev[open] summary::after{content:'▾'}.endev .endevk{font-family:var(--ensans);opacity:.75;font-size:13px}.endev[open] .g{margin-top:6px}.endev .g{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-top:4px;font-family:var(--ensans);font-size:13px}.endev .g b{display:block;font-size:15px}
 .ensplit{display:flex;height:16px;border:3px solid var(--ink);margin:6px 0 4px;background:#eee}.ensplit>i{display:block;min-width:2px}
 .asguestbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:8px;background:#e05a8a;color:#fff;border:3px solid var(--ink);padding:6px 10px;margin:0 0 8px;font-weight:700}.asguestbar.hidden{display:none}
@@ -840,10 +840,11 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 </section>
 
 <section class="panel srvonly ownonly" id="catPanel">
-  <h2>Huisdieren</h2>
-  <p class="hint" style="margin:0 0 6px">Je huisdieren lopen door het huis op de kaart. Het gewicht gebruikt de kattenbak om te zien welke kat er ging.</p>
+  <details class="fold" id="catFold"><summary><h2 style="display:inline;margin:0">Huisdieren</h2></summary>
+  <p class="hint" style="margin:8px 0 6px">Je huisdieren lopen door het huis op de kaart. Het gewicht gebruikt de kattenbak om te zien welke kat er ging.</p>
   <div id="catList"></div>
   <div class="row" style="margin-top:8px"><button class="btn grow" id="catAdd">+ Huisdier</button><button class="btn gold grow" id="catSave">Opslaan</button></div>
+  </details>
 </section>
 
 <section class="panel srvonly ownonly" id="logPanel">
