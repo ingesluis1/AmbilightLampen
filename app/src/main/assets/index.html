@@ -847,7 +847,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 
 <section class="panel srvonly ownonly" id="logPanel">
   <details id="logDet"><summary style="cursor:pointer"><b>Logboek</b> <span class="hint">wie deed wat</span></summary>
-    <div class="row" style="margin-top:8px;align-items:center"><select id="logWho" class="grow"><option value="">Iedereen</option></select></div>
+    <div class="row" style="margin-top:8px;align-items:center"><select id="logWho" class="grow" aria-label="Wie"><option value="">Iedereen</option></select><select id="logWhat" class="grow" aria-label="Wat"></select></div>
     <div id="logList"></div>
   </details>
 </section>
@@ -2656,8 +2656,12 @@ $('catAdd').onclick=()=>{catEdit=catEdit||[];catEdit.push({name:'',kg:5,sprite:c
 $('catSave').onclick=async()=>{const bad=catEdit.find(c=>!c.name||!(c.kg>=0.5&&c.kg<=20));if(bad){toast(t('Geef elk huisdier een naam en een gewicht tussen 0,5 en 20 kg'));return}
   await api('/api/kattenbak/cats',{cats:catEdit});toast(t('Opgeslagen'));poll()};
 /* Logboek: laatste acties, nieuwste boven, per dag een kopje; filter op persoon */
-async function logLoad(){const who=$('logWho').value;let r;try{r=await api('/api/logboek?n=300'+(who?'&who='+encodeURIComponent(who):''))}catch(e){return}
-  const loc=I18N.lang==='en'?'en-GB':'nl-NL',items=r.items||[],box=$('logList');
+/* Soort actie, voor het filter Wat */
+const LOG_KIND=[['','Alle acties'],['open','Hub geopend'],['power','Lampen aan/uit'],['scene','Scènes'],['live','Kleur/helderheid'],['plug','Stekkers'],['airco','Airco'],['litter','Kattenbak'],['avatar','Poppetjes'],['settings','Instellingen']];
+function logKind(p){p=p||'';return p==='/open'?'open':/\/api\/lamps?\/power/.test(p)?'power':p==='/api/scene'?'scene':p==='/api/live'?'live':p==='/api/stekker'?'plug':p==='/api/airco'?'airco':p==='/api/kattenbak'?'litter':p==='/api/people/avatar'?'avatar':'settings'}
+async function logLoad(){const who=$('logWho').value,kind=$('logWhat').value;let r;try{r=await api('/api/logboek?n='+(kind?2000:300)+(who?'&who='+encodeURIComponent(who):''))}catch(e){return}
+  if(!$('logWhat').options.length)$('logWhat').innerHTML=LOG_KIND.map(([v,n])=>`<option value="${v}">${esc(t(n))}</option>`).join('');
+  const loc=I18N.lang==='en'?'en-GB':'nl-NL',items=(r.items||[]).filter(x=>!kind||logKind(x.path)===kind).slice(0,400),box=$('logList');
   if(!who){const names=[...new Set(items.map(x=>x.who))].sort(),sel=$('logWho'),cur=sel.value;sel.innerHTML=`<option value="">${esc(t('Iedereen'))}</option>`+names.map(n=>`<option>${esc(n)}</option>`).join('');sel.value=cur}
   if(!items.length){box.innerHTML=`<p class="hint">${esc(t('Nog niets.'))}</p>`;return}
   // per dag een uitklapblok (vandaag open); dezelfde actie van dezelfde persoon achter elkaar = één regel met ×n
@@ -2673,7 +2677,7 @@ const LOG_NAMES={'save':'Kamer of instellingen opgeslagen','people/save':'Mensen
   'room/save':'Kamer aangepast','room/delete':'Kamer verwijderd','room/order':'Volgorde kamers aangepast','tvsync/approve':'Tv gekoppeld','tvsync/remove':'Tv ontkoppeld','kattenbak/cats':'Huisdieren aangepast',
   'access/set':'Toegang aangepast','access/emails':'E-mailadressen aangepast','scene/save':'Scène opgeslagen','scene/delete':'Scène verwijderd','lamp/delete':'Lamp verwijderd','energy/workdays ':'Werkdagen aangepast',
   'pushover/save':'Pushover ingesteld','enelogic':'Enelogic ingesteld','growatt':'Growatt ingesteld','people/linkEmail':'E-mailadres gekoppeld','net/hide':'Apparaat verborgen'};
-$('logDet').ontoggle=()=>{if($('logDet').open)logLoad()};$('logWho').onchange=logLoad;
+$('logDet').ontoggle=()=>{if($('logDet').open)logLoad()};$('logWho').onchange=logLoad;$('logWhat').onchange=logLoad;
 document.querySelectorAll('#viewSeg .btn').forEach(b=>{b.classList.toggle('on',(b.dataset.v==='34')===view34);b.onclick=()=>setView34(b.dataset.v==='34')});
 $('asGuestBtn').onclick=()=>setAsGuest('guest');$('asMemberBtn').onclick=()=>setAsGuest('member');$('asGuestStop').onclick=()=>setAsGuest('');$('asGuestBar').classList.toggle('hidden',!asGuest);
 if(asGuest==='member')$('asGuestBar').querySelector('span').textContent=t('Je bekijkt de hub als huisgenoot');
