@@ -2572,7 +2572,7 @@ function avEditor(box,start,personId,done){let a=avNorm(start);const first=JSON.
   update()}
 /* Hoofdgebruiker: blok Mensen. Per persoon (uitklapbaar) naam, rol, e-mailadressen, wifi-apparaten en hub-apparaten,
    poppetje; daaronder "Niet gekoppeld" (wifi-apparaten, toegangsverzoeken, losse e-mailadressen). */
-let mensenData=null;
+let mensenData=null,mensenAll=false;
 async function peopleAdmin(){if(!S||S.role!=='owner')return;let r;try{r=await api('/api/people/admin')}catch(e){return}mensenRender(r)}
 function mensenRender(r){mensenData=r;const box=$('mensenList'),loc=I18N.lang==='en'?'en-GB':'nl-NL',ppl=r.people||[],fr=r.free||{};
   $('cfState').textContent=r.cf?'· '+(r.cfResult||t('ingevuld')):'· '+t('nog niet ingevuld');
@@ -2630,6 +2630,10 @@ function mensenRender(r){mensenData=r;const box=$('mensenList'),loc=I18N.lang===
     for(const d of p.hub)pd.append(hubRow(d,true));for(const d of p.wifi)pd.append(wifiRow(d,true));
     const pav=body.querySelector('.pav');pav.ontoggle=()=>{if(pav.open&&!pav.dataset.ed){pav.dataset.ed='1';avEditor(pav.querySelector('.ped'),p.avatar,p.id,()=>{peopleLoad(true);peopleAdmin()})}};
     body.querySelector('[data-del]').onclick=async()=>{if(!confirm(t('{n} verwijderen?',{n:p.name})))return;after(api('/api/people/save',{id:p.id,delete:true}).then(()=>api('/api/people/admin')))}}
+  // eerst 3 mensen, de rest achter "Toon alle"
+  {const rows=[...box.children].filter(x=>x.classList.contains('mgrp'));if(rows.length>3){rows.slice(3).forEach(x=>x.classList.toggle('hidden',!mensenAll));
+    const b=document.createElement('button');b.className='btn';b.style.cssText='width:100%;margin:6px 0';b.textContent=mensenAll?t('Minder tonen'):t('Toon alle ({n})',{n:rows.length});
+    b.onclick=()=>{mensenAll=!mensenAll;mensenRender(mensenData)};box.append(b)}}
   // Niet gekoppeld
   const fw=fr.wifi||[],fh=fr.hub||[],fe=fr.emails||[],req=fh.filter(d=>d.role==='pending').length;
   if(fw.length||fh.length||fe.length){const body=group('',sm=>{const b=document.createElement('b');b.textContent=t('Niet gekoppeld');sm.append(b);const h=document.createElement('span');h.className='hint';
