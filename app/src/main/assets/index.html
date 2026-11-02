@@ -1890,7 +1890,8 @@ function airCard(l){const a=airOf(l.id),d=document.createElement('div');d.classN
   d.querySelector('[data-sl]').onclick=()=>airSet(l.id,{sleep:!a.sleep});
   return d}
 /* Kattenbak (alleen op de hub; stand uit /api/state als lamp.litter). Status, bezoeken vandaag, gewicht, storingen, schoonmaken. */
-const KB_CSS=document.head.appendChild(document.createElement('style'));KB_CSS.textContent='.kbic{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.kbic .btn.ic{display:flex;align-items:center;justify-content:center;padding:8px 0}.kbic .btn.ic svg{width:28px;height:28px}';
+const KB_CSS=document.head.appendChild(document.createElement('style'));KB_CSS.textContent='.kbic{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.kbic .btn.ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 2px 5px;min-width:0}.kbic .btn.ic svg{width:26px;height:26px}.kbic .btn.ic span{font-size:11px;line-height:1.1;text-align:center;overflow-wrap:anywhere}.kbavg{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:13px;margin:4px 0 0;display:flex;flex-wrap:wrap;gap:4px 12px}.kbavg i{display:inline-block;width:10px;height:10px;border:2px solid #2a1a2e;margin-right:4px;vertical-align:-1px}';
+const KB_SHORT={clean:'Schoonmaken',pour:'Zand bijvullen',smooth:'Egaliseren',uv:'Steriliseren',auto:'Automatisch',light:'Lampje',lock:'Kinderslot'};
 const kbOf=id=>{const x=S&&(S.lamps||[]).find(q=>q.id===id);return x&&x.litter};
 const KB_STATUS={standby:'Klaar',sleep:'Slaapt',uv:'Bezig met steriliseren',cat_in:'Kat erin',cat_near:'Kat in de buurt',cat_out:'Kat net weg',cleaning:'Bezig met schoonmaken',clean:'Bezig met schoonmaken',smooth:'Zand egaliseren',clear_sand:'Zand bijvullen'};
 const KB_FAULT={vol:'Afvalbak vol',bak:'Bak eruit',motor:'Motorstoring',sensor:'Sensorstoring',filter:'Filter vervangen'};
@@ -1905,7 +1906,7 @@ const KB_IC={
   auto:'<circle cx="12" cy="12" r="9"/><path d="M8.5 16l3.5-9 3.5 9M10 13h4"/>',
   light:'<path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-4 10.5c1 1 1 2 1 3h6c0-1 0-2 1-3A6 6 0 0 0 12 3z"/>',
   lock:'<rect x="5" y="11" width="14" height="10"/><path d="M8 11V7a4 4 0 0 1 8 0v4M12 15v2"/>'};
-const kbIc=(k,name,cls='',dis=false)=>`<button class="btn ic${cls}" data-${k}="1" title="${esc(t(name))}" aria-label="${esc(t(name))}"${dis?' disabled':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">${KB_IC[k]}</svg></button>`;
+const kbIc=(k,name,cls='',dis=false)=>`<button class="btn ic${cls}" data-${k}="1" title="${esc(t(name))}" aria-label="${esc(t(name))}"${dis?' disabled':''}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" stroke-linejoin="miter">${KB_IC[k]}</svg><span>${esc(t(KB_SHORT[k]||name))}</span></button>`;
 function kbCard(l){const a=kbOf(l.id),d=document.createElement('div');d.className='aircard';
   if(!a){d.innerHTML=`<div class="hint">${esc(t('De kattenbak bedien je op de House hub.'))}</div>`;return d}
   if(!a.known){d.innerHTML=`<b>${esc(l.name)}</b><div class="hint">${esc(t(a.online?'Even geduld, de stand wordt opgehaald...':'De kattenbak is niet bereikbaar.'))}</div>`;return d}
@@ -1979,7 +1980,7 @@ async function stHist(id,h){let c=stLogs[id];if(!c||Date.now()-c.at>60000){try{c
     return `<div class="kbrow">${esc(new Date(x.start).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}<span>${esc(t('{m} min',{m:min})+' · '+stKwh(x.kwh)+(pr!=null?' · ≈ '+enEUR(x.kwh*pr):''))}</span></div>`}).join(''):''}
 /* Bezoeken (de hub houdt ze bij): gewicht per bezoek als punten, aantal per dag als staafjes (14 dagen), laatste bezoeken */
 const kbLogs={};
-async function kbHist(id,h){let c=kbLogs[id];if(!c||Date.now()-c.at>60000){try{const r=await api('/api/kattenbak/log?days=30&id='+encodeURIComponent(id));c=kbLogs[id]={at:Date.now(),v:r.visits||[],cats:r.cats||[]};kbCats=c.cats}catch(e){return}}
+async function kbHist(id,h){if(!h.offsetWidth){if(!h._ro&&window.ResizeObserver){h._ro=new ResizeObserver(()=>{if(h.offsetWidth){h._ro.disconnect();h._ro=null;kbHist(id,h)}});h._ro.observe(h)}return}let c=kbLogs[id];if(!c||Date.now()-c.at>60000){try{const r=await api('/api/kattenbak/log?days=30&id='+encodeURIComponent(id));c=kbLogs[id]={at:Date.now(),v:r.visits||[],cats:r.cats||[]};kbCats=c.cats}catch(e){return}}
   if(!h.isConnected)return;const v=c.v,list=h.querySelector('.kblist');
   if(!v.length){h.querySelector('.kbw').classList.add('hidden');h.querySelector('.kbv').classList.add('hidden');h.querySelectorAll('.lbl').forEach(x=>x.classList.add('hidden'));
     list.innerHTML=`<p class="hint" style="margin:6px 0 0">${esc(t('Nog geen bezoeken opgeslagen. Vanaf nu houdt de hub elk bezoek bij, met gewicht en duur.'))}</p>`;return}
@@ -1990,7 +1991,9 @@ async function kbHist(id,h){let c=kbLogs[id];if(!c||Date.now()-c.at>60000){try{c
   // Gewicht per kat: elke kat een eigen lijn (de hub wijst bezoeken met gewicht toe aan de dichtstbijzijnde kat)
   const cats=(c.cats||[]).map((ct,i)=>({name:ct.name,color:KAT_COL[i%KAT_COL.length],pts:v.filter(x=>x.weight>0&&x.cat===ct.name).slice().reverse()}));
   const wl=v.filter(x=>x.weight>0);
-  if(wl.length)kbDots(h.querySelector('.kbw'),cats.length?cats:[{name:t('Kat'),color:KAT_COL[0],pts:wl.slice().reverse()}],loc);
+  if(wl.length){kbDots(h.querySelector('.kbw'),cats.length?cats:[{name:t('Kat'),color:KAT_COL[0],pts:wl.slice().reverse()}],loc);
+    const av=(cats.length?cats:[{name:t('Kat'),color:KAT_COL[0],pts:wl}]).filter(x=>x.pts.length).map(x=>`<span><i style="background:${x.color}"></i>${esc(x.name)} ${esc(t('gemiddeld {kg} kg',{kg:nl1(x.pts.reduce((a,p)=>a+p.weight,0)/x.pts.length/1000,2)}))} <small>(${x.pts.length}×)</small></span>`).join('');
+    let ae=h.querySelector('.kbavg');if(!ae){ae=document.createElement('div');ae.className='kbavg';h.querySelector('.kbw').after(ae)}ae.innerHTML=av}
   else{const w=h.querySelector('.kbw');w.classList.add('hidden');w.previousElementSibling.classList.add('hidden')}
   const dur=s=>s>=60?Math.floor(s/60)+' min '+(s%60)+' s':s+' s';
   list.innerHTML=`<div class="lbl">${esc(t('Laatste bezoeken'))}</div>`+v.slice(0,8).map(x=>`<div class="kbrow">${esc(new Date(x.t).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}))}<span>${x.cat?esc(x.cat+' · '):''}${x.weight>0?esc(nl1(x.weight/1000,2)+' kg'+(x.src==='weging'?'':' · ')):''}${x.src==='weging'?' · '+esc(t('alleen gewogen')):esc(dur(x.seconds||0))}</span></div>`).join('')}
