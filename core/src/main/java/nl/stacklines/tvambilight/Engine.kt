@@ -739,7 +739,8 @@ object Engine {
                     val maxC = sample?.let { (it.left + it.top + it.right).maxOfOrNull { z -> z.max() } } ?: 0
                     if (maxC > 10) blackSince = 0L else if (blackSince == 0L) blackSince = t0
                 }
-                val tvOff = s.followAmbi && blackSince != 0L && t0 - blackSince > 20_000
+                // Zwarte randen (bv. een staande video met brede balken) zijn nog geen tv uit: zegt de tv zelf "aan", dan niet
+                val tvOff = s.followAmbi && blackSince != 0L && t0 - blackSince > 20_000 && PhilipsTv.isOn() != true
                 if (home || tvOff) {
                     val sc = if (tvOff) SceneEngine.find(s.offScene) else homeSc
                     if (!paused || (sc?.id ?: "") != pauseScene) {

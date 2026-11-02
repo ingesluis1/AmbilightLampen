@@ -65,6 +65,17 @@ object PhilipsTv {
         } catch (_: Exception) { null }
     }
 
+    @Volatile private var powerAt = 0L
+    @Volatile private var powerOn: Boolean? = null
+    /** Staat de tv aan volgens de tv zelf (powerstate "On")? null = onbekend. Hooguit elke 5 seconden gevraagd. */
+    fun isOn(): Boolean? {
+        val now = System.currentTimeMillis(); if (now - powerAt < 5000) return powerOn
+        powerAt = now
+        val u = Store.tvUser ?: return null; val p = Store.tvPass ?: return null
+        powerOn = try { val r = call("GET", "/powerstate", user = u, pass = p); if (r.code == 200) JSONObject(r.body).optString("powerstate").equals("On", true) else null } catch (_: Exception) { null }
+        return powerOn
+    }
+
     /** Huidige randkleuren, of null als de tv niet bereikbaar of niet gekoppeld is. */
     fun measured(): ZoneSample? {
         val u = Store.tvUser ?: return null
