@@ -823,6 +823,8 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <label class="s"><input type="checkbox" id="awAirco"> Airco uit</label>
   <label class="s"><input type="checkbox" id="awPlugs"> Stekkers uit (alleen die uit mogen)</label>
   <label class="s"><input type="checkbox" id="awEmpty"> Alleen als er verder niemand thuis is</label>
+  <label class="s" style="margin-top:10px"><input type="checkbox" id="hlEnabled"> Bij thuiskomen na zonsondergang: lampen aan in</label>
+  <select id="hlRoom" style="width:100%"></select>
   <p class="hint" id="awState" style="margin:6px 0 0"></p>
   <button class="btn gold" id="awSave" style="width:100%;margin-top:8px">Opslaan</button>
 </section>
@@ -2673,13 +2675,15 @@ async function autoLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await
   const srt=ppl.slice().sort((a,b)=>a.name.localeCompare(b.name));sel.innerHTML=srt.map(p=>`<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('');
   sel.value=c.person||(ppl.find(p=>p.me)||srt[0]||{}).id||'';sel.dataset.v=sel.value;sel.onchange=()=>{sel.dataset.v=sel.value};seg(mn,[[10,'10 min'],[15,'15 min'],[30,'30 min'],[60,t('1 uur')]],c.minutes||15);
   $('awEnabled').checked=!!c.enabled;
+  const hl=r.homeLight||{},rs=roomsList();$('hlEnabled').checked=!!hl.enabled;$('hlRoom').innerHTML=rs.map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('');
+  $('hlRoom').value=hl.room||(rs.find(x=>/gang|hal/i.test(x.name))||rs[0]||{}).id||'';
   $('awLamps').checked=c.lamps!==false;$('awAirco').checked=!!c.airco;$('awPlugs').checked=c.plugs!==false;$('awEmpty').checked=c.onlyIfEmpty!==false;
   const loc=I18N.lang==='en'?'en-GB':'nl-NL',f=ms=>new Date(ms).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
   const pr=ppl.find(p=>p.id===sel.dataset.v);
   $('awState').textContent=[pr?(pr.home?t('{n} is nu thuis.',{n:pr.name}):r.personLast?t('{n} is weg sinds {d}.',{n:pr.name,d:f(r.personLast)}):''):'',
     r.lastRun?t('Laatst automatisch uitgezet: {d} ({w}).',{d:f(r.lastRun),w:r.lastWhat||''}):''].filter(Boolean).join(' ')}
 $('awSave').onclick=async()=>{const r=await api('/api/auto/save',{enabled:$('awEnabled').checked,person:$('awPerson').dataset.v,minutes:+$('awMin').dataset.v,
-  lamps:$('awLamps').checked,airco:$('awAirco').checked,plugs:$('awPlugs').checked,onlyIfEmpty:$('awEmpty').checked});toast(r.message||'');autoLoad()};
+  lamps:$('awLamps').checked,airco:$('awAirco').checked,plugs:$('awPlugs').checked,onlyIfEmpty:$('awEmpty').checked,homeLight:{enabled:$('hlEnabled').checked,room:$('hlRoom').value}});toast(r.message||'');autoLoad()};
 /* ---------- Toegang (House hub) ---------- */
 let gateTimer=0;
 function accessGate(){if(!document.body.classList.contains('gated')){document.body.classList.add('gated');$('gate').classList.remove('hidden')}gateCheck()}
