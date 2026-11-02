@@ -279,6 +279,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .mgrp{border-bottom:2px solid rgba(0,0,0,.15)}.mgrp>div{padding:0 0 10px}
 .apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
 .badge.tvon{background:#5ac06a;border-color:#2a6a3a}.btn.tvgo{font-size:13px;padding:2px 8px;text-decoration:none;color:inherit;display:inline-block}
+.kcode{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:#fff6e4;border:1px solid #d8c090;padding:1px 4px;word-break:break-all;display:inline-block;max-width:100%}.kguide{margin:4px 0 8px;padding-left:20px;font-size:14px}.kguide li{margin:4px 0}.kact{border-top:1px solid rgba(58,28,14,.15);padding:6px 0;font-size:13px;display:flex;flex-direction:column;gap:2px}
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
@@ -837,6 +838,20 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div id="mensenList"></div>
   <button class="btn gold" id="mensenPlus" style="margin-top:10px">+ Persoon</button>
   <div class="row hidden" id="mensenNewRow" style="margin-top:10px;align-items:center"><input type="text" id="mensenNew" class="grow" placeholder="Naam" maxlength="30" autocomplete="off"><button class="btn gold" id="mensenAdd">Toevoegen</button><button class="btn" id="mensenCancel" aria-label="Annuleren">✕</button></div>
+</section>
+
+<section class="panel srvonly ownonly" id="keysPanel">
+  <details class="fold" id="keysFold"><summary><h2 style="display:inline;margin:0">Opdrachten (iPhone)</h2></summary>
+  <div id="keysList" style="margin-top:8px"></div>
+  <button class="btn gold" id="keysPlus" style="margin-top:8px">+ Sleutel</button>
+  <div class="hidden" id="keysNewRow" style="margin-top:8px">
+    <div class="row" style="align-items:center"><input type="text" id="keysName" class="grow" placeholder="Bijvoorbeeld: iPhone Inge" maxlength="40" autocomplete="off">
+      <select id="keysRole" style="width:auto"><option value="member">Huisgenoot</option><option value="owner">Hoofdgebruiker</option></select></div>
+    <div class="row" style="margin-top:6px"><button class="btn gold grow" id="keysMake">Sleutel maken</button><button class="btn" id="keysCancel" aria-label="Annuleren">✕</button></div>
+  </div>
+  <div class="hidden" id="keysNew"></div>
+  <div id="keysGuide"></div>
+  </details>
 </section>
 
 <section class="panel srvonly ownonly" id="catPanel">
@@ -2661,6 +2676,38 @@ function catRender(){const box=$('catList');box.innerHTML='';if(!catEdit.length)
 $('catAdd').onclick=()=>{catEdit=catEdit||[];catEdit.push({name:'',kg:5,sprite:catSprites[0]||''});catRender()};
 $('catSave').onclick=async()=>{const bad=catEdit.find(c=>!c.name||!(c.kg>=0.5&&c.kg<=20));if(bad){toast(t('Geef elk huisdier een naam en een gewicht tussen 0,5 en 20 kg'));return}
   await api('/api/kattenbak/cats',{cats:catEdit});toast(t('Opgeslagen'));poll()};
+/* Opdrachten (iPhone Shortcuts): sleutels beheren en per kamer en scène laten zien wat je invult */
+async function keysLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/keys')}catch(e){return}
+  const loc=I18N.lang==='en'?'en-GB':'nl-NL',box=$('keysList'),ks=r.keys||[];
+  box.innerHTML=ks.length?ks.map(k=>`<div class="kbrow"><span><b>${esc(k.name)}</b> · ${esc(t(k.role==='owner'?'Hoofdgebruiker':'Huisgenoot'))}<br><small style="opacity:.7">${esc(k.used?t('laatst gebruikt {d}',{d:new Date(k.used).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}):t('nog niet gebruikt'))}</small></span><button class="btn red" data-kdel="${esc(k.id)}" aria-label="${esc(t('Weghalen'))}">✕</button></div>`).join('')
+    :`<p class="hint" style="margin:0">${esc(t('Nog geen sleutels.'))}</p>`;
+  box.querySelectorAll('[data-kdel]').forEach(b=>b.onclick=async()=>{if(b.dataset.sure){toast((await api('/api/keys/delete',{id:b.dataset.kdel})).message);keysLoad()}else{b.dataset.sure=1;b.textContent=t('Zeker?')}});
+  keysGuide()}
+/** Wat je in Opdrachten invult: adres, kopteksten en per knop de tekst (JSON) */
+function keysGuide(key){const home=`http://${location.hostname==='hub.stacklines.nl'?'192.168.1.177':location.hostname}:8790`,out='https://hub.stacklines.nl';
+  const rs=roomsList(),sc=(S.scenes||[]).filter(x=>!x.builtin||true).slice(0,40);
+  const code=x=>`<code class="kcode">${esc(x)}</code>`,row=(n,p,b)=>`<div class="kact"><b>${esc(n)}</b><div>${code('POST '+p)}</div><div>${code(JSON.stringify(b))}</div></div>`;
+  $('keysGuide').innerHTML=`<h3 style="margin:12px 0 4px">${esc(t('Zo maak je een knop'))}</h3>
+    <ol class="kguide">
+      <li>${esc(t('Open Opdrachten en maak een nieuwe opdracht met de stap "Haal inhoud van URL op".'))}</li>
+      <li>${esc(t('URL: thuis'))} ${code(home+'/api/lamps/toggle')}<br>${esc(t('van buitenaf'))} ${code(out+'/api/lamps/toggle')}</li>
+      <li>${esc(t('Tik op Toon meer. Methode: POST. Kopteksten:'))}<br>${code('X-Hub-Key')} = ${key?code(key):esc(t('je sleutel'))}<br>${esc(t('van buitenaf ook:'))} ${code('CF-Access-Client-Id')} ${esc(t('en'))} ${code('CF-Access-Client-Secret')}</li>
+      <li>${esc(t('Hoofdtekst aanvraag: JSON, met de velden hieronder (bijvoorbeeld room = gang).'))}</li>
+      <li>${esc(t('Geef de opdracht een naam en icoon, en zet hem in de Opdrachten-widget op je beginscherm.'))}</li>
+    </ol>
+    <details class="fold"><summary><b>${esc(t('Alle knoppen'))}</b></summary>
+      ${row(t('Hele huis aan/uit'),'/api/lamps/toggle',{})}
+      ${rs.map(r=>row(t('{r} aan/uit',{r:r.name}),'/api/lamps/toggle',{room:r.id})).join('')}
+      ${row(t('Alles uit'),'/api/lamps/power',{on:false})}
+      ${sc.map(x=>row(t('Scène {n}',{n:x.name}),'/api/scene',{id:x.id,room:(rs.find(r=>r.tv)||{}).id||''})).join('')}
+    </details>`}
+const keysNewShow=on=>{$('keysNewRow').classList.toggle('hidden',!on);$('keysPlus').classList.toggle('hidden',on);if(on)$('keysName').focus();else $('keysName').value=''};
+$('keysPlus').onclick=()=>{$('keysNew').classList.add('hidden');keysNewShow(true)};$('keysCancel').onclick=()=>keysNewShow(false);
+$('keysMake').onclick=async()=>{const n=$('keysName').value.trim();if(!n){$('keysName').focus();return}
+  const r=await api('/api/keys/new',{name:n,role:$('keysRole').value});keysNewShow(false);if(!r.ok)return;const k=r.key.key;
+  const nb=$('keysNew');nb.classList.remove('hidden');nb.innerHTML=`<div class="banner" style="margin-top:8px"><b>${esc(t('Je sleutel (alleen nu te zien):'))}</b><br><code class="kcode" id="keysVal">${esc(k)}</code><br><button class="btn" id="keysCopy" style="margin-top:6px">${esc(t('Kopiëren'))}</button></div>`;
+  $('keysCopy').onclick=async()=>{try{await navigator.clipboard.writeText(k);toast(t('Gekopieerd'))}catch(e){const rg=document.createRange();rg.selectNodeContents($('keysVal'));const sl=getSelection();sl.removeAllRanges();sl.addRange(rg)}};
+  keysLoad();keysGuide(k)};
 /* Logboek: laatste acties, nieuwste boven, per dag een kopje; filter op persoon */
 /* Soort actie, voor het filter Wat */
 const LOG_KIND=[['','Alle acties'],['open','Hub geopend'],['power','Lampen aan/uit'],['scene','Scènes'],['live','Kleur/helderheid'],['plug','Stekkers'],['airco','Airco'],['litter','Kattenbak'],['avatar','Poppetjes'],['settings','Instellingen']];
@@ -3682,7 +3729,7 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();poLoad();catLoad();hubLoad();tvSyncLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(document.body.classList.contains('member')&&n!=='home'&&n!=='energy'){showTab('home');return}if(n==='energy')enLoad();
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();poLoad();catLoad();hubLoad();tvSyncLoad();keysLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(document.body.classList.contains('member')&&n!=='home'&&n!=='energy'){showTab('home');return}if(n==='energy')enLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
