@@ -280,6 +280,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
 .badge.tvon{background:#5ac06a;border-color:#2a6a3a}.btn.tvgo{font-size:13px;padding:2px 8px;text-decoration:none;color:inherit;display:inline-block}
 .kcode{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:#fff6e4;border:1px solid #d8c090;padding:1px 4px;word-break:break-all;display:inline-block;max-width:100%}.kguide{margin:4px 0 8px;padding-left:20px;font-size:14px}.kguide li{margin:4px 0}.kact{border-top:1px solid rgba(58,28,14,.15);padding:6px 0;font-size:13px;display:flex;flex-direction:column;gap:2px}
+.hkpin{font:600 28px/1.2 ui-monospace,Consolas,monospace;letter-spacing:3px;background:#fff6e4;border:2px solid #d8c090;padding:8px 12px;display:inline-block;margin:2px 0 6px}
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
@@ -838,6 +839,12 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div id="mensenList"></div>
   <button class="btn gold" id="mensenPlus" style="margin-top:10px">+ Persoon</button>
   <div class="row hidden" id="mensenNewRow" style="margin-top:10px;align-items:center"><input type="text" id="mensenNew" class="grow" placeholder="Naam" maxlength="30" autocomplete="off"><button class="btn gold" id="mensenAdd">Toevoegen</button><button class="btn" id="mensenCancel" aria-label="Annuleren">✕</button></div>
+</section>
+
+<section class="panel srvonly ownonly" id="hkPanel">
+  <details class="fold" id="hkFold"><summary><h2 style="display:inline;margin:0">Apple Woning</h2></summary>
+  <div id="hkBox" style="margin-top:8px"></div>
+  </details>
 </section>
 
 <section class="panel srvonly ownonly" id="keysPanel">
@@ -2676,6 +2683,21 @@ function catRender(){const box=$('catList');box.innerHTML='';if(!catEdit.length)
 $('catAdd').onclick=()=>{catEdit=catEdit||[];catEdit.push({name:'',kg:5,sprite:catSprites[0]||''});catRender()};
 $('catSave').onclick=async()=>{const bad=catEdit.find(c=>!c.name||!(c.kg>=0.5&&c.kg<=20));if(bad){toast(t('Geef elk huisdier een naam en een gewicht tussen 0,5 en 20 kg'));return}
   await api('/api/kattenbak/cats',{cats:catEdit});toast(t('Opgeslagen'));poll()};
+/* Apple Woning (HomeKit-brug op de hub): koppelcode en stappen, of "gekoppeld" */
+async function hkLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/homekit')}catch(e){return}
+  const box=$('hkBox');if(!r.running){box.innerHTML=`<p class="hint" style="margin:0">${esc(t('De brug start niet:'))} ${esc(r.error||'')}</p>`;return}
+  box.innerHTML=(r.paired?`<p style="margin:0 0 6px"><b>✓ ${esc(t('Gekoppeld'))}</b> · ${esc(t('{n} apparaten',{n:r.count}))}</p>`
+    :`<p style="margin:0 0 6px">${esc(t('{n} apparaten klaar om te koppelen',{n:r.count}))}</p>`)+
+   `<div class="hkpin">${esc(r.pin)}</div>
+    <ol class="kguide">
+      <li>${esc(t('Open Woning (Home) op je iPhone en tik op + en dan Accessoire toevoegen (Add Accessory).'))}</li>
+      <li>${esc(t('Tik op Meer opties (More options) en kies House hub.'))}</li>
+      <li>${esc(t('Typ de code hierboven. Zegt de iPhone dat het geen gecertificeerd accessoire is: tik op Voeg toch toe (Add Anyway).'))}</li>
+      <li>${esc(t('Zet daarna elke lamp in de goede kamer. Siri werkt dan meteen, bijvoorbeeld "Zet de gang aan".'))}</li>
+    </ol>
+    ${r.paired?`<button class="btn" id="hkReset">${esc(t('Opnieuw koppelen'))}</button>`:''}`;
+  if($('hkReset'))$('hkReset').onclick=async()=>{const b=$('hkReset');if(!b.dataset.sure){b.dataset.sure=1;b.textContent=t('Zeker? Woning raakt alles kwijt');return}
+    b.disabled=true;const x=await api('/api/homekit/reset',{});toast(x.message||'');hkLoad()}}
 /* Opdrachten (iPhone Shortcuts): sleutels beheren en per kamer en scène laten zien wat je invult */
 async function keysLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/keys')}catch(e){return}
   const loc=I18N.lang==='en'?'en-GB':'nl-NL',box=$('keysList'),ks=r.keys||[];
@@ -3729,7 +3751,7 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();poLoad();catLoad();hubLoad();tvSyncLoad();keysLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(document.body.classList.contains('member')&&n!=='home'&&n!=='energy'){showTab('home');return}if(n==='energy')enLoad();
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();poLoad();catLoad();hubLoad();tvSyncLoad();keysLoad();hkLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(document.body.classList.contains('member')&&n!=='home'&&n!=='energy'){showTab('home');return}if(n==='energy')enLoad();
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
