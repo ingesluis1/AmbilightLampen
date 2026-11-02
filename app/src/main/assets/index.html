@@ -278,6 +278,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .accrow{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
 .mgrp{border-bottom:2px solid rgba(0,0,0,.15)}.mgrp>div{padding:0 0 10px}
 .apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
+.logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
 #houseDevFold>summary{list-style:none;cursor:pointer}#houseDevFold>summary::-webkit-details-marker{display:none}#houseDevFold>summary::after{content:' ▸';opacity:.5}#houseDevFold[open]>summary::after{content:' ▾'}
@@ -2636,10 +2637,19 @@ async function logLoad(){const who=$('logWho').value;let r;try{r=await api('/api
   const loc=I18N.lang==='en'?'en-GB':'nl-NL',items=r.items||[],box=$('logList');
   if(!who){const names=[...new Set(items.map(x=>x.who))].sort(),sel=$('logWho'),cur=sel.value;sel.innerHTML=`<option value="">${esc(t('Iedereen'))}</option>`+names.map(n=>`<option>${esc(n)}</option>`).join('');sel.value=cur}
   if(!items.length){box.innerHTML=`<p class="hint">${esc(t('Nog niets.'))}</p>`;return}
-  let day='',h='';for(const x of items){const d=new Date(x.t),dk=d.toLocaleDateString(loc,{weekday:'long',day:'numeric',month:'long'});
-    if(dk!==day){day=dk;h+=`<div class="lbl" style="margin-top:8px">${esc(dk)}</div>`}
-    h+=`<div class="kbrow"><span>${esc(d.toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'}))} · <b>${esc(x.who)}</b></span><span style="text-align:right">${esc(x.what)}</span></div>`}
-  box.innerHTML=h}
+  // per dag een uitklapblok (vandaag open); dezelfde actie van dezelfde persoon achter elkaar = één regel met ×n
+  const hm=ms=>new Date(ms).toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'}),todayK=new Date().toDateString(),wasOpen=new Set([...box.querySelectorAll('details[open]')].map(x=>x.dataset.d));
+  const days=[];for(const x of items){const d=new Date(x.t),k=d.toDateString(),what=LOG_NAMES[x.what]?t(LOG_NAMES[x.what]):x.what;let g=days[days.length-1];
+    if(!g||g.k!==k){g={k,label:(x=>x.charAt(0).toUpperCase()+x.slice(1))(d.toLocaleDateString(loc,{weekday:'long',day:'numeric',month:'long'})),rows:[]};days.push(g)}
+    const last=g.rows[g.rows.length-1];if(last&&last.who===x.who&&last.what===what){last.n++;last.from=x.t}else g.rows.push({who:x.who,what,to:x.t,from:x.t,n:1})}
+  box.innerHTML=days.map(g=>`<details class="logday" data-d="${esc(g.k)}"${g.k===todayK||wasOpen.has(g.k)?' open':''}><summary>${esc(g.k===todayK?t('Vandaag'):g.label)} <small>(${g.rows.reduce((a,r)=>a+r.n,0)})</small></summary>`
+    +g.rows.map(r=>`<div class="kbrow"><span>${esc(r.n>1&&hm(r.from)!==hm(r.to)?hm(r.from)+'–'+hm(r.to):hm(r.to))} · <b>${esc(r.who)}</b></span><span style="text-align:right">${esc(r.what)}${r.n>1?' ('+r.n+'×)':''}</span></div>`).join('')+'</details>').join('')}
+/* Oude logregels hebben soms nog de technische naam van de opdracht */
+const LOG_NAMES={'save':'Kamer of instellingen opgeslagen','people/save':'Mensen bijgewerkt','people/email':'E-mailadres aangepast','people/role':'Rol aangepast','cloud/refresh':'Apparaten opnieuw gezocht',
+  'energy/tariffs':'Tarieven aangepast','energy/workdays':'Werkdagen aangepast','energy/refresh':'Energie ververst','net/presence':'"Telt mee voor thuis" aangepast','net/label':'Apparaat hernoemd',
+  'room/save':'Kamer aangepast','room/delete':'Kamer verwijderd','room/order':'Volgorde kamers aangepast','tvsync/approve':'Tv gekoppeld','tvsync/remove':'Tv ontkoppeld','kattenbak/cats':'Huisdieren aangepast',
+  'access/set':'Toegang aangepast','access/emails':'E-mailadressen aangepast','scene/save':'Scène opgeslagen','scene/delete':'Scène verwijderd','lamp/delete':'Lamp verwijderd','energy/workdays ':'Werkdagen aangepast',
+  'pushover/save':'Pushover ingesteld','enelogic':'Enelogic ingesteld','growatt':'Growatt ingesteld','people/linkEmail':'E-mailadres gekoppeld','net/hide':'Apparaat verborgen'};
 $('logDet').ontoggle=()=>{if($('logDet').open)logLoad()};$('logWho').onchange=logLoad;
 document.querySelectorAll('#viewSeg .btn').forEach(b=>{b.classList.toggle('on',(b.dataset.v==='34')===view34);b.onclick=()=>setView34(b.dataset.v==='34')});
 $('asGuestBtn').onclick=()=>setAsGuest('guest');$('asMemberBtn').onclick=()=>setAsGuest('member');$('asGuestStop').onclick=()=>setAsGuest('');$('asGuestBar').classList.toggle('hidden',!asGuest);
