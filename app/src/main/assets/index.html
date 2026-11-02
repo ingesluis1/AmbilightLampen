@@ -1366,15 +1366,15 @@ function tvLinkBtn(){return tvLinked()&&S.tvLink.ip?` <a class="btn tvgo" href="
 /** Staat de tv in deze kamer aan? Aan de stekker van de tv: meer dan 25 W. */
 function tvOnHere(){if(!L||!L.tv||!L.tv.plug)return false;const rm=roomById(curRoom);if(rm&&!rm.tv)return false;const p=stOf(L.tv.plug);return !!(p&&p.on&&p.watt>25)}
 /** Tv aan: een zacht gekleurd schijnsel voor de tv dat langzaam van kleur verandert */
-function tvGlow(g,k,sc){if(!tvOnHere())return;const tv=L.tv,now=Date.now(),h=(now/60)%360,h2=(h+120)%360,h3=(h+240)%360;
-  // het scherm zelf: boven het tv-meubel (schuin van voren) of op de plek van de tv (van boven)
+function tvGlow(g,k,sc){if(!tvOnHere())return;const tv=L.tv,now=Date.now(),h=(now/180)%360,h2=(h+70)%360;
+  // het scherm zelf: boven het tv-meubel (schuin van voren) of op de plek van de tv (van boven); rustig verloop, geen flikkeren
   const v34=Room.isView34(),sw=tv.w*k*(v34?.9:.86),shh=k*(v34?.5:.12),[cx,wy]=sc(tv.x,tv.y),sy=v34?wy-k*.95:wy-shh/2;
-  g.save();const lg=g.createLinearGradient(cx-sw/2,0,cx+sw/2,0);lg.addColorStop(0,`hsl(${h},70%,${48+8*Math.sin(now/400)}%)`);lg.addColorStop(.5,`hsl(${h2},65%,50%)`);lg.addColorStop(1,`hsl(${h3},70%,${48+8*Math.cos(now/500)}%)`);
+  g.save();const lg=g.createLinearGradient(cx-sw/2,0,cx+sw/2,0);lg.addColorStop(0,`hsl(${h},55%,48%)`);lg.addColorStop(1,`hsl(${h2},55%,48%)`);
   g.globalAlpha=.85;g.fillStyle=lg;g.fillRect(Math.round(cx-sw/2),Math.round(sy),Math.round(sw),Math.round(shh));
-  // schijnsel in de kamer, voor de tv
-  g.globalAlpha=1;g.globalCompositeOperation='lighter';const [x,y]=sc(tv.x,tv.y+.45),r=k*1.6,gr=g.createRadialGradient(x,y,0,x,y,r);
-  gr.addColorStop(0,`hsla(${h},85%,60%,.42)`);gr.addColorStop(.45,`hsla(${h2},80%,55%,.18)`);gr.addColorStop(1,'hsla(0,0%,0%,0)');
-  g.fillStyle=gr;g.beginPath();g.ellipse(x,y,r,r*.7,0,0,7);g.fill();g.restore()}
+  // licht vanaf het scherm de kamer in
+  g.globalAlpha=1;g.globalCompositeOperation='lighter';const x=cx,y=sy+shh/2,r=k*1.8,gr=g.createRadialGradient(x,y,0,x,y,r);
+  gr.addColorStop(0,`hsla(${h},70%,60%,.30)`);gr.addColorStop(.5,`hsla(${h2},65%,55%,.12)`);gr.addColorStop(1,'hsla(0,0%,0%,0)');
+  g.fillStyle=gr;g.beginPath();g.ellipse(x,y,r,r*.8,0,0,7);g.fill();g.restore()}
 function draw(){
   if(!L)return;
   // Alleen de lampen van deze kamer; de tv alleen in de tv-kamer
