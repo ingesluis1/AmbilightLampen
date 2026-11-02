@@ -278,6 +278,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .accrow{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
 .mgrp{border-bottom:2px solid rgba(0,0,0,.15)}.mgrp>div{padding:0 0 10px}
 .apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
+.badge.tvon{background:#5ac06a;border-color:#2a6a3a}.btn.tvgo{font-size:13px;padding:2px 8px;text-decoration:none;color:inherit;display:inline-block}
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
@@ -1357,7 +1358,17 @@ function drawCatsOld(g,k,sc,list){if(!list.length)return false;const px=k/11,now
     g.font='600 '+Math.max(11,k*.22)+'px system-ui,sans-serif';g.textAlign='center';g.lineWidth=3;g.strokeStyle='rgba(29,17,36,.8)';
     g.strokeText(a.cat,p[0],y-px*1.5);g.fillStyle='#fff3d6';g.fillText(a.cat,p[0],y-px*1.5)}
   return true}
-setInterval(()=>{if(S&&(curTab==='home'||fullOpen)&&(catsHere().length||catAnimState().length))draw()},120);
+setInterval(()=>{if(S&&(curTab==='home'||fullOpen)&&(catsHere().length||catAnimState().length||tvOnHere()))draw()},120);
+/* Tv: bordje groen als de tv-app met de hub verbonden is; knop naar de pagina van de tv (alleen thuis op het wifi) */
+const tvLinked=()=>!!(S&&S.tvLink&&S.tvLink.online);
+function tvBadge(){return ' <span class="badge'+(tvLinked()?' tvon':'')+'" title="'+esc(tvLinked()?t('Tv verbonden'):t('tv'))+'">'+esc(t('tv'))+(tvLinked()?' ●':'')+'</span>'}
+function tvLinkBtn(){return tvLinked()&&S.tvLink.ip?` <a class="btn tvgo" href="http://${esc(S.tvLink.ip)}:8790/" target="_blank" rel="noopener">${esc(t('Naar de tv'))} ›</a>`:''}
+/** Staat de tv in deze kamer aan? Aan de stekker van de tv: meer dan 25 W. */
+function tvOnHere(){if(!L||!L.tv||!L.tv.plug)return false;const rm=roomById(curRoom);if(rm&&!rm.tv)return false;const p=stOf(L.tv.plug);return !!(p&&p.on&&p.watt>25)}
+/** Tv aan: een zacht gekleurd schijnsel voor de tv dat langzaam van kleur verandert */
+function tvGlow(g,k,sc){if(!tvOnHere())return;const tv=L.tv,[x,y]=sc(tv.x,tv.y+.35),r=k*1.3,h=(Date.now()/60)%360,h2=(h+120)%360;
+  g.save();g.globalCompositeOperation='lighter';const gr=g.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,`hsla(${h},80%,60%,.32)`);gr.addColorStop(.5,`hsla(${h2},80%,55%,.14)`);gr.addColorStop(1,'hsla(0,0%,0%,0)');
+  g.fillStyle=gr;g.beginPath();g.ellipse(x,y,r,r*.7,0,0,7);g.fill();g.restore()}
 function draw(){
   if(!L)return;
   // Alleen de lampen van deze kamer; de tv alleen in de tv-kamer
@@ -1383,6 +1394,7 @@ function draw(){
       g.font='600 '+fs+'px "Pixelify Sans",monospace';g.fillStyle='#fff3d6';g.fillText(a.inside+' °C',W-k*.25,H-k*.15);
       g.font='600 '+fs*.6+'px "Pixelify Sans",monospace';g.fillStyle='#c9b7d6';g.fillText(t('binnen'),W-k*.25,H-k*.15-fs*1.05);g.restore()}}
   if(ro)doorTags(g,k,sc);
+  if(ro)tvGlow(g,k,sc);
   doorUps(ro,k);
   g.lineWidth=2;g.setLineDash([6,4]);g.strokeStyle='#ffe08a';
   $('wv').textContent=L.w;$('hv').textContent=L.h;
@@ -3477,7 +3489,7 @@ function homeUI(){if(!S)return;roomBar();const house=isHouse();
   if(house){houseCards();return}
   const rid=homeRoomId(),rm=roomById(rid)||{},ls=lampsIn(rid),lights=ls.filter(isLight),isTv=!!rm.tv;
   $('homeRoomTitle').classList.toggle('hidden',!multi());
-  if(multi()){$('homeRoomTitle').innerHTML=esc(rm.name)+(isTv?' <span class="badge">'+esc(t('tv'))+'</span>':'')+` <button class="btn pen ownonly" id="roomEditPen" aria-label="${esc(t('Kamer bewerken'))}" title="${esc(t('Kamer bewerken'))}">✎</button>`;
+  if(multi()){$('homeRoomTitle').innerHTML=esc(rm.name)+(isTv?tvBadge()+tvLinkBtn():'')+` <button class="btn pen ownonly" id="roomEditPen" aria-label="${esc(t('Kamer bewerken'))}" title="${esc(t('Kamer bewerken'))}">✎</button>`;
     $('roomEditPen').onclick=()=>{showTab('room');openRoom(rid)}}
   $('tvBanner').classList.toggle('hidden',!(multi()&&isTv&&S.sync));
   $('tvBanner').textContent=t('De tv synct hier. Kies je een scène of zet je de lampen uit, dan stopt de sync.');
@@ -3497,7 +3509,7 @@ function houseCards(){const rs=roomsList(),all=lamps.filter(l=>lampRoom(l)&&isLi
   const box=$('houseCards'),key=JSON.stringify(data)+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;box.innerHTML='';
   for(const [id,name,color,tv,status,n,on,sw] of data){const c=document.createElement('div');c.className='rcard';c.tabIndex=0;c.setAttribute('role','button');
     c.innerHTML=`<span class="nm"><span class="rdot" style="background:${esc(color)}"></span><span class="grow"></span></span><span class="mrow"><span class="meta"></span><button class="btn bulb${on?' on':''}"${n?'':' disabled'}>${BULB}</button></span><span class="sw">${sw.map(x=>`<i style="background:${esc(x)}"></i>`).join('')}</span>`;
-    c.querySelector('.grow').innerHTML=esc(name)+(tv?' <span class="badge">'+esc(t('tv'))+'</span>':'');c.querySelector('.meta').textContent=status;
+    c.querySelector('.grow').innerHTML=esc(name)+(tv?tvBadge():'');c.querySelector('.meta').textContent=status;
     c.setAttribute('aria-label',t('{r} openen',{r:name}));
     const bb=c.querySelector('.bulb');bb.title=t(on?'Kamer uit':'Kamer aan');bb.setAttribute('aria-label',name+': '+t(on?'Kamer uit':'Kamer aan'));
     // Lampje: de hele kamer aan of uit, zonder hem te openen
@@ -3527,7 +3539,7 @@ function roomListUI(){const rs=roomsList(),box=$('roomList');
   const key=JSON.stringify(data)+I18N.lang;if(box.dataset.k===key)return;box.dataset.k=key;box.innerHTML='';
   data.forEach(([id,name,color,tv,w,h,n],i)=>{const r=document.createElement('div');r.className='rrow';
     r.innerHTML=`<span class="rdot" style="background:${esc(color)}"></span><span class="name"><b></b><br><span class="sub"></span></span><button class="btn" data-a="up" aria-label="${esc(t('Omhoog'))}">▲</button><button class="btn" data-a="down" aria-label="${esc(t('Omlaag'))}">▼</button><button class="btn" data-a="edit">${esc(t('Bewerken'))}</button>`;
-    r.querySelector('b').innerHTML=esc(name)+(tv?' <span class="badge">'+esc(t('tv'))+'</span>':'');
+    r.querySelector('b').innerHTML=esc(name)+(tv?tvBadge():'');
     r.querySelector('.sub').textContent=dv('{w} × {h} m · {n} lamp(en)',{w,h,n});
     const up=r.querySelector('[data-a=up]'),dn=r.querySelector('[data-a=down]');up.disabled=i===0;dn.disabled=i===data.length-1;
     const move=d=>{const ids=data.map(x=>x[0]);[ids[i],ids[i+d]]=[ids[i+d],ids[i]];roomOp('/api/room/order',{ids})};
@@ -3540,7 +3552,7 @@ function colorPicker(box,cur,pick){const key=cur+'|'+ROOM_COLORS.join();if(box.d
     b.setAttribute('aria-label',t('Kleur'));b.setAttribute('aria-pressed',String(c===cur));b.onclick=()=>pick(c);box.append(b)}}
 function metaUI(rid){const r=roomById(rid);if(!r)return;const m=multi();
   $('roomBackRow').classList.toggle('hidden',!m);
-  $('editorTitle').innerHTML=m?esc(r.name)+(r.tv?' <span class="badge">'+esc(t('tv'))+'</span>':''):esc(t('Je kamer'));
+  $('editorTitle').innerHTML=m?esc(r.name)+(r.tv?tvBadge():''):esc(t('Je kamer'));
   $('roomMetaTitle').textContent=t(m?'Deze kamer':'Kamers');
   if(document.activeElement!==$('erName')&&$('erName').dataset.id!==r.id+r.name){$('erName').value=r.name;$('erName').dataset.id=r.id+r.name}
   colorPicker($('erColors'),r.color,c=>roomOp('/api/room/save',{id:r.id,color:c}));
