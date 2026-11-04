@@ -2700,20 +2700,21 @@ async function hkLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await a
     b.disabled=true;const x=await api('/api/homekit/reset',{});toast(x.message||'');hkLoad()}}
 /* Opdrachten (iPhone Shortcuts): sleutels beheren en per kamer en scène laten zien wat je invult */
 async function keysLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/keys')}catch(e){return}
-  const loc=I18N.lang==='en'?'en-GB':'nl-NL',box=$('keysList'),ks=r.keys||[];
+  keysInfo=r;const loc=I18N.lang==='en'?'en-GB':'nl-NL',box=$('keysList'),ks=r.keys||[];
   box.innerHTML=ks.length?ks.map(k=>`<div class="kbrow"><span><b>${esc(k.name)}</b> · ${esc(t(k.role==='owner'?'Hoofdgebruiker':'Huisgenoot'))}<br><small style="opacity:.7">${esc(k.used?t('laatst gebruikt {d}',{d:new Date(k.used).toLocaleString(loc,{weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}):t('nog niet gebruikt'))}</small></span><button class="btn red" data-kdel="${esc(k.id)}" aria-label="${esc(t('Weghalen'))}">✕</button></div>`).join('')
     :`<p class="hint" style="margin:0">${esc(t('Nog geen sleutels.'))}</p>`;
   box.querySelectorAll('[data-kdel]').forEach(b=>b.onclick=async()=>{if(b.dataset.sure){toast((await api('/api/keys/delete',{id:b.dataset.kdel})).message);keysLoad()}else{b.dataset.sure=1;b.textContent=t('Zeker?')}});
   keysGuide()}
 /** Wat je in Opdrachten invult: adres, kopteksten en per knop de tekst (JSON) */
-function keysGuide(key){const home=`http://${location.hostname==='hub.stacklines.nl'?'192.168.1.177':location.hostname}:8790`,out='https://hub.stacklines.nl';
+let keysInfo={};
+function keysGuide(key){const home=`http://${keysInfo.lan||location.host}`,out=keysInfo.publicHost?'https://'+keysInfo.publicHost:'';
   const rs=roomsList(),sc=(S.scenes||[]).filter(x=>!x.builtin||true).slice(0,40);
   const code=x=>`<code class="kcode">${esc(x)}</code>`,row=(n,p,b)=>`<div class="kact"><b>${esc(n)}</b><div>${code('POST '+p)}</div><div>${code(JSON.stringify(b))}</div></div>`;
   $('keysGuide').innerHTML=`<h3 style="margin:12px 0 4px">${esc(t('Zo maak je een knop'))}</h3>
     <ol class="kguide">
       <li>${esc(t('Open Opdrachten en maak een nieuwe opdracht met de stap "Haal inhoud van URL op".'))}</li>
-      <li>${esc(t('URL: thuis'))} ${code(home+'/api/lamps/toggle')}<br>${esc(t('van buitenaf'))} ${code(out+'/api/lamps/toggle')}</li>
-      <li>${esc(t('Tik op Toon meer. Methode: POST. Kopteksten:'))}<br>${code('X-Hub-Key')} = ${key?code(key):esc(t('je sleutel'))}<br>${esc(t('van buitenaf ook:'))} ${code('CF-Access-Client-Id')} ${esc(t('en'))} ${code('CF-Access-Client-Secret')}</li>
+      <li>${esc(t('URL: thuis'))} ${code(home+'/api/lamps/toggle')}${out?`<br>${esc(t('van buitenaf'))} ${code(out+'/api/lamps/toggle')}`:''}</li>
+      <li>${esc(t('Tik op Toon meer. Methode: POST. Kopteksten:'))}<br>${code('X-Hub-Key')} = ${key?code(key):esc(t('je sleutel'))}${out?`<br>${esc(t('van buitenaf ook:'))} ${code('CF-Access-Client-Id')} ${esc(t('en'))} ${code('CF-Access-Client-Secret')}`:''}</li>
       <li>${esc(t('Hoofdtekst aanvraag: JSON, met de velden hieronder (bijvoorbeeld room = gang).'))}</li>
       <li>${esc(t('Geef de opdracht een naam en icoon, en zet hem in de Opdrachten-widget op je beginscherm.'))}</li>
     </ol>
