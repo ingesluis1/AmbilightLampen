@@ -697,6 +697,9 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="ennote" id="enDayLegend"></div>
   <div class="enlbl" id="enDayGasLbl">Gas per uur</div>
   <div class="enchart small" id="enDayGas"></div>
+  <div class="enlbl hidden" id="enDayTempLbl">Temperatuur</div>
+  <div class="enchart small hidden" id="enDayTemp"></div>
+  <div class="ennote hidden" id="enDayTempLegend"></div>
   <div class="enlbl hidden" id="enDaySolarLbl">Opwek per kwartier (zonnepanelen)</div>
   <div class="enchart small hidden" id="enDaySolar"></div>
   <div id="enSplitBox" class="hidden">
@@ -3146,6 +3149,23 @@ function enBars(el,vals,o){const W=Math.max(200,el.clientWidth),H=el.clientHeigh
     tip.textContent=o.tip(i,vals[i],neg?neg[i]:null);tip.classList.remove('hidden');tip.style.left=Math.min(r.width-70,Math.max(70,(padL+i*bw+bw/2)*r.width/W))+'px';tip.style.top=Math.max(14,(y0-sc(v))*r.height/H-4)+'px'};
   el.onpointerleave=()=>tip.classList.add('hidden');
   el.onclick=e=>{const i=at(e);if(i>=0&&o.pick)o.pick(i)}}
+/* Lijnen per kwartier (temperatuur): series [{vals, color, name}], null = geen meting (lijn onderbroken) */
+const EN_TEMP={in:'#c4552b',out:'#5b8db8'};
+function enLine(el,series,o){const W=Math.max(200,el.clientWidth),H=el.clientHeight,padL=42,padB=18,padT=6,w=W-padL,h=H-padB-padT;
+  const all=series.flatMap(x=>x.vals).filter(v=>v!=null);if(!all.length){el.innerHTML='';return}
+  let lo=Math.floor(Math.min(...all))-1,hi=Math.ceil(Math.max(...all))+1;const step=niceStep((hi-lo)/3);lo=Math.floor(lo/step)*step;hi=Math.ceil(hi/step)*step;
+  const n=series[0].vals.length,xs=i=>padL+(i+.5)*w/n,ys=v=>padT+(hi-v)/(hi-lo)*h;
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(o.title||'')}">`;
+  for(let y=lo;y<=hi+1e-9;y+=step){const py=ys(y);s+=`<line x1="${padL}" x2="${W}" y1="${py}" y2="${py}" stroke="rgba(58,28,14,.15)"/><text x="${padL-5}" y="${py+4}" text-anchor="end" font-size="11" fill="var(--text)">${nl1(y,step<1?1:0)}°</text>`}
+  for(const sr of series){let d='',pen=false;sr.vals.forEach((v,i)=>{if(v==null){pen=false;return}d+=(pen?'L':'M')+xs(i).toFixed(1)+','+ys(v).toFixed(1);pen=true});
+    s+=`<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>`}
+  o.labels.forEach((l,i)=>{if(l)s+=`<text x="${xs(i)}" y="${H-3}" text-anchor="middle" font-size="11" fill="var(--text)">${esc(l)}</text>`});
+  el.innerHTML=s+'</svg><div class="tip hidden"></div>';
+  const tip=el.querySelector('.tip');
+  el.onpointermove=e=>{const r=el.getBoundingClientRect(),i=Math.floor(((e.clientX-r.left)*W/r.width-padL)/(w/n));if(i<0||i>=n||series.every(x=>x.vals[i]==null)){tip.classList.add('hidden');return}
+    tip.textContent=o.tip(i);tip.classList.remove('hidden');tip.style.left=Math.min(r.width-70,Math.max(70,xs(i)*r.width/W))+'px';
+    const v=series.map(x=>x.vals[i]).filter(x=>x!=null);tip.style.top=Math.max(14,ys(Math.max(...v))*r.height/H-4)+'px'};
+  el.onpointerleave=()=>tip.classList.add('hidden')}
 /* Eén pakket van de hub (elke 15 minuten klaargezet): 400 dagen, 25 maanden, patronen, stekkers. Hieruit knippen we de periode. */
 let enSnap=null,enSnapAt=0;
 async function enLoad(){if(!SRV)return;let r;
@@ -3257,7 +3277,7 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   const AD=(enAll&&enAll.days)||[],lyDay=d=>{const x=new Date(d+'T12:00:00');x.setFullYear(x.getFullYear()-1);const k=x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0');return AD.find(z=>z.date===k)},
     dly=ds.map(d=>{const z=lyDay(d.date);return z?z[enKind]??null:null}),hasD=dly.some(v=>v>0);enCmpHint(hasD,t('dag'));
   enBars($('enDays'),ds.map(d=>d[enKind]??null),{color:EN_COL[enKind],labels:lbl,sel,pick,title:t(K.title+' per dag'),pair:hasD&&enCmp?dly:null,pairColor:EN_PAIR[enKind],
-    tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+K.unit+(enKind==='solar'&&ds[i].solarEst?' '+t('(geschat naar zonlicht)'):'')+(ds[i].manual&&enKind!=='solar'?' '+t(ds[i].manual==='bt'?'(Budget Thuis, hele kWh)':'(zelf ingevuld)'):'')+costTxt(ds[i])+selfTxt(ds[i])+(hasD&&enCmp&&dly[i]!=null?' · '+t('vorig jaar {v}',{v:nl1(dly[i],2)+K.unit}):'')});
+    tip:(i,v)=>enDate(ds[i].date)+': '+nl1(v,2)+K.unit+(enKind==='solar'&&ds[i].solarEst?' '+t('(geschat naar zonlicht)'):'')+(ds[i].manual&&enKind!=='solar'?' '+t(ds[i].manual==='bt'?'(Budget Thuis, hele kWh)':'(zelf ingevuld)'):'')+costTxt(ds[i])+selfTxt(ds[i])+(hasD&&enCmp&&dly[i]!=null?' · '+t('vorig jaar {v}',{v:nl1(dly[i],2)+K.unit}):'')+(ds[i].tout!=null?' · '+t('buiten')+' '+nl1(ds[i].tout,1)+'°':'')+(ds[i].tin!=null?' · '+t('binnen')+' '+nl1(ds[i].tin,1)+'°':'')});
 }
 async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textContent=enDate(d,{weekday:'long',day:'numeric',month:'long'});
   // Bladeren t/m vandaag: stroom en gas komen pas de dag erna (netbeheerder), de opwek (Growatt) is er meteen
@@ -3276,14 +3296,22 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   if(hasS)enBars($('enDaySolar'),sol,{color:EN_COL.solar,min:100,labels:sol.map((_,k)=>k%4===0?String(k/4):''),title:t('Opwek per kwartier'),tip:(k,v)=>hhmm(k)+'–'+hhmm(k+1)+': '+t('opwek {n} W',{n:nl1(v||0,0)})});
   const g=r.gas||[],hasG=g.some(v=>v!=null);$('enDayGas').classList.toggle('hidden',!hasG);$('enDayGasLbl').classList.toggle('hidden',!hasG);
   if(hasG)enBars($('enDayGas'),g,{color:EN_COL.gas,min:.05,labels:g.map((_,k)=>k%3===0?String(k):''),title:t('Gas per uur'),tip:(k,v)=>String(k).padStart(2,'0')+':00: '+nl1(v,3)+' m³'});
+  const tp=r.temp,tIn=tp?tp.in:[],tOut=tp?tp.out:[],hasTI=tIn.some(v=>v!=null),hasTO=tOut.some(v=>v!=null),hasT=hasTI||hasTO;
+  ['enDayTempLbl','enDayTemp','enDayTempLegend'].forEach(x=>$(x).classList.toggle('hidden',!hasT));
+  if(hasT){const ser=[];if(hasTO)ser.push({vals:tOut,color:EN_TEMP.out});if(hasTI)ser.push({vals:tIn,color:EN_TEMP.in});
+    const f=v=>v==null?'–':nl1(v,1)+'°';
+    enLine($('enDayTemp'),ser,{labels:tOut.map((_,k)=>k%16===0?String(k/4):''),title:t('Temperatuur'),tip:k=>hhmm(k)+': '+(hasTI?t('binnen')+' '+f(tIn[k])+' · ':'')+t('buiten')+' '+f(tOut[k])});
+    $('enDayTempLegend').innerHTML=(hasTI?sw(EN_TEMP.in)+esc(t('binnen (airco bij het raam, +{n}°)',{n:nl1(tp.offset||0,1)}))+' &nbsp; ':'')+sw(EN_TEMP.out)+esc(t('buiten'))}
+  const avg=a=>{const v=a.filter(x=>x!=null);return v.length?v.reduce((x,y)=>x+y,0)/v.length:null},aIn=avg(tIn),aOut=avg(tOut);
   const tot=r.kwh.reduce((a,v)=>a+(v||0),0),peak=Math.max(...w.map(v=>v||0)),pk=w.indexOf(peak),totB=(r.back||[]).reduce((a,v)=>a+(v||0),0),totS=sol.reduce((a,v)=>a+(v||0),0)/4000;
   const dd=ds.find(x=>x.date===d)||{},c=enCostDay(dd);
   enDayTot=r.kwh.some(v=>v!=null)?tot:null;enSplitLoad();
   const plugTot=plq.reduce((a,p)=>a+p.quarters.reduce((x,v)=>x+(v||0),0),0);
   // samenvatting als kleine vakjes onder de datum (geen lange zin tussen de grafieken)
   const cell=(k,v)=>`<div><small>${esc(t(k))}</small><b>${esc(v)}</b></div>`;
-  $('enDaySum').innerHTML=noMeter?(plugTot>0?cell('Stekkers tot nu',nl1(plugTot,2)+' kWh'):'')
-    :cell('Totaal',nl1(tot,2)+' kWh')+cell(t('Piek')+' '+hhmm(pk),nl1(peak,0)+' W')+(totB>0?cell('Terug',nl1(totB,2)+' kWh'):'')+(hasS?cell('Opwek',nl1(totS,2)+' kWh'):'')+(c!=null?cell('Kosten','≈ '+enEUR(c)):'')}
+  const tcell=(aIn!=null?cell('Binnen',nl1(aIn,1)+'°'):'')+(aOut!=null?cell('Buiten',nl1(aOut,1)+'°'):'');
+  $('enDaySum').innerHTML=noMeter?(plugTot>0?cell('Stekkers tot nu',nl1(plugTot,2)+' kWh'):'')+tcell
+    :cell('Totaal',nl1(tot,2)+' kWh')+cell(t('Piek')+' '+hhmm(pk),nl1(peak,0)+' W')+(totB>0?cell('Terug',nl1(totB,2)+' kWh'):'')+(hasS?cell('Opwek',nl1(totS,2)+' kWh'):'')+(c!=null?cell('Kosten','≈ '+enEUR(c)):'')+tcell}
 /* ---------- Energie: extra blokken (deze maand, jaarafrekening, apparaten, patronen) ----------
    enAll: dagen van het laatste jaar (voor vergelijken en de jaarafrekening); enMonthsLong: 25 maanden (vorig jaar);
    enPlugsAll: stekkers met kWh per dag; enProfile: patronen (de hub rekent die uit de kwartieren). */
