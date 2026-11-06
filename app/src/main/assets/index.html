@@ -286,7 +286,12 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum{grid-template-columns:repeat(3,minmax(0,1fr))!important}.endaysum b{white-space:nowrap;font-size:16px}.endaysum small.ensub{white-space:nowrap}
 .entable small.encsplit{display:block;font-size:11px;opacity:.75;font-weight:400;line-height:1.3;margin-top:2px;white-space:nowrap}
-.huistabs{margin:0 0 10px;display:flex}.huistabs .btn{flex:1}#pkTab:not(:empty){background:#3f6fa8;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}.pkrow .stname small{opacity:.8}.pkic{width:40px;height:40px;padding:0!important;min-width:0;font-size:22px;line-height:1;display:inline-flex;align-items:center;justify-content:center;margin-left:6px}.pkic span{display:inline-block}.pkic.busy span{animation:pkspin 1s linear infinite}@keyframes pkspin{to{transform:rotate(360deg)}}.pkrow .stname{cursor:pointer}.pkrow{min-height:57px;box-sizing:border-box;padding-left:12px;border-top:0!important;border-bottom:1px solid rgba(58,28,14,.15)}#pkList .pksect{margin:22px -8px 0;border:0;background:rgba(58,28,14,.1);border-radius:4px;padding:5px 8px;display:flex;align-items:center;gap:6px}.pkcnt{background:rgba(58,28,14,.18);border-radius:9px;padding:0 7px;font-size:12px}#pkList .sect:first-child{margin-top:0}.pkrow .pksub{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pkrow.open .pksub{white-space:normal}.pkrow .stname b::after{content:' ▸';opacity:.5;font-size:.8em}.pkrow.open .stname b::after{content:' ▾'}.pkrow.open{border-bottom:0}
+.huistabs{margin:0 0 10px;display:flex}.huistabs .btn{flex:1}#pkTab:not(:empty){background:#3f6fa8;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}.pkrow .stname small{opacity:.8}.mailgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px;margin:8px 0 4px}
+.mailth{display:block;padding:0;border:3px solid var(--ink);border-radius:4px;background:#fff;overflow:hidden;aspect-ratio:3/2;cursor:pointer;font-size:28px;text-align:center;line-height:2.4}
+.mailth img{width:100%;height:100%;object-fit:cover;display:block}
+.mailbig{position:fixed;inset:0;z-index:20;background:rgba(20,10,20,.85);display:flex;align-items:center;justify-content:center;padding:16px}
+.mailbig img{max-width:100%;max-height:85vh;border:4px solid var(--ink);background:#fff}.mailbig #mailBigX{position:absolute;top:calc(12px + env(safe-area-inset-top));right:12px}
+.pkic{width:40px;height:40px;padding:0!important;min-width:0;font-size:22px;line-height:1;display:inline-flex;align-items:center;justify-content:center;margin-left:6px}.pkic span{display:inline-block}.pkic.busy span{animation:pkspin 1s linear infinite}@keyframes pkspin{to{transform:rotate(360deg)}}.pkrow .stname{cursor:pointer}.pkrow{min-height:57px;box-sizing:border-box;padding-left:12px;border-top:0!important;border-bottom:1px solid rgba(58,28,14,.15)}#pkList .pksect{margin:22px -8px 0;border:0;background:rgba(58,28,14,.1);border-radius:4px;padding:5px 8px;display:flex;align-items:center;gap:6px}.pkcnt{background:rgba(58,28,14,.18);border-radius:9px;padding:0 7px;font-size:12px}#pkList .sect:first-child{margin-top:0}.pkrow .pksub{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pkrow.open .pksub{white-space:normal}.pkrow .stname b::after{content:' ▸';opacity:.5;font-size:.8em}.pkrow.open .stname b::after{content:' ▾'}.pkrow.open{border-bottom:0}
 .pkdet{padding:2px 0 10px 16px;font-size:14px}.pkfacts{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:0 0 8px}.pkfacts dt{opacity:.7}.pkfacts dd{margin:0;overflow-wrap:anywhere}
 .pktl{list-style:none;margin:0;padding:0 0 0 12px;border-left:2px solid rgba(58,28,14,.25)}.pktl li{position:relative;padding:3px 0 5px 8px;display:flex;flex-direction:column}
 .pktl li::before{content:'';position:absolute;left:-19px;top:8px;width:10px;height:10px;border-radius:50%;background:#e8d4a8;border:2px solid rgba(58,28,14,.4)}.pktl li.now::before{background:#e8a33a;border-color:#7a4a12}
@@ -748,6 +753,11 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 </section>
 </div>
 <div id="huisPakketjes" class="hidden">
+<section class="panel hidden" id="mailPanel">
+  <h2 style="margin:0 0 6px">Post</h2>
+  <div id="mailList"></div>
+</section>
+<div class="mailbig hidden" id="mailBig" role="dialog" aria-label="Brief"><img id="mailBigImg" alt=""><button class="btn" id="mailBigX" aria-label="Sluiten">✕</button></div>
 <section class="panel" id="pkPanel">
   <div class="row" style="align-items:center"><h2 style="margin:0;flex:1">Pakketjes</h2><button class="btn gold pkic hidden" id="pkPlus" aria-label="Pakketje toevoegen" title="Pakketje toevoegen">+</button><button class="btn pkic" id="pkRefresh" aria-label="Vernieuwen" title="Vernieuwen"><span>↻</span></button></div>
   <div class="hint" id="pkState" style="margin-top:4px"></div>
@@ -3234,7 +3244,16 @@ function pkDetHtml(k){const d=pkDet[k];if(!d||d.loading)return `<p class="hint" 
   const facts=(d.facts||[]).map(([a,b])=>`<dt>${esc(t(a))}</dt><dd>${esc(b)}</dd>`).join('');
   const ev=(d.events||[]).map((e,i)=>`<li${i===0?' class="now"':''}><span class="pkt">${esc(when(e.t))}</span><span>${esc(e.text)}${e.place?` <small>· ${esc(e.place)}</small>`:''}</span></li>`).join('');
   return (facts?`<dl class="pkfacts">${facts}</dl>`:'')+(ev?`<ol class="pktl">${ev}</ol>`:`<p class="hint" style="margin:0">${esc(t('Nog geen stappen bekend.'))}</p>`)}
-function pkRender(){const r=pkData||{},on=pkItems.filter(x=>x.dir==='in'&&!x.delivered).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
+/* Post (PostNL MyMail): foto's van de enveloppen die vandaag (of de laatste dagen) komen, nieuwste eerst */
+function mailRender(){const L=((pkData&&pkData.letters)||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
+  const err=pkData&&pkData.mailError;$('mailPanel').classList.toggle('hidden',!L.length&&!err);
+  const day=d=>{if(!d)return '';const n=pkDayN(new Date(d+'T12:00:00'));return n===0?t('Vandaag'):n===-1?t('Gisteren'):pkDay(new Date(d+'T12:00:00'))};
+  const groups=[];for(const l of L){const k=day(l.date)||l.title;let g=groups.find(x=>x.k===k);if(!g)groups.push(g={k,a:[]});g.a.push(l)}
+  $('mailList').innerHTML=(err&&!L.length?`<p class="hint" style="margin:0">${esc(err)}</p>`:'')
+    +groups.map(g=>`<div class="sect pksect">${esc(g.k)} <span class="pkcnt">${g.a.length}</span></div><div class="mailgrid">`
+      +g.a.map(l=>l.img?`<button class="mailth" data-mail="${esc(l.id)}" aria-label="${esc(t('Brief van {d} bekijken',{d:g.k}))}"><img loading="lazy" alt="" src="/api/post/img?id=${encodeURIComponent(l.id)}"></button>`:`<div class="mailth">✉</div>`).join('')+`</div>`).join('');
+  $('mailList').querySelectorAll('[data-mail]').forEach(b=>b.onclick=()=>{$('mailBigImg').src='/api/post/img?id='+encodeURIComponent(b.dataset.mail);$('mailBig').classList.remove('hidden')})}
+function pkRender(){mailRender();const r=pkData||{},on=pkItems.filter(x=>x.dir==='in'&&!x.delivered).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
   const since=Date.now()-14*864e5,recent=x=>!x.deliveredAt||new Date(x.deliveredAt)>since;
   const done=pkItems.filter(x=>x.dir==='in'&&x.delivered&&recent(x)).sort((a,b)=>(b.deliveredAt||'').localeCompare(a.deliveredAt||'')).slice(0,10);
   const out=pkItems.filter(x=>x.dir==='out'&&(!x.delivered||recent(x)));
@@ -3260,6 +3279,8 @@ function pkRender(){const r=pkData||{},on=pkItems.filter(x=>x.dir==='in'&&!x.del
     const r=await api('/api/pakketjes/remove',{key:b.dataset.pkdel});if(r.ok){pkData=r;pkItems=r.items||[];pkRender()}})}
 const pkNewShow=on=>{$('pkNew').classList.toggle('hidden',!on);$('pkPlus').classList.toggle('hidden',on);
   if(on){try{$('pkPc').value=localStorage.getItem('pkPc')||''}catch(e){}$('pkCode').focus()}else{$('pkCode').value='';$('pkName').value=''}};
+$('mailBig').onclick=e=>{if(e.target.id!=='mailBigImg')$('mailBig').classList.add('hidden')};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('mailBig').classList.add('hidden')});
 $('pkPlus').onclick=()=>pkNewShow(true);$('pkCancel').onclick=()=>pkNewShow(false);
 $('pkAdd').onclick=async()=>{const c=$('pkCode').value.trim();if(!c){$('pkCode').focus();return}const b=$('pkAdd');b.disabled=true;b.textContent=t('Bezig...');
   try{const pc=$('pkPc').value.trim();try{localStorage.setItem('pkPc',pc)}catch(e){}
