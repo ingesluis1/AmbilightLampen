@@ -286,7 +286,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum{grid-template-columns:repeat(3,minmax(0,1fr))!important}.endaysum b{white-space:nowrap;font-size:16px}.endaysum small.ensub{white-space:nowrap}
 .entable small.encsplit{display:block;font-size:11px;opacity:.75;font-weight:400;line-height:1.3;margin-top:2px;white-space:nowrap}
-.huistabs{margin:0 0 10px;display:flex}.huistabs .btn{flex:1}#pkTab:not(:empty){background:#3f6fa8;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}.pkrow .stname small{opacity:.8}.pkcar{background:#ffcc00;color:#d40511;font-weight:700;border-radius:3px;padding:0 4px;font-size:11px}.pkrow .btn.red{padding:4px 10px}.pkrow.today .stname b{color:#b05a10}#stockLowTab:not(:empty){background:#b33a2a;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}
+.huistabs{margin:0 0 10px;display:flex}.huistabs .btn{flex:1}#pkTab:not(:empty){background:#3f6fa8;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}.pkrow .stname small{opacity:.8}.pkcar{background:#ffcc00;color:#d40511;font-weight:700;border-radius:3px;padding:0 4px;font-size:11px}.pkcar.dpd{background:#dc0032;color:#fff}.pkcar.vintedgo{background:#007782;color:#fff}.pkrow .btn.red{padding:4px 10px}.pkrow.today .stname b{color:#b05a10}#stockLowTab:not(:empty){background:#b33a2a;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}
 .entabs{margin:8px 0 2px;width:100%;display:flex}.entabs .btn{flex:1}
 .endaysum small.ensub{font-size:11px;opacity:.75;margin-top:1px}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
@@ -950,6 +950,20 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <input type="password" id="dhKey" placeholder="DHL API Key" autocomplete="new-password">
   <div class="row" style="margin-top:8px"><button class="btn gold grow" id="dhSave">Opslaan en testen</button><button class="btn" id="dhTest">Testen</button><button class="btn red" id="dhClear">Wissen</button></div>
   <div class="hint" id="dhState"></div>
+  </details>
+  <details class="apigrp" id="dpPanel"><summary><b>DPD</b> <span class="hint" id="dpSum"></span></summary>
+  <p style="margin:0 0 8px">Je DPD-pakketjes automatisch, met je <b>myDPD</b>-account (e-mail en wachtwoord van de myDPD-app). Het wachtwoord blijft op de server.</p>
+  <input type="email" id="dpEmail" placeholder="E-mailadres myDPD" autocomplete="off" autocapitalize="off">
+  <input type="password" id="dpPass" placeholder="Wachtwoord myDPD" autocomplete="new-password" style="margin-top:6px">
+  <div class="row" style="margin-top:8px"><button class="btn gold grow" id="dpSave">Koppelen</button><button class="btn red" id="dpClear">Wissen</button></div>
+  <div class="hint" id="dpState"></div>
+  </details>
+  <details class="apigrp" id="vgPanel"><summary><b>Vinted Go</b> <span class="hint" id="vgSum"></span></summary>
+  <p style="margin:0 0 8px">Je Vinted Go-pakketjes automatisch, zonder wachtwoord: vul je e-mailadres in, Vinted Go mailt je een link. Kopieer die link (niet openen) en plak hem hier.</p>
+  <div class="row"><input type="email" id="vgEmail" class="grow" placeholder="E-mailadres Vinted" autocomplete="off" autocapitalize="off"><button class="btn" id="vgSend">Stuur link</button></div>
+  <input type="text" id="vgLink" placeholder="Link uit de mail" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:6px">
+  <div class="row" style="margin-top:8px"><button class="btn gold grow" id="vgConfirm">Koppelen</button><button class="btn red" id="vgClear">Wissen</button></div>
+  <div class="hint" id="vgState"></div>
   </details>
   <div class="sect">Overig</div>
   <details class="apigrp" id="poPanel"><summary><b>Meldingen (Pushover)</b> <span class="hint" id="poState"></span></summary>
@@ -3196,10 +3210,11 @@ $('stockAdd').onclick=async()=>{const n=$('stockName').value.trim();if(!n){$('st
 let pkItems=[],pkData=null;
 const pkLoc=()=>I18N.lang==='en'?'en-GB':'nl-NL';
 const pkHm=d=>d.toLocaleTimeString(pkLoc(),{hour:'2-digit',minute:'2-digit'});
+const PK_CAR={dhl:'DHL',dpd:'DPD',vintedgo:'Vinted Go'};
 function pkDayN(d){const a=new Date();a.setHours(0,0,0,0);const b=new Date(d);b.setHours(0,0,0,0);return Math.round((b-a)/864e5)}
 function pkDay(d){const n=pkDayN(d);if(n===0)return t('vandaag');if(n===1)return t('morgen');if(n===-1)return t('gisteren');return d.toLocaleDateString(pkLoc(),{weekday:'short',day:'numeric',month:'short'})}
 function pkWhen(x){if(x.delivered){if(!x.deliveredAt)return t('bezorgd');const d=new Date(x.deliveredAt);return t('bezorgd {d} om {h}',{d:pkDay(d),h:pkHm(d)})}
-  if(!x.from)return '';const f=new Date(x.from),u=x.to?new Date(x.to):null;
+  if(!x.from)return '';if(x.from.length<=10)return pkDay(new Date(x.from+'T12:00:00'));const f=new Date(x.from),u=x.to?new Date(x.to):null;
   return pkDay(f)+' '+(u&&+u!==+f?pkHm(f)+'–'+pkHm(u):pkHm(f))}
 async function pkLoad(){if(!SRV)return;try{const r=await api('/api/pakketjes');if(r.ok){pkData=r;pkItems=r.items||[];pkRender()}}catch(e){}}
 function pkRender(){const r=pkData||{},on=pkItems.filter(x=>x.dir==='in'&&!x.delivered).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
@@ -3207,14 +3222,14 @@ function pkRender(){const r=pkData||{},on=pkItems.filter(x=>x.dir==='in'&&!x.del
   const done=pkItems.filter(x=>x.dir==='in'&&x.delivered&&recent(x)).sort((a,b)=>(b.deliveredAt||'').localeCompare(a.deliveredAt||'')).slice(0,10);
   const out=pkItems.filter(x=>x.dir==='out'&&(!x.delivered||recent(x)));
   $('pkTab').textContent=on.length?String(on.length):'';
-  const any=r.configured||r.dhl||pkItems.length;$('pkPlus').classList.toggle('hidden',!r.dhl||!$('pkNew').classList.contains('hidden'));
+  const any=r.configured||r.dhl||r.accounts||pkItems.length;$('pkPlus').classList.toggle('hidden',!r.dhl||!$('pkNew').classList.contains('hidden'));
   $('pkState').textContent=!any?t('Nog niet gekoppeld. Koppel PostNL of DHL bij Instellingen, API-sleutels.'):!r.configured?'':r.error?r.error:r.at?t('Bijgewerkt om {h}',{h:pkHm(new Date(r.at))}):t('Even geduld, de pakketjes worden opgehaald...');
   $('pkRefresh').classList.toggle('hidden',!any);
   const st=x=>x.status&&x.status!=='Pakket is bezorgd'?x.status:'';
-  const row=x=>{const w=pkWhen(x),today=!x.delivered&&x.from&&pkDayN(new Date(x.from))===0;
+  const row=x=>{const w=pkWhen(x),today=!x.delivered&&x.from&&pkDayN(new Date(x.from.length<=10?x.from+'T12:00:00':x.from))===0;
     return `<div class="strow pkrow${today?' today':''}"><span class="stname"><b>${esc(x.sender||x.title||x.barcode||'')}</b>${x.sender&&x.title&&x.title!==x.sender?` <small>${esc(x.title)}</small>`:''}`
-    +`<br><small>${x.carrier==='dhl'?'<span class="pkcar">DHL</span> ':''}${esc(st(x))}${st(x)&&w?' · ':''}${esc(w)}${x.error?' · '+esc(x.error):''}</small></span>`
-    +(x.url?`<a class="btn" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(t(x.carrier==='dhl'?'Bekijk bij DHL':'Bekijk bij PostNL'))}">↗</a>`:'')
+    +`<br><small>${PK_CAR[x.carrier]?`<span class="pkcar ${x.carrier}">${PK_CAR[x.carrier]}</span> `:''}${esc(st(x))}${st(x)&&w?' · ':''}${esc(w)}${x.error?' · '+esc(x.error):''}</small></span>`
+    +(x.url?`<a class="btn" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(t('Bekijk bij {c}',{c:PK_CAR[x.carrier]||'PostNL'}))}">↗</a>`:'')
     +(x.manual?`<button class="btn red" data-pkdel="${esc(x.key)}" aria-label="${esc(t('Weghalen'))}">✕</button>`:'')+`</div>`};
   const sect=(h,a)=>a.length?`<div class="sect">${esc(t(h))}</div>`+a.map(row).join(''):'';
   $('pkList').innerHTML=any?((sect('Onderweg',on)+sect('Bezorgd',done)+sect('Verstuurd',out))||`<p class="hint" style="margin:0">${esc(t('Geen pakketjes onderweg.'))}</p>`):'';
@@ -3241,6 +3256,16 @@ async function dhDo(path,body,btn){const b=$(btn),old=b.textContent;b.disabled=t
 $('dhSave').onclick=()=>dhDo('/api/dhl/save',{key:$('dhKey').value},'dhSave');
 $('dhTest').onclick=()=>dhDo('/api/dhl/test',{},'dhTest');
 $('dhClear').onclick=()=>{if(confirm(t('DHL-key van de server wissen?')))dhDo('/api/dhl/clear',{},'dhClear')};
+function acUI(p,s){if(!s)return;$(p+'Sum').textContent=s.authLost?t('verlopen'):s.configured?(s.error?'!':'✓'):'';
+  $(p+'State').textContent=s.authLost?t('De koppeling is verlopen. Log opnieuw in.'):s.configured?t('Gekoppeld')+(s.user?' · '+s.user:'')+(s.error?' · '+s.error:''):t('Nog niet gekoppeld.');
+  $(p+'Clear').classList.toggle('hidden',!s.configured&&!s.authLost)}
+async function acDo(p,path,body,btn,done){const b=$(btn),old=b.textContent;b.disabled=true;b.textContent=t('Bezig...');
+  try{const r=await api(path,body||{});toast(r.message||'');acUI(p,r);if(r.ok&&done)done()}finally{b.disabled=false;b.textContent=old}}
+$('dpSave').onclick=()=>acDo('dp','/api/dpd/save',{email:$('dpEmail').value,password:$('dpPass').value},'dpSave',()=>{$('dpPass').value='';setTimeout(pkLoad,8000)});
+$('dpClear').onclick=()=>{if(confirm(t('DPD-gegevens van de server wissen?')))acDo('dp','/api/dpd/clear',{},'dpClear')};
+$('vgSend').onclick=()=>acDo('vg','/api/vintedgo/register',{email:$('vgEmail').value},'vgSend',()=>$('vgLink').focus());
+$('vgConfirm').onclick=()=>acDo('vg','/api/vintedgo/confirm',{link:$('vgLink').value},'vgConfirm',()=>{$('vgLink').value='';setTimeout(pkLoad,8000)});
+$('vgClear').onclick=()=>{if(confirm(t('Vinted Go-koppeling van de server wissen?')))acDo('vg','/api/vintedgo/clear',{},'vgClear')};
 $('pnClear').onclick=async()=>{if(!confirm(t('PostNL-koppeling van de server wissen?')))return;const r=await api('/api/postnl/clear',{});toast(r.message||'');pnUI(r);pkLoad()};
 /* Tab Huis: subtabjes Energie en Voorraad (later meer, bv. pakketjes); de keuze onthouden */
 let huisTab='energie';try{huisTab=localStorage.getItem('huisTab')||'energie'}catch(e){}
@@ -4087,7 +4112,7 @@ function eneUI(s){if(!s)return;const ph=(id,base,set)=>{$(id).placeholder=t(base
   const r=s.test;let txt=s.configured?t('Ingevuld.'):t('Nog niet (helemaal) ingevuld.');
   if(r)txt=r.ok?t('Verbonden. Meetpunten: {p}',{p:(r.points||[]).map(p=>p.label+(p.dayMax?' ('+t('t/m {d}',{d:p.dayMax.slice(0,10)})+')':'')).join(', ')||t('geen')}):t('Fout: {e}',{e:r.error});
   $('eneState').textContent=txt;$('eneClear').classList.toggle('hidden',!s.configured&&!s.email)}
-async function eneLoad(){if(!SRV)return;try{eneUI(await api('/api/enelogic'))}catch(e){}try{gwUI(await api('/api/growatt'))}catch(e){}try{pnUI(await api('/api/postnl'))}catch(e){}try{dhUI(await api('/api/dhl'))}catch(e){}}
+async function eneLoad(){if(!SRV)return;try{eneUI(await api('/api/enelogic'))}catch(e){}try{gwUI(await api('/api/growatt'))}catch(e){}try{pnUI(await api('/api/postnl'))}catch(e){}try{dhUI(await api('/api/dhl'))}catch(e){}try{const d=await api('/api/dpd');acUI('dp',d);if(d.user&&!$('dpEmail').value)$('dpEmail').value=d.user}catch(e){}try{const v=await api('/api/vintedgo');acUI('vg',v);if(v.user&&!$('vgEmail').value)$('vgEmail').value=v.user}catch(e){}}
 /* Growatt: het wachtwoord komt nooit terug; het veld toont alleen "al ingevuld" */
 function gwUI(s){if(!s)return;$('gwToken').placeholder=t('Growatt API-token')+(s.configured?' · '+t('al ingevuld'):'');
   const r=s.test;let txt=s.configured?t('Ingevuld.'):t('Nog niet (helemaal) ingevuld.');
