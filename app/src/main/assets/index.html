@@ -3422,7 +3422,8 @@ function enMonthUI(){const A=enAll,box=$('enMonth'),sw=c=>`<i class="ensw" style
   let h=`<div class="enkpi">
     <div data-info="${iNow}"><small>${esc(nowLbl)}</small><b>${T?esc(enEUR0(cNow,true)):esc(nl1(kNow,0)+' kWh')}</b><small>${esc(nl1(kNow,0)+' kWh'+(hasG?' · '+nl1(gNow,0)+' m³':''))}</small></div>
     ${whole?'':`<div data-info="${iExp}"><small>${esc(t('Verwachting hele maand'))}</small><b>${T?esc(enEUR0(cNow*f,true)):esc(nl1(kNow*f,0)+' kWh')}</b><small>${esc(nl1(kNow*f,0)+' kWh'+(hasG?' · '+nl1(gNow*f,0)+' m³':''))}</small></div>`}`;
-  if(pds.length===n){const pk=enSumL(pds,'kwh'),pg=enSumL(pds,'gas');
+  // Vergelijking met de maand ervoor: weggelaten (Inge, 06-11-2026: niet interessant); alleen vorig jaar
+  if(false&&pds.length===n){const pk=enSumL(pds,'kwh'),pg=enSumL(pds,'gas');
     const iP=enInfo([[t('Stroom nu / toen'),nl1(kNow,1)+' / '+nl1(pk,1)+' kWh'],...(hasG?[[t('Gas nu / toen'),nl1(gNow,1)+' / '+nl1(pg,1)+' m³']]:[]),[t('Kosten nu / toen'),enEUR(cNow)+' / '+enEUR(enCostL(pds))],t('Telkens de eerste {n} dagen van de maand.',{n})]);
     // Stroom en gas elk een eigen vakje: procent, en de hoeveelheden nu en toen
     const lbl=t('t.o.v. 1–{n} {m}',{m:enMonName(pm),n});
