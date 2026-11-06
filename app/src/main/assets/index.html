@@ -286,7 +286,12 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum{grid-template-columns:repeat(3,minmax(0,1fr))!important}.endaysum b{white-space:nowrap;font-size:16px}.endaysum small.ensub{white-space:nowrap}
 .entable small.encsplit{display:block;font-size:11px;opacity:.75;font-weight:400;line-height:1.3;margin-top:2px;white-space:nowrap}
-.huistabs{margin:0 0 10px;display:flex}.huistabs .btn{flex:1}#pkTab:not(:empty){background:#3f6fa8;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}.pkrow .stname small{opacity:.8}.pkcar{background:#ffcc00;color:#d40511;font-weight:700;border-radius:3px;padding:0 4px;font-size:11px}.pkcar.dpd{background:#dc0032;color:#fff}.pkcar.vintedgo{background:#007782;color:#fff}.pkrow .btn.red{padding:4px 10px}.pkrow.today .stname b{color:#b05a10}#stockLowTab:not(:empty){background:#b33a2a;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}
+.huistabs{margin:0 0 10px;display:flex}.huistabs .btn{flex:1}#pkTab:not(:empty){background:#3f6fa8;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}.pkrow .stname small{opacity:.8}.pkrow .stname{cursor:pointer}.pkrow .stname b::after{content:' ▸';opacity:.5;font-size:.8em}.pkrow.open .stname b::after{content:' ▾'}.pkrow.open{border-bottom:0}
+.pkdet{padding:2px 0 10px 4px;font-size:14px}.pkfacts{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:0 0 8px}.pkfacts dt{opacity:.7}.pkfacts dd{margin:0;overflow-wrap:anywhere}
+.pktl{list-style:none;margin:0;padding:0 0 0 12px;border-left:2px solid rgba(58,28,14,.25)}.pktl li{position:relative;padding:3px 0 5px 8px;display:flex;flex-direction:column}
+.pktl li::before{content:'';position:absolute;left:-19px;top:8px;width:10px;height:10px;border-radius:50%;background:#e8d4a8;border:2px solid rgba(58,28,14,.4)}.pktl li.now::before{background:#e8a33a;border-color:#7a4a12}
+.pktl li.now>span:last-child{font-weight:600}.pktl .pkt{font-size:12px;opacity:.7}
+.pkcar{background:#ffcc00;color:#d40511;font-weight:700;border-radius:3px;padding:0 4px;font-size:11px}.pkcar.dpd{background:#dc0032;color:#fff}.pkcar.dragonfly{background:#1b2a4a;color:#fff}.pkcar.gls{background:#061ab1;color:#ffd100}.pkcar.trunkrs{background:#201047;color:#00d963}.pkcar.budbee{background:#3fb06b;color:#fff}#pkCarrier{max-width:40%}.pkcar.vintedgo{background:#007782;color:#fff}.pkrow .btn.red{padding:4px 10px}.pkrow.today .stname b{color:#b05a10}#stockLowTab:not(:empty){background:#b33a2a;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}
 .entabs{margin:8px 0 2px;width:100%;display:flex}.entabs .btn{flex:1}
 .endaysum small.ensub{font-size:11px;opacity:.75;margin-top:1px}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
@@ -749,8 +754,9 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div id="pkList" style="margin-top:6px"></div>
   <button class="btn gold hidden" id="pkPlus" style="margin-top:8px">+ Pakketje</button>
   <div class="hidden" id="pkNew" style="margin-top:8px">
-    <input type="text" id="pkCode" placeholder="DHL-trackingcode" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false">
-    <div class="row" style="margin-top:6px"><input type="text" id="pkPc" class="grow" placeholder="Postcode (voor meer details)" maxlength="10" autocomplete="postal-code" autocapitalize="characters"><input type="text" id="pkName" class="grow" placeholder="Wat is het? (mag leeg)" maxlength="40" autocomplete="off"></div>
+    <div class="row"><input type="text" id="pkCode" class="grow" placeholder="Trackingcode" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <select id="pkCarrier" aria-label="Bezorger"><option value="auto">Automatisch</option><option value="dhl">DHL</option><option value="dragonfly">DragonFly</option><option value="gls">GLS</option><option value="trunkrs">Trunkrs</option><option value="budbee">Budbee</option></select></div>
+    <div class="row" style="margin-top:6px"><input type="text" id="pkPc" class="grow" placeholder="Postcode (nodig voor GLS en Trunkrs)" maxlength="10" autocomplete="postal-code" autocapitalize="characters"><input type="text" id="pkName" class="grow" placeholder="Wat is het? (mag leeg)" maxlength="40" autocomplete="off"></div>
     <div class="row" style="margin-top:6px"><button class="btn gold grow" id="pkAdd">Toevoegen</button><button class="btn" id="pkCancel" aria-label="Annuleren">✕</button></div>
   </div>
 </section>
@@ -3210,29 +3216,47 @@ $('stockAdd').onclick=async()=>{const n=$('stockName').value.trim();if(!n){$('st
 let pkItems=[],pkData=null;
 const pkLoc=()=>I18N.lang==='en'?'en-GB':'nl-NL';
 const pkHm=d=>d.toLocaleTimeString(pkLoc(),{hour:'2-digit',minute:'2-digit'});
-const PK_CAR={dhl:'DHL',dpd:'DPD',vintedgo:'Vinted Go'};
+const PK_CAR={dhl:'DHL',dpd:'DPD',vintedgo:'Vinted Go',dragonfly:'DragonFly',gls:'GLS',trunkrs:'Trunkrs',budbee:'Budbee'};
 function pkDayN(d){const a=new Date();a.setHours(0,0,0,0);const b=new Date(d);b.setHours(0,0,0,0);return Math.round((b-a)/864e5)}
 function pkDay(d){const n=pkDayN(d);if(n===0)return t('vandaag');if(n===1)return t('morgen');if(n===-1)return t('gisteren');return d.toLocaleDateString(pkLoc(),{weekday:'short',day:'numeric',month:'short'})}
 function pkWhen(x){if(x.delivered){if(!x.deliveredAt)return t('bezorgd');const d=new Date(x.deliveredAt);return t('bezorgd {d} om {h}',{d:pkDay(d),h:pkHm(d)})}
   if(!x.from)return '';if(x.from.length<=10)return pkDay(new Date(x.from+'T12:00:00'));const f=new Date(x.from),u=x.to?new Date(x.to):null;
   return pkDay(f)+' '+(u&&+u!==+f?pkHm(f)+'–'+pkHm(u):pkHm(f))}
 async function pkLoad(){if(!SRV)return;try{const r=await api('/api/pakketjes');if(r.ok){pkData=r;pkItems=r.items||[];pkRender()}}catch(e){}}
+/* Detail van een pakketje (uitklappen): tijdlijn en gegevens, opgehaald bij de bezorger via de hub */
+const pkOpen=new Set(),pkDet={};
+async function pkDetLoad(k,dir){if(pkDet[k]&&pkDet[k].ok&&Date.now()-pkDet[k].at<120000)return;pkDet[k]={loading:true};
+  try{const r=await api('/api/pakketjes/detail?key='+encodeURIComponent(k)+'&dir='+encodeURIComponent(dir||'in'));pkDet[k]={...r,at:Date.now()}}
+  catch(e){pkDet[k]={ok:false,message:t('Details ophalen lukt nu niet.')}}
+  const box=document.querySelector(`[data-pkdet="${CSS.escape(k)}"]`);if(box)box.innerHTML=pkDetHtml(k)}
+function pkDetHtml(k){const d=pkDet[k];if(!d||d.loading)return `<p class="hint" style="margin:0">${esc(t('Even geduld...'))}</p>`;
+  if(!d.ok)return `<p class="hint" style="margin:0">${esc(d.message||t('Details ophalen lukt nu niet.'))}</p>`;
+  const when=s=>{if(!s)return '';const x=new Date(s);if(isNaN(x))return '';return pkDay(x)+' '+pkHm(x)};
+  const facts=(d.facts||[]).map(([a,b])=>`<dt>${esc(t(a))}</dt><dd>${esc(b)}</dd>`).join('');
+  const ev=(d.events||[]).map((e,i)=>`<li${i===0?' class="now"':''}><span class="pkt">${esc(when(e.t))}</span><span>${esc(e.text)}${e.place?` <small>· ${esc(e.place)}</small>`:''}</span></li>`).join('');
+  return (facts?`<dl class="pkfacts">${facts}</dl>`:'')+(ev?`<ol class="pktl">${ev}</ol>`:`<p class="hint" style="margin:0">${esc(t('Nog geen stappen bekend.'))}</p>`)}
 function pkRender(){const r=pkData||{},on=pkItems.filter(x=>x.dir==='in'&&!x.delivered).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
   const since=Date.now()-14*864e5,recent=x=>!x.deliveredAt||new Date(x.deliveredAt)>since;
   const done=pkItems.filter(x=>x.dir==='in'&&x.delivered&&recent(x)).sort((a,b)=>(b.deliveredAt||'').localeCompare(a.deliveredAt||'')).slice(0,10);
   const out=pkItems.filter(x=>x.dir==='out'&&(!x.delivered||recent(x)));
   $('pkTab').textContent=on.length?String(on.length):'';
-  const any=r.configured||r.dhl||r.accounts||pkItems.length;$('pkPlus').classList.toggle('hidden',!r.dhl||!$('pkNew').classList.contains('hidden'));
-  $('pkState').textContent=!any?t('Nog niet gekoppeld. Koppel PostNL of DHL bij Instellingen, API-sleutels.'):!r.configured?'':r.error?r.error:r.at?t('Bijgewerkt om {h}',{h:pkHm(new Date(r.at))}):t('Even geduld, de pakketjes worden opgehaald...');
+  const any=true;$('pkPlus').classList.toggle('hidden',!$('pkNew').classList.contains('hidden'));
+  const none=!(r.configured||r.dhl||r.accounts||pkItems.length);
+  $('pkState').textContent=none?t('Koppel PostNL, DPD of Vinted Go bij Instellingen, API-sleutels, of voeg een pakketje toe met een code.'):!r.configured?'':r.error?r.error:r.at?t('Bijgewerkt om {h}',{h:pkHm(new Date(r.at))}):t('Even geduld, de pakketjes worden opgehaald...');
   $('pkRefresh').classList.toggle('hidden',!any);
   const st=x=>x.status&&x.status!=='Pakket is bezorgd'?x.status:'';
   const row=x=>{const w=pkWhen(x),today=!x.delivered&&x.from&&pkDayN(new Date(x.from.length<=10?x.from+'T12:00:00':x.from))===0;
-    return `<div class="strow pkrow${today?' today':''}"><span class="stname"><b>${esc(x.sender||x.title||x.barcode||'')}</b>${x.sender&&x.title&&x.title!==x.sender?` <small>${esc(x.title)}</small>`:''}`
+    const open=pkOpen.has(x.key);
+    return `<div class="strow pkrow${today?' today':''}${open?' open':''}" data-pkkey="${esc(x.key)}" data-pkdir="${esc(x.dir)}"><span class="stname" role="button" tabindex="0" aria-expanded="${open}"><b>${esc(x.sender||x.title||x.barcode||'')}</b>${x.sender&&x.title&&x.title!==x.sender?` <small>${esc(x.title)}</small>`:''}`
     +`<br><small>${PK_CAR[x.carrier]?`<span class="pkcar ${x.carrier}">${PK_CAR[x.carrier]}</span> `:''}${esc(st(x))}${st(x)&&w?' · ':''}${esc(w)}${x.error?' · '+esc(x.error):''}</small></span>`
     +(x.url?`<a class="btn" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(t('Bekijk bij {c}',{c:PK_CAR[x.carrier]||'PostNL'}))}">↗</a>`:'')
-    +(x.manual?`<button class="btn red" data-pkdel="${esc(x.key)}" aria-label="${esc(t('Weghalen'))}">✕</button>`:'')+`</div>`};
+    +(x.manual?`<button class="btn red" data-pkdel="${esc(x.key)}" aria-label="${esc(t('Weghalen'))}">✕</button>`:'')+`</div>`
+    +(open?`<div class="pkdet" data-pkdet="${esc(x.key)}">${pkDetHtml(x.key)}</div>`:'')};
   const sect=(h,a)=>a.length?`<div class="sect">${esc(t(h))}</div>`+a.map(row).join(''):'';
   $('pkList').innerHTML=any?((sect('Onderweg',on)+sect('Bezorgd',done)+sect('Verstuurd',out))||`<p class="hint" style="margin:0">${esc(t('Geen pakketjes onderweg.'))}</p>`):'';
+  $('pkList').querySelectorAll('.pkrow .stname').forEach(n=>{const go=()=>{const row=n.closest('.pkrow'),k=row.dataset.pkkey;
+      if(pkOpen.has(k))pkOpen.delete(k);else{pkOpen.add(k);pkDetLoad(k,row.dataset.pkdir)}pkRender()};
+    n.onclick=go;n.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});
   $('pkList').querySelectorAll('[data-pkdel]').forEach(b=>b.onclick=async()=>{if(!b.dataset.sure){b.dataset.sure=1;b.textContent=t('Zeker?');return}
     const r=await api('/api/pakketjes/remove',{key:b.dataset.pkdel});if(r.ok){pkData=r;pkItems=r.items||[];pkRender()}})}
 const pkNewShow=on=>{$('pkNew').classList.toggle('hidden',!on);$('pkPlus').classList.toggle('hidden',on);
@@ -3240,7 +3264,7 @@ const pkNewShow=on=>{$('pkNew').classList.toggle('hidden',!on);$('pkPlus').class
 $('pkPlus').onclick=()=>pkNewShow(true);$('pkCancel').onclick=()=>pkNewShow(false);
 $('pkAdd').onclick=async()=>{const c=$('pkCode').value.trim();if(!c){$('pkCode').focus();return}const b=$('pkAdd');b.disabled=true;b.textContent=t('Bezig...');
   try{const pc=$('pkPc').value.trim();try{localStorage.setItem('pkPc',pc)}catch(e){}
-    const r=await api('/api/pakketjes/add',{code:c,postcode:pc,name:$('pkName').value.trim()});toast(r.message||'');
+    const r=await api('/api/pakketjes/add',{code:c,postcode:pc,name:$('pkName').value.trim(),carrier:$('pkCarrier').value});toast(r.message||'');
     if(r.ok){pkData=r;pkItems=r.items||[];pkNewShow(false);pkRender()}}finally{b.disabled=false;b.textContent=t('Toevoegen')}};
 $('pkRefresh').onclick=async()=>{const b=$('pkRefresh');b.disabled=true;try{await api('/api/pakketjes/refresh',{});await new Promise(r=>setTimeout(r,5000));await pkLoad()}finally{b.disabled=false}};
 /* PostNL koppelen (Instellingen): inloglink openen, postnl://login?code=... plakken */
