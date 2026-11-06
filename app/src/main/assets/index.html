@@ -284,6 +284,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .strow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(58,28,14,.15)}.strow:first-child{border-top:0}.strow>b{min-width:2.2ch;text-align:center;font-size:18px}.strow .btn{padding:4px 12px;min-width:0}.strow .stname{flex:1;min-width:0}.strow.low .stname{color:#b33a2a;font-weight:600}.strow.low .stname small{font-weight:400}.strow.ed{flex-wrap:wrap}.stlow{color:#b33a2a;font-size:14px;margin-left:6px}
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum{grid-template-columns:repeat(3,minmax(0,1fr))!important}.endaysum b{white-space:nowrap;font-size:16px}.endaysum small.ensub{white-space:nowrap}
+.entable small.encsplit{display:block;font-size:11px;opacity:.75;font-weight:400;line-height:1.3;margin-top:2px;white-space:nowrap}
 .entabs{margin:8px 0 2px;width:100%;display:flex}.entabs .btn{flex:1}
 .endaysum small.ensub{font-size:11px;opacity:.75;margin-top:1px}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
@@ -3237,6 +3238,10 @@ function enCostGas(x){if(x.gas==null)return null;let c=null;for(const [P,f] of e
 function enBackValue(x){if(x.back==null)return null;let c=null;for(const [P,f,,sal] of enParts(x)){const pr=sal?P.stroom:P.terug;if(pr!=null)c=(c||0)+x.back*f*pr}return c}
 function enFixed(x){let c=0;for(const [P,,days] of enParts(x))c+=((P.vast||0)-(P.korting||0)/12)*12/365*days;return c}
 function enCostDay(x){const a=enCostStroom(x),b=enCostGas(x);if(a==null&&b==null)return null;return (a||0)+(b||0)+enFixed(x)}
+/* Alleen het vaste deel (vastrecht en netbeheer min korting) van een dag of maand met verbruik; de rest is verbruik */
+function enFixedOf(x){return enCostStroom(x)==null&&enCostGas(x)==null?0:enFixed(x)}
+/* Vast (vastrecht en netbeheer) en korting (vermindering energiebelasting) los: [vast, korting] */
+function enFixedParts(x){if(enCostStroom(x)==null&&enCostGas(x)==null)return [0,0];let v=0,k=0;for(const [P,,days] of enParts(x)){v+=(P.vast||0)*12/365*days;k+=(P.korting||0)/365*days}return [v,k]}
 /* Contracten: een kaartje per periode (naam, van-tot, prijzen). Bewerken gebeurt in een kopie; opslaan stuurt alle periodes. */
 let enCon=null,enConDirty=false;
 const enConFields=[['stroom','Stroom per kWh (normaal)','0,25'],['stroomDal','Stroom per kWh, daltarief (als je dat hebt)','zelfde'],['terug','Teruglevering per kWh','0,05'],
@@ -3273,17 +3278,19 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   // Overzicht als tabel: rijen = periode, kolommen = stroom, gas, kosten (cijfers in een gewoon lettertype)
   const M=enMonths&&enMonths.ok?enMonths.months.filter(m=>m.kwh!=null||m.gas!=null):[],T=enHasT();
   const mlab=m=>new Date(m+'-15T12:00:00').toLocaleDateString(I18N.lang==='en'?'en-GB':'nl-NL',{month:'short',year:'2-digit'});
-  const rows=[[enDate(r.last),'',last.kwh,last.gas,T?enCostDay(last):null,1,2],
-    [t('Deze maand'),t('{n} dagen',{n:month.filter(d=>d.kwh!=null).length}),sum('kwh',month),sum('gas',month),T?month.reduce((a,d)=>a+(enCostDay(d)||0),0):null,0,1]];
+  const fx=l=>l.reduce((a,d)=>{const p=enFixedParts(d);return [a[0]+p[0],a[1]+p[1]]},[0,0]);
+  const rows=[[enDate(r.last),'',last.kwh,last.gas,T?enCostDay(last):null,1,2,T?enFixedParts(last):[0,0]],
+    [t('Deze maand'),t('{n} dagen',{n:month.filter(d=>d.kwh!=null).length}),sum('kwh',month),sum('gas',month),T?month.reduce((a,d)=>a+(enCostDay(d)||0),0):null,0,1,T?fx(month):[0,0]]];
   if(M.length)rows.push([t('{n} maanden',{n:M.length}),mlab(M[0].month)+' – '+mlab(M[M.length-1].month),M.reduce((a,m)=>a+(m.kwh||0),0),M.reduce((a,m)=>a+(m.gas||0),0),
-    T?M.reduce((a,m)=>a+(enCostDay(m)||0),0):null,0,0]);
+    T?M.reduce((a,m)=>a+(enCostDay(m)||0),0):null,0,0,T?fx(M):[0,0]]);
   const sw=c=>`<i class="ensw" style="background:${c}"></i>`;
   let h=`<table class="entable"><thead><tr><th></th><th>${sw(EN_COL.kwh)}${esc(t('Stroom'))}</th>${r.gas?`<th>${sw(EN_COL.gas)}${esc(t('Gas'))}</th>`:''}${T?`<th>${esc(t('Kosten'))}</th>`:''}</tr></thead><tbody>`;
-  for(const [p,sub,k,g,c,dk,dg] of rows)h+=`<tr><th scope="row">${esc(p)}${sub?`<small>${esc(sub)}</small>`:''}</th><td>${nl1(k,dk)}<small> kWh</small></td>${r.gas?`<td>${nl1(g,dg)}<small> m³</small></td>`:''}${T?`<td>${c==null?'–':enEUR0(c,dk===0&&dg===0)}</td>`:''}</tr>`;
+  const costTd=(c,[v,k],whole)=>c==null?'–':enEUR0(c,whole)+`<small class="encsplit">${esc(t('verbruik'))} ${enEUR0(c-v+k,whole)}<br>${esc(t('vast'))} ${enEUR0(v,whole)}${k>0?`<br>${esc(t('korting'))} −${enEUR0(k,whole)}`:''}</small>`;
+  for(const [p,sub,k,g,c,dk,dg,f] of rows)h+=`<tr><th scope="row">${esc(p)}${sub?`<small>${esc(sub)}</small>`:''}</th><td>${nl1(k,dk)}<small> kWh</small></td>${r.gas?`<td>${nl1(g,dg)}<small> m³</small></td>`:''}${T?`<td>${costTd(c,f,dk===0&&dg===0)}</td>`:''}</tr>`;
   h+='</tbody></table>';
   const backs=[[last.back,t('op {d}',{d:enDate(r.last)}),1],[sum('back',month),t('deze maand'),0]].concat(M.length?[[M.reduce((a,m)=>a+(m.back||0),0),t('in {n} maanden',{n:M.length}),0]]:[]).filter(x=>x[0]>0);
   if(backs.length)h+=`<p class="ennote">${esc(t('Teruggeleverd'))}: ${backs.map(([v,l,d])=>nl1(v,d)+' kWh '+esc(l)).join(' · ')}</p>`;
-  if(T)h+=`<p class="ennote">${esc(t('Kosten zijn een schatting met de tarieven die toen golden, inclusief vaste kosten en korting. Tot en met 2026 telt je teruglevering mee via saldering.'))}</p>`;
+  if(T)h+=`<p class="ennote">${esc(t('Kosten zijn een schatting met de tarieven die toen golden. Vast = vastrecht en netbeheer; korting = vermindering energiebelasting. Tot en met 2026 telt je teruglevering mee via saldering.'))}</p>`;
   const sn=r.solarNow,fcs=r.solarFc||{},fT=fcs[enToday()],tm=new Date();tm.setDate(tm.getDate()+1);const fM=fcs[tm.getFullYear()+'-'+String(tm.getMonth()+1).padStart(2,'0')+'-'+String(tm.getDate()).padStart(2,'0')];
   const fTxt=(fT!=null?' · '+t('verwacht {n} kWh',{n:nl1(fT,1)}):'')+(fM!=null?' · '+t('morgen {n} kWh',{n:nl1(fM,1)}):'');
   if(sn&&sn.ok)h+=`<p class="ennote">${esc(t('Zonnepanelen'))}: ${esc(t('vandaag {a} kWh · nu {b} W · totaal {c} kWh',{a:nl1(sn.today,1),b:nl1(sn.power,0),c:nl1(sn.total,0)})+fTxt)}</p>`;
@@ -3371,7 +3378,7 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   const solCell=(hasS||fcd!=null)?`<div><small>${esc(t('Opwek'))}</small><b>${hasS?esc(nl1(totS,2)+' kWh'):'–'}</b>${fcd!=null?sub(t('verwacht {n}',{n:nl1(fcd,1)})):''}</div>`:'';
   const tcell=solCell+(aIn!=null||aOut!=null?`<div><small>${esc(t('Binnen'))}</small><b>${aIn!=null?esc(nl1(aIn,1)+'°'):'–'}</b>${aOut!=null?sub(t('buiten {n}°',{n:nl1(aOut,1)})):''}</div>`:'');
   $('enDaySum').innerHTML=noMeter?(plugTot>0?cell('Stekkers tot nu',nl1(plugTot,2)+' kWh'):'')+tcell
-    :cell('Totaal',nl1(tot,2)+' kWh')+cell(t('Piek')+' '+hhmm(pk),nl1(peak,0)+' W')+(totB>0?cell('Terug',nl1(totB,2)+' kWh'):'')+(c!=null?cell('Kosten','≈ '+enEUR(c)):'')+tcell}
+    :cell('Totaal',nl1(tot,2)+' kWh')+cell(t('Piek')+' '+hhmm(pk),nl1(peak,0)+' W')+(totB>0?cell('Terug',nl1(totB,2)+' kWh'):'')+(c!=null?`<div><small>${esc(t('Kosten'))}</small><b>≈ ${esc(enEUR(c))}</b><small class="ensub">${esc(t('verbruik'))} ${esc(enEUR(c-enFixedParts(dd)[0]+enFixedParts(dd)[1]))}</small><small class="ensub">${esc(t('vast'))} ${esc(enEUR(enFixedParts(dd)[0]))}</small>${enFixedParts(dd)[1]>0?`<small class="ensub">${esc(t('korting'))} −${esc(enEUR(enFixedParts(dd)[1]))}</small>`:''}</div>`:'')+tcell}
 /* ---------- Energie: extra blokken (deze maand, jaarafrekening, apparaten, patronen) ----------
    enAll: dagen van het laatste jaar (voor vergelijken en de jaarafrekening); enMonthsLong: 25 maanden (vorig jaar);
    enPlugsAll: stekkers met kWh per dag; enProfile: patronen (de hub rekent die uit de kwartieren). */
@@ -3417,7 +3424,7 @@ function enMonthUI(){const A=enAll,box=$('enMonth');if(!A||!enData){box.innerHTM
     ${whole?'':`<div data-info="${iExp}"><small>${esc(t('Verwachting hele maand'))}</small><b>${T?esc(enEUR0(cNow*f,true)):esc(nl1(kNow*f,0)+' kWh')}</b><small>${esc(nl1(kNow*f,0)+' kWh'+(hasG?' · '+nl1(gNow*f,0)+' m³':''))}</small></div>`}`;
   if(pds.length===n){const pk=enSumL(pds,'kwh'),pg=enSumL(pds,'gas');
     const iP=enInfo([[t('Stroom nu / toen'),nl1(kNow,1)+' / '+nl1(pk,1)+' kWh'],...(hasG?[[t('Gas nu / toen'),nl1(gNow,1)+' / '+nl1(pg,1)+' m³']]:[]),[t('Kosten nu / toen'),enEUR(cNow)+' / '+enEUR(enCostL(pds))],t('Telkens de eerste {n} dagen van de maand.',{n})]);
-    h+=`<div data-info="${iP}"><small>${esc(t('t.o.v. {m}, eerste {n} dagen',{m:enMonName(pm),n}))}</small><b>${enDelta(enPct(kNow,pk))||'–'}</b><small>${esc(t('stroom'))}${hasG?' · '+esc(t('gas'))+' '+(enDelta(enPct(gNow,pg))||'–'):''}</small></div>`}
+    h+=`<div data-info="${iP}"><small>${esc(t('verbruik t.o.v. 1–{n} {m}',{m:enMonName(pm),n}))}</small><b>${enDelta(enPct(kNow,pk))||'–'}</b><small>${esc(t('stroom'))}${hasG?' · '+esc(t('gas'))+' '+(enDelta(enPct(gNow,pg))||'–'):''}</small></div>`}
   if(lm){const iL=enInfo([[t('Stroom verwacht / toen'),nl1(kNow*f,0)+' / '+nl1(lm.kwh,0)+' kWh'],...(hasG&&lm.gas?[[t('Gas verwacht / toen'),nl1(gNow*f,0)+' / '+nl1(lm.gas,0)+' m³']]:[]),t('Verwacht = je gemiddelde per dag tot nu, keer de hele maand.')]);
     h+=`<div data-info="${iL}"><small>${esc(t('t.o.v. {m}',{m:enMonName(ly,{month:'long',year:'numeric'})}))}</small><b>${enDelta(enPct(kNow*f,lm.kwh))||'–'}</b><small>${esc(t('stroom, verwacht vs. toen'))}${hasG&&lm.gas?' · '+esc(t('gas'))+' '+(enDelta(enPct(gNow*f,lm.gas))||'–'):''}</small></div>`}
   box.innerHTML=h+'</div>';enInfoWire(box)}
