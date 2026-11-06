@@ -702,6 +702,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="ennote hidden" id="enDayTempLegend"></div>
   <div class="enlbl hidden" id="enDaySolarLbl">Opwek per kwartier (zonnepanelen)</div>
   <div class="enchart small hidden" id="enDaySolar"></div>
+  <div class="ennote hidden" id="enDaySolarLegend"></div>
   <div id="enSplitBox" class="hidden">
     <div class="row" style="align-items:center;margin-top:10px"><div class="enlbl grow" style="margin:0">Waar ging de stroom heen?</div>
       <div class="seg" id="enSplitSeg"><button class="btn on" data-s="day">Deze dag</button><button class="btn" data-s="month">Deze maand</button></div></div>
@@ -3246,7 +3247,9 @@ function enDays(){const r=enData,ds=r.days,last=ds[ds.length-1]||{},lbl=ds.map(d
   const backs=[[last.back,t('op {d}',{d:enDate(r.last)}),1],[sum('back',month),t('deze maand'),0]].concat(M.length?[[M.reduce((a,m)=>a+(m.back||0),0),t('in {n} maanden',{n:M.length}),0]]:[]).filter(x=>x[0]>0);
   if(backs.length)h+=`<p class="ennote">${esc(t('Teruggeleverd'))}: ${backs.map(([v,l,d])=>nl1(v,d)+' kWh '+esc(l)).join(' · ')}</p>`;
   if(T)h+=`<p class="ennote">${esc(t('Kosten zijn een schatting met de tarieven die toen golden, inclusief vaste kosten en korting. Tot en met 2026 telt je teruglevering mee via saldering.'))}</p>`;
-  const sn=r.solarNow;if(sn&&sn.ok)h+=`<p class="ennote">${esc(t('Zonnepanelen'))}: ${esc(t('vandaag {a} kWh · nu {b} W · totaal {c} kWh',{a:nl1(sn.today,1),b:nl1(sn.power,0),c:nl1(sn.total,0)}))}</p>`;
+  const sn=r.solarNow,fcs=r.solarFc||{},fT=fcs[enToday()],tm=new Date();tm.setDate(tm.getDate()+1);const fM=fcs[tm.getFullYear()+'-'+String(tm.getMonth()+1).padStart(2,'0')+'-'+String(tm.getDate()).padStart(2,'0')];
+  const fTxt=(fT!=null?' · '+t('verwacht {n} kWh',{n:nl1(fT,1)}):'')+(fM!=null?' · '+t('morgen {n} kWh',{n:nl1(fM,1)}):'');
+  if(sn&&sn.ok)h+=`<p class="ennote">${esc(t('Zonnepanelen'))}: ${esc(t('vandaag {a} kWh · nu {b} W · totaal {c} kWh',{a:nl1(sn.today,1),b:nl1(sn.power,0),c:nl1(sn.total,0)})+fTxt)}</p>`;
   $('enTiles').innerHTML=h;
   enTarUI();
   const sel=ds.findIndex(d=>d.date===enDay),pick=i=>{enDay=ds[i].date;enDays();enDayLoad()};
@@ -3292,8 +3295,10 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
     tip:(k,v,b)=>hhmm(k)+'–'+hhmm(k+1)+': '+t(noMeter?'stekkers samen {n} W':'verbruik {n} W',{n:nl1(v||0,0)})+(b?' · '+t('terug {n} W',{n:nl1(b,0)}):'')+stack.filter(st=>st.vals[k]>=1).map(st=>' · '+st.name+' '+nl1(st.vals[k],0)+' W').join('')});
   const sw=c=>`<i class="ensw" style="background:${c}"></i>`,noE=!r.kwh.some(v=>v!=null);
   $('enDayLegend').innerHTML=noE&&stack.length?esc(t('Alleen de stekkers: de meter van het hele huis komt meestal de volgende dag.'))+stack.map(st=>' &nbsp; '+sw(st.color)+esc(st.name)).join(''):noE?esc(t('Stroom en gas van deze dag komen pas binnen als je netbeheerder ze doorgeeft (meestal de volgende dag).')):sw(EN_COL.kwh)+esc(t('verbruik (omhoog)'))+(hasB?' &nbsp; '+sw(EN_COL.back)+esc(t('teruglevering (omlaag)')):'')+stack.map(st=>' &nbsp; '+sw(st.color)+esc(st.name)).join('');
-  const sol=r.solarW||[],hasS=sol.some(v=>v>0);$('enDaySolar').classList.toggle('hidden',!hasS);$('enDaySolarLbl').classList.toggle('hidden',!hasS);
-  if(hasS)enBars($('enDaySolar'),sol,{color:EN_COL.solar,min:100,labels:sol.map((_,k)=>k%4===0?String(k/4):''),title:t('Opwek per kwartier'),tip:(k,v)=>hhmm(k)+'–'+hhmm(k+1)+': '+t('opwek {n} W',{n:nl1(v||0,0)})});
+  const sol=r.solarW||[],hasS=sol.some(v=>v>0),fc=r.solarFc||null,hasF=!!(fc&&fc.some(v=>v>0)),showS=hasS||hasF;$('enDaySolar').classList.toggle('hidden',!showS);$('enDaySolarLbl').classList.toggle('hidden',!showS);
+  $('enDaySolarLegend').classList.toggle('hidden',!hasF);if(hasF)$('enDaySolarLegend').innerHTML=(hasS?sw(EN_COL.solar)+esc(t('opwek'))+' &nbsp; ':'')+'<i class="ensw" style="background:var(--ink);height:3px;vertical-align:middle"></i>'+esc(t('verwacht'));
+  if(showS){const sv=hasS?sol:(fc||[]).map(()=>null);enBars($('enDaySolar'),sv,{color:EN_COL.solar,min:100,ghost:hasF?fc:null,labels:sv.map((_,k)=>k%4===0?String(k/4):''),title:t('Opwek per kwartier'),
+    tip:(k,v)=>hhmm(k)+'–'+hhmm(k+1)+': '+(v!=null?t('opwek {n} W',{n:nl1(v||0,0)}):'')+(hasF&&fc[k]>0?(v!=null?' · ':'')+t('verwacht {n} W',{n:nl1(fc[k],0)}):'')})}
   const g=r.gas||[],hasG=g.some(v=>v!=null);$('enDayGas').classList.toggle('hidden',!hasG);$('enDayGasLbl').classList.toggle('hidden',!hasG);
   if(hasG)enBars($('enDayGas'),g,{color:EN_COL.gas,min:.05,labels:g.map((_,k)=>k%3===0?String(k):''),title:t('Gas per uur'),tip:(k,v)=>String(k).padStart(2,'0')+':00: '+nl1(v,3)+' m³'});
   const tp=r.temp,tIn=tp?tp.in:[],tOut=tp?tp.out:[],hasTI=tIn.some(v=>v!=null),hasTO=tOut.some(v=>v!=null),hasT=hasTI||hasTO;
@@ -3309,7 +3314,8 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   const plugTot=plq.reduce((a,p)=>a+p.quarters.reduce((x,v)=>x+(v||0),0),0);
   // samenvatting als kleine vakjes onder de datum (geen lange zin tussen de grafieken)
   const cell=(k,v)=>`<div><small>${esc(t(k))}</small><b>${esc(v)}</b></div>`;
-  const tcell=(aIn!=null?cell('Binnen',nl1(aIn,1)+'°'):'')+(aOut!=null?cell('Buiten',nl1(aOut,1)+'°'):'');
+  const fcd=enData&&enData.solarFc&&enData.solarFc[d];
+  const tcell=(fcd!=null?cell('Verwacht',nl1(fcd,1)+' kWh'):'')+(aIn!=null?cell('Binnen',nl1(aIn,1)+'°'):'')+(aOut!=null?cell('Buiten',nl1(aOut,1)+'°'):'');
   $('enDaySum').innerHTML=noMeter?(plugTot>0?cell('Stekkers tot nu',nl1(plugTot,2)+' kWh'):'')+tcell
     :cell('Totaal',nl1(tot,2)+' kWh')+cell(t('Piek')+' '+hhmm(pk),nl1(peak,0)+' W')+(totB>0?cell('Terug',nl1(totB,2)+' kWh'):'')+(hasS?cell('Opwek',nl1(totS,2)+' kWh'):'')+(c!=null?cell('Kosten','≈ '+enEUR(c)):'')+tcell}
 /* ---------- Energie: extra blokken (deze maand, jaarafrekening, apparaten, patronen) ----------
