@@ -16,7 +16,7 @@
 <link rel="stylesheet" href="/ui.css">
 <style>
 /* Safe-area: niets onder de notch, de thuisbalk of (liggend) de afgeronde hoeken; op de tv is dit allemaal 0 */
-body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+html{min-height:calc(100% + env(safe-area-inset-top))}body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
 .tabbar{position:fixed;left:0;right:0;bottom:0;padding-left:max(6px,env(safe-area-inset-left),calc(50% - 314px))!important;padding-right:max(6px,env(safe-area-inset-right),calc(50% - 314px))!important;z-index:6;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:var(--wood);border-top:4px solid var(--ink);box-shadow:inset 0 3px 0 var(--wood-lt)}
 .tabbar .btn{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;font-size:12px}
 .tabbar .ic{font-size:18px;line-height:1}
