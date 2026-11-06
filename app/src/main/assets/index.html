@@ -281,6 +281,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .badge.tvon{background:#5ac06a;border-color:#2a6a3a}.btn.tvgo{font-size:13px;padding:2px 8px;text-decoration:none;color:inherit;display:inline-block}
 .kcode{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:#fff6e4;border:1px solid #d8c090;padding:1px 4px;word-break:break-all;display:inline-block;max-width:100%}.kguide{margin:4px 0 8px;padding-left:20px;font-size:14px}.kguide li{margin:4px 0}.kact{border-top:1px solid rgba(58,28,14,.15);padding:6px 0;font-size:13px;display:flex;flex-direction:column;gap:2px}
 .hkpin{font:600 28px/1.2 ui-monospace,Consolas,monospace;letter-spacing:3px;background:#fff6e4;border:2px solid #d8c090;padding:8px 12px;display:inline-block;margin:2px 0 6px}
+.strow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(58,28,14,.15)}.strow:first-child{border-top:0}.strow>b{min-width:2.2ch;text-align:center;font-size:18px}.strow .btn{padding:4px 12px;min-width:0}.strow .stname{flex:1;min-width:0}.strow.low .stname{color:#b33a2a;font-weight:600}.strow.low .stname small{font-weight:400}.strow.ed{flex-wrap:wrap}.stlow{color:#b33a2a;font-size:14px;margin-left:6px}
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
@@ -369,6 +370,19 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <h2>Thuis</h2>
   <div class="people" id="peopleRow"></div>
   <details id="myAvatarBox" style="margin-top:10px"><summary><b>Mijn poppetje</b></summary><div id="myAvatarEd"></div></details>
+</section>
+
+<section class="panel srvonly hidden" id="stockPanel">
+  <details class="fold" id="stockFold"><summary><h2 style="display:inline;margin:0">Voorraad</h2> <span class="stlow" id="stockLow"></span></summary>
+  <div id="stockList" style="margin-top:6px"></div>
+  <button class="btn gold" id="stockPlus" style="margin-top:8px">+ Product</button>
+  <div class="hidden" id="stockNew" style="margin-top:8px">
+    <div class="row" style="align-items:center"><input type="text" id="stockName" class="grow" placeholder="Bijvoorbeeld: shampoo" maxlength="40" autocomplete="off"></div>
+    <div class="row" style="align-items:center;margin-top:6px"><label for="stockCount" style="flex:1">Nu in huis</label><input type="number" id="stockCount" value="1" min="0" max="999" inputmode="numeric" style="width:70px"></div>
+    <div class="row" style="align-items:center;margin-top:6px"><label for="stockMin" style="flex:1">Bijna op bij</label><input type="number" id="stockMin" value="1" min="0" max="99" inputmode="numeric" style="width:70px"></div>
+    <div class="row" style="margin-top:6px"><button class="btn gold grow" id="stockAdd">Toevoegen</button><button class="btn" id="stockCancel" aria-label="Annuleren">✕</button></div>
+  </div>
+  </details>
 </section>
 
 <section class="panel" id="homeMapPanel">
@@ -2687,6 +2701,30 @@ function catRender(){const box=$('catList');box.innerHTML='';if(!catEdit.length)
 $('catAdd').onclick=()=>{catEdit=catEdit||[];catEdit.push({name:'',kg:5,sprite:catSprites[0]||''});catRender()};
 $('catSave').onclick=async()=>{const bad=catEdit.find(c=>!c.name||!(c.kg>=0.5&&c.kg<=20));if(bad){toast(t('Geef elk huisdier een naam en een gewicht tussen 0,5 en 20 kg'));return}
   await api('/api/kattenbak/cats',{cats:catEdit});toast(t('Opgeslagen'));poll()};
+/* Voorraad (shampoo, wasmiddel...): - en + per product; rood = bijna op (aantal <= minimum). Bijna op staat bovenaan. */
+let stockItems=[],stockAt=0,stockEdit=null;
+async function stockLoad(){stockAt=Date.now();try{const r=await api('/api/voorraad');if(r.ok){stockItems=r.items||[];stockRender()}}catch(e){}}
+function stockRender(){const low=x=>x.count<=x.min,list=[...stockItems].sort((a,b)=>(low(b)-low(a))||a.name.localeCompare(b.name,'nl'));
+  const nLow=list.filter(low).length;$('stockLow').textContent=nLow?t('{n} bijna op',{n:nLow}):'';
+  $('stockList').innerHTML=list.length?list.map(x=>stockEdit===x.id
+    ?`<div class="strow ed"><input type="text" value="${esc(x.name)}" maxlength="40" data-sname style="flex:1;min-width:0"><label style="font-size:13px">${esc(t('bijna op bij'))}</label><input type="number" value="${x.min}" min="0" max="99" data-smin style="width:56px">
+       <button class="btn gold" data-ssave="${esc(x.id)}">${esc(t('Opslaan'))}</button><button class="btn red" data-sdel="${esc(x.id)}" aria-label="${esc(t('Weghalen'))}">✕</button></div>`
+    :`<div class="strow${low(x)?' low':''}"><button class="btn" data-sstep="-1" data-sid="${esc(x.id)}" aria-label="${esc(t('Eén minder'))}">−</button><b>${x.count}</b><button class="btn" data-sstep="1" data-sid="${esc(x.id)}" aria-label="${esc(t('Eén meer'))}">+</button>
+       <span class="stname">${esc(x.name)}${low(x)?` <small>${esc(t('bijna op'))}</small>`:''}</span><button class="btn pen" data-sedit="${esc(x.id)}" aria-label="${esc(t('Aanpassen'))}">✎</button></div>`).join('')
+    :`<p class="hint" style="margin:0">${esc(t('Nog niets. Voeg toe wat je op voorraad wilt houden.'))}</p>`;
+  const L=$('stockList');
+  L.querySelectorAll('[data-sstep]').forEach(b=>b.onclick=async()=>{const x=stockItems.find(y=>y.id===b.dataset.sid);if(!x)return;const d=+b.dataset.sstep;if(d<0&&x.count<=0)return;
+    x.count+=d;stockRender();try{const r=await api('/api/voorraad/step',{id:x.id,d});if(r.items){stockItems=r.items;stockRender()}}catch(e){}});
+  L.querySelectorAll('[data-sedit]').forEach(b=>b.onclick=()=>{stockEdit=b.dataset.sedit;stockRender()});
+  L.querySelectorAll('[data-ssave]').forEach(b=>b.onclick=async()=>{const row=b.closest('.strow');const r=await api('/api/voorraad',{id:b.dataset.ssave,name:row.querySelector('[data-sname]').value,min:+row.querySelector('[data-smin]').value||0});
+    stockEdit=null;if(r.items)stockItems=r.items;stockRender()});
+  L.querySelectorAll('[data-sdel]').forEach(b=>b.onclick=async()=>{if(!b.dataset.sure){b.dataset.sure=1;b.textContent=t('Zeker?');return}
+    const r=await api('/api/voorraad',{id:b.dataset.sdel,delete:true});stockEdit=null;if(r.items)stockItems=r.items;stockRender()})}
+const stockNewShow=on=>{$('stockNew').classList.toggle('hidden',!on);$('stockPlus').classList.toggle('hidden',on);if(on)$('stockName').focus();else{$('stockName').value='';$('stockCount').value=1;$('stockMin').value=1}};
+$('stockPlus').onclick=()=>stockNewShow(true);$('stockCancel').onclick=()=>stockNewShow(false);
+$('stockAdd').onclick=async()=>{const n=$('stockName').value.trim();if(!n){$('stockName').focus();return}
+  const r=await api('/api/voorraad',{name:n,count:+$('stockCount').value||0,min:+$('stockMin').value||0});if(!r.ok){toast(r.message||'');return}stockItems=r.items||[];stockNewShow(false);stockRender()};
+$('stockFold').addEventListener('toggle',()=>{if($('stockFold').open)stockLoad()});
 /* Apple Woning (HomeKit-brug op de hub): koppelcode en stappen, of "gekoppeld" */
 async function hkLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/homekit')}catch(e){return}
   const box=$('hkBox');if(!r.running){box.innerHTML=`<p class="hint" style="margin:0">${esc(t('De brug start niet:'))} ${esc(r.error||'')}</p>`;return}
@@ -3608,6 +3646,7 @@ let houseSceneOpen=false;
 function homeUI(){if(!S)return;roomBar();const house=isHouse();
   $('housePanel').classList.toggle('hidden',!house);$('homeMapPanel').classList.toggle('hidden',house);$('ctrlPanel').classList.toggle('hidden',house);
   $('homePeople').classList.toggle('hidden',!(SRV&&house));
+  const stockOn=SRV&&house&&S.role!=='guest';$('stockPanel').classList.toggle('hidden',!stockOn);if(stockOn&&Date.now()-stockAt>60e3)stockLoad();
   $('scenePanel').classList.toggle('hidden',house&&!houseSceneOpen);$('houseScene').classList.toggle('on',houseSceneOpen);
   if(house){houseCards();return}
   const rid=homeRoomId(),rm=roomById(rid)||{},ls=lampsIn(rid),lights=ls.filter(isLight),isTv=!!rm.tv;
