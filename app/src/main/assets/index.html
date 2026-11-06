@@ -277,7 +277,7 @@ body.guest .tabbar{grid-template-columns:1fr!important}
 body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneSaveRow{display:none!important}
 .accrow{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
 .mgrp{border-bottom:2px solid rgba(0,0,0,.15)}.mgrp>div{padding:0 0 10px}
-.apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
+.apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.sect+.apigrp{border-top:0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
 .badge.tvon{background:#5ac06a;border-color:#2a6a3a}.btn.tvgo{font-size:13px;padding:2px 8px;text-decoration:none;color:inherit;display:inline-block}
 .kcode{font-family:ui-monospace,Consolas,monospace;font-size:12px;background:#fff6e4;border:1px solid #d8c090;padding:1px 4px;word-break:break-all;display:inline-block;max-width:100%}.kguide{margin:4px 0 8px;padding-left:20px;font-size:14px}.kguide li{margin:4px 0}.kact{border-top:1px solid rgba(58,28,14,.15);padding:6px 0;font-size:13px;display:flex;flex-direction:column;gap:2px}
 .hkpin{font:600 28px/1.2 ui-monospace,Consolas,monospace;letter-spacing:3px;background:#fff6e4;border:2px solid #d8c090;padding:8px 12px;display:inline-block;margin:2px 0 6px}
@@ -286,7 +286,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum{grid-template-columns:repeat(3,minmax(0,1fr))!important}.endaysum b{white-space:nowrap;font-size:16px}.endaysum small.ensub{white-space:nowrap}
 .entable small.encsplit{display:block;font-size:11px;opacity:.75;font-weight:400;line-height:1.3;margin-top:2px;white-space:nowrap}
-.huistabs{margin:0 0 10px;display:flex}.huistabs .btn{flex:1}#stockLowTab:not(:empty){background:#b33a2a;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}
+.huistabs{margin:0 0 10px;display:flex}.huistabs .btn{flex:1}#pkTab:not(:empty){background:#3f6fa8;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}.pkrow .stname small{opacity:.8}.pkcar{background:#ffcc00;color:#d40511;font-weight:700;border-radius:3px;padding:0 4px;font-size:11px}.pkrow .btn.red{padding:4px 10px}.pkrow.today .stname b{color:#b05a10}#stockLowTab:not(:empty){background:#b33a2a;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}
 .entabs{margin:8px 0 2px;width:100%;display:flex}.entabs .btn{flex:1}
 .endaysum small.ensub{font-size:11px;opacity:.75;margin-top:1px}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
@@ -675,7 +675,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 <!-- Tabblad: Instellingen -->
 <!-- Energie (alleen op de hub): verbruik uit Enelogic -->
 <div class="page hidden" id="page-energy">
-<div class="seg huistabs" id="huisTabs" role="tablist"><button class="btn on" data-h="energie" role="tab">&#991; Energie</button><button class="btn" data-h="voorraad" role="tab">Voorraad <span class="stlow" id="stockLowTab"></span></button></div>
+<div class="seg huistabs" id="huisTabs" role="tablist"><button class="btn on" data-h="energie" role="tab">&#991; Energie</button><button class="btn" data-h="voorraad" role="tab">Voorraad <span class="stlow" id="stockLowTab"></span></button><button class="btn" data-h="pakketjes" role="tab">Pakketjes <span class="stlow" id="pkTab"></span></button></div>
 <div id="huisEnergie">
 <section class="panel">
   <h2>Energie</h2>
@@ -739,6 +739,19 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
     <div class="row" style="align-items:center;margin-top:6px"><label for="stockCount" style="flex:1">Nu in huis</label><input type="number" id="stockCount" value="1" min="0" max="999" inputmode="numeric" style="width:70px"></div>
     <div class="row" style="align-items:center;margin-top:6px"><label for="stockMin" style="flex:1">Bijna op bij</label><input type="number" id="stockMin" value="1" min="0" max="99" inputmode="numeric" style="width:70px"></div>
     <div class="row" style="margin-top:6px"><button class="btn gold grow" id="stockAdd">Toevoegen</button><button class="btn" id="stockCancel" aria-label="Annuleren">✕</button></div>
+  </div>
+</section>
+</div>
+<div id="huisPakketjes" class="hidden">
+<section class="panel" id="pkPanel">
+  <div class="row" style="align-items:center"><h2 style="margin:0;flex:1">Pakketjes</h2><button class="btn" id="pkRefresh">Vernieuwen</button></div>
+  <div class="hint" id="pkState" style="margin-top:4px"></div>
+  <div id="pkList" style="margin-top:6px"></div>
+  <button class="btn gold hidden" id="pkPlus" style="margin-top:8px">+ Pakketje</button>
+  <div class="hidden" id="pkNew" style="margin-top:8px">
+    <input type="text" id="pkCode" placeholder="DHL-trackingcode" maxlength="40" autocomplete="off" autocapitalize="characters" spellcheck="false">
+    <div class="row" style="margin-top:6px"><input type="text" id="pkPc" class="grow" placeholder="Postcode (voor meer details)" maxlength="10" autocomplete="postal-code" autocapitalize="characters"><input type="text" id="pkName" class="grow" placeholder="Wat is het? (mag leeg)" maxlength="40" autocomplete="off"></div>
+    <div class="row" style="margin-top:6px"><button class="btn gold grow" id="pkAdd">Toevoegen</button><button class="btn" id="pkCancel" aria-label="Annuleren">✕</button></div>
   </div>
 </section>
 </div>
@@ -899,7 +912,8 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 <section class="panel srvonly ownonly" id="apiPanel">
   <h2>API-sleutels</h2>
   <p class="hint" style="margin:0 0 6px">Koppelingen met andere diensten. De sleutels blijven op de server.</p>
-  <details class="apigrp" id="enePanel"><summary><b>Energie (Enelogic)</b> <span class="hint" id="eneSum"></span></summary>
+  <div class="sect">Energie</div>
+  <details class="apigrp" id="enePanel"><summary><b>Slimme meter (Enelogic)</b> <span class="hint" id="eneSum"></span></summary>
   <p style="margin:0 0 8px">Verbruik van je slimme meter via Enelogic. Vul de API-sleutel van je Enelogic-account in. Hij blijft op de server.</p>
   <input type="password" id="eneApiKey" placeholder="API-sleutel" autocomplete="new-password">
   <details style="margin-top:8px"><summary>Lukt het niet met alleen de sleutel?</summary>
@@ -917,6 +931,27 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="row" style="margin-top:8px"><button class="btn gold grow" id="gwSave">Opslaan en testen</button><button class="btn" id="gwTest">Testen</button><button class="btn red" id="gwClear">Wissen</button></div>
   <div class="hint" id="gwState"></div>
   </details>
+  <div class="sect">Pakketjes</div>
+  <details class="apigrp" id="pnPanel"><summary><b>PostNL</b> <span class="hint" id="pnSum"></span></summary>
+  <p style="margin:0 0 8px">Je pakketjes van PostNL onder Huis, Pakketjes, met een melding als er vandaag een komt en als hij bezorgd is. De hub logt in zoals de PostNL-app; je wachtwoord typ je alleen bij PostNL.</p>
+  <ol class="hint" style="margin:0 0 8px;padding-left:18px">
+    <li>Op de pc in Chrome, op déze pagina: druk op <b>F12</b>, kies <b>Console</b> en zet bij het tandwieltje <b>Preserve log</b> aan.</li>
+    <li>Klik op <b>Inloggen bij PostNL</b> (zelfde tabblad) en log in. Was je al ingelogd, dan gaat het meteen door.</li>
+    <li>De pagina wordt wit: dat hoort zo. In de Console staat een rode regel <i>Failed to launch 'postnl://login?code=…'</i>. Kopieer die hele regel.</li>
+    <li>Ga terug naar de hub (pijltje terug), plak de regel hieronder en klik op <b>Koppelen</b>. Doe het binnen een paar minuten. Lukt het in een gewoon venster niet, doe het dan in een incognitovenster.</li>
+  </ol>
+  <a class="btn gold" id="pnStart" href="/api/postnl/login" style="display:block;text-align:center;text-decoration:none">Inloggen bij PostNL</a>
+  <input type="text" id="pnCode" placeholder="postnl://login?code=..." autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:8px">
+  <div class="row" style="margin-top:8px"><button class="btn gold grow" id="pnFinish">Koppelen</button><button class="btn red" id="pnClear">Wissen</button></div>
+  <div class="hint" id="pnState"></div>
+  </details>
+  <details class="apigrp" id="dhPanel"><summary><b>DHL</b> <span class="hint" id="dhSum"></span></summary>
+  <p style="margin:0 0 8px">DHL-pakketjes volgen met de officiële DHL-API. Maak op <b>developer.dhl.com</b> een app met <i>Shipment Tracking - Unified</i> en vul de <b>API Key</b> in. Daarna voeg je onder Huis, Pakketjes een DHL-code toe met <b>+ Pakketje</b>.</p>
+  <input type="password" id="dhKey" placeholder="DHL API Key" autocomplete="new-password">
+  <div class="row" style="margin-top:8px"><button class="btn gold grow" id="dhSave">Opslaan en testen</button><button class="btn" id="dhTest">Testen</button><button class="btn red" id="dhClear">Wissen</button></div>
+  <div class="hint" id="dhState"></div>
+  </details>
+  <div class="sect">Overig</div>
   <details class="apigrp" id="poPanel"><summary><b>Meldingen (Pushover)</b> <span class="hint" id="poState"></span></summary>
     <p style="margin:6px 0 8px">Meldingen op je telefoon, bijvoorbeeld als de was klaar is. Je <b>gebruikerssleutel</b> staat op <b>pushover.net</b> bovenaan na het inloggen. Maak daar onder <i>Create an Application/API Token</i> een app "House hub" aan voor het <b>app-token</b>.</p>
     <input type="password" id="poUser" placeholder="Gebruikerssleutel (user key)" autocomplete="off">
@@ -3157,12 +3192,62 @@ const stockNewShow=on=>{$('stockNew').classList.toggle('hidden',!on);$('stockPlu
 $('stockPlus').onclick=()=>stockNewShow(true);$('stockCancel').onclick=()=>stockNewShow(false);
 $('stockAdd').onclick=async()=>{const n=$('stockName').value.trim();if(!n){$('stockName').focus();return}
   const r=await api('/api/voorraad',{name:n,count:+$('stockCount').value||0,min:+$('stockMin').value||0,icon:stockGuess(n)});if(!r.ok){toast(r.message||'');return}stockItems=r.items||[];stockNewShow(false);stockRender()};
+/* Pakketjes (PostNL, op de hub): onderweg (binnenkomend), bezorgd en verstuurd. Het tabje telt wat er onderweg is. */
+let pkItems=[],pkData=null;
+const pkLoc=()=>I18N.lang==='en'?'en-GB':'nl-NL';
+const pkHm=d=>d.toLocaleTimeString(pkLoc(),{hour:'2-digit',minute:'2-digit'});
+function pkDayN(d){const a=new Date();a.setHours(0,0,0,0);const b=new Date(d);b.setHours(0,0,0,0);return Math.round((b-a)/864e5)}
+function pkDay(d){const n=pkDayN(d);if(n===0)return t('vandaag');if(n===1)return t('morgen');if(n===-1)return t('gisteren');return d.toLocaleDateString(pkLoc(),{weekday:'short',day:'numeric',month:'short'})}
+function pkWhen(x){if(x.delivered){if(!x.deliveredAt)return t('bezorgd');const d=new Date(x.deliveredAt);return t('bezorgd {d} om {h}',{d:pkDay(d),h:pkHm(d)})}
+  if(!x.from)return '';const f=new Date(x.from),u=x.to?new Date(x.to):null;
+  return pkDay(f)+' '+(u&&+u!==+f?pkHm(f)+'–'+pkHm(u):pkHm(f))}
+async function pkLoad(){if(!SRV)return;try{const r=await api('/api/pakketjes');if(r.ok){pkData=r;pkItems=r.items||[];pkRender()}}catch(e){}}
+function pkRender(){const r=pkData||{},on=pkItems.filter(x=>x.dir==='in'&&!x.delivered).sort((a,b)=>(a.from||'9').localeCompare(b.from||'9'));
+  const since=Date.now()-14*864e5,recent=x=>!x.deliveredAt||new Date(x.deliveredAt)>since;
+  const done=pkItems.filter(x=>x.dir==='in'&&x.delivered&&recent(x)).sort((a,b)=>(b.deliveredAt||'').localeCompare(a.deliveredAt||'')).slice(0,10);
+  const out=pkItems.filter(x=>x.dir==='out'&&(!x.delivered||recent(x)));
+  $('pkTab').textContent=on.length?String(on.length):'';
+  const any=r.configured||r.dhl||pkItems.length;$('pkPlus').classList.toggle('hidden',!r.dhl||!$('pkNew').classList.contains('hidden'));
+  $('pkState').textContent=!any?t('Nog niet gekoppeld. Koppel PostNL of DHL bij Instellingen, API-sleutels.'):!r.configured?'':r.error?r.error:r.at?t('Bijgewerkt om {h}',{h:pkHm(new Date(r.at))}):t('Even geduld, de pakketjes worden opgehaald...');
+  $('pkRefresh').classList.toggle('hidden',!any);
+  const st=x=>x.status&&x.status!=='Pakket is bezorgd'?x.status:'';
+  const row=x=>{const w=pkWhen(x),today=!x.delivered&&x.from&&pkDayN(new Date(x.from))===0;
+    return `<div class="strow pkrow${today?' today':''}"><span class="stname"><b>${esc(x.sender||x.title||x.barcode||'')}</b>${x.sender&&x.title&&x.title!==x.sender?` <small>${esc(x.title)}</small>`:''}`
+    +`<br><small>${x.carrier==='dhl'?'<span class="pkcar">DHL</span> ':''}${esc(st(x))}${st(x)&&w?' · ':''}${esc(w)}${x.error?' · '+esc(x.error):''}</small></span>`
+    +(x.url?`<a class="btn" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(t(x.carrier==='dhl'?'Bekijk bij DHL':'Bekijk bij PostNL'))}">↗</a>`:'')
+    +(x.manual?`<button class="btn red" data-pkdel="${esc(x.key)}" aria-label="${esc(t('Weghalen'))}">✕</button>`:'')+`</div>`};
+  const sect=(h,a)=>a.length?`<div class="sect">${esc(t(h))}</div>`+a.map(row).join(''):'';
+  $('pkList').innerHTML=any?((sect('Onderweg',on)+sect('Bezorgd',done)+sect('Verstuurd',out))||`<p class="hint" style="margin:0">${esc(t('Geen pakketjes onderweg.'))}</p>`):'';
+  $('pkList').querySelectorAll('[data-pkdel]').forEach(b=>b.onclick=async()=>{if(!b.dataset.sure){b.dataset.sure=1;b.textContent=t('Zeker?');return}
+    const r=await api('/api/pakketjes/remove',{key:b.dataset.pkdel});if(r.ok){pkData=r;pkItems=r.items||[];pkRender()}})}
+const pkNewShow=on=>{$('pkNew').classList.toggle('hidden',!on);$('pkPlus').classList.toggle('hidden',on);
+  if(on){try{$('pkPc').value=localStorage.getItem('pkPc')||''}catch(e){}$('pkCode').focus()}else{$('pkCode').value='';$('pkName').value=''}};
+$('pkPlus').onclick=()=>pkNewShow(true);$('pkCancel').onclick=()=>pkNewShow(false);
+$('pkAdd').onclick=async()=>{const c=$('pkCode').value.trim();if(!c){$('pkCode').focus();return}const b=$('pkAdd');b.disabled=true;b.textContent=t('Bezig...');
+  try{const pc=$('pkPc').value.trim();try{localStorage.setItem('pkPc',pc)}catch(e){}
+    const r=await api('/api/pakketjes/add',{code:c,postcode:pc,name:$('pkName').value.trim()});toast(r.message||'');
+    if(r.ok){pkData=r;pkItems=r.items||[];pkNewShow(false);pkRender()}}finally{b.disabled=false;b.textContent=t('Toevoegen')}};
+$('pkRefresh').onclick=async()=>{const b=$('pkRefresh');b.disabled=true;try{await api('/api/pakketjes/refresh',{});await new Promise(r=>setTimeout(r,5000));await pkLoad()}finally{b.disabled=false}};
+/* PostNL koppelen (Instellingen): inloglink openen, postnl://login?code=... plakken */
+function pnUI(s){if(!s)return;$('pnSum').textContent=s.authLost?t('verlopen'):s.configured?'✓':'';
+  $('pnState').textContent=s.authLost?t('De koppeling is verlopen. Log opnieuw in.'):s.configured?t('Gekoppeld')+(s.user?' · '+s.user:'')+(s.error?' · '+s.error:''):t('Nog niet gekoppeld.');
+  $('pnClear').classList.toggle('hidden',!s.configured&&!s.authLost)}
+$('pnFinish').onclick=async()=>{const c=$('pnCode').value.trim();if(!c){$('pnCode').focus();return}const b=$('pnFinish');b.disabled=true;
+  try{const r=await api('/api/postnl/finish',{code:c});toast(r.message||'');pnUI(r);if(r.ok){$('pnCode').value='';setTimeout(pkLoad,6000)}}finally{b.disabled=false}};
+function dhUI(s){if(!s)return;$('dhKey').placeholder=t('DHL API Key')+(s.configured?' · '+t('al ingevuld'):'');$('dhSum').textContent=s.configured?(s.error?'!':'✓'):'';
+  $('dhState').textContent=s.configured?(s.error||t('Ingevuld.')):t('Nog niet (helemaal) ingevuld.');$('dhClear').classList.toggle('hidden',!s.configured)}
+async function dhDo(path,body,btn){const b=$(btn),old=b.textContent;b.disabled=true;b.textContent=t('Bezig...');
+  try{const r=await api(path,body||{});toast(r.message||'');dhUI(r);if(r.ok)$('dhKey').value=''}finally{b.disabled=false;b.textContent=old}}
+$('dhSave').onclick=()=>dhDo('/api/dhl/save',{key:$('dhKey').value},'dhSave');
+$('dhTest').onclick=()=>dhDo('/api/dhl/test',{},'dhTest');
+$('dhClear').onclick=()=>{if(confirm(t('DHL-key van de server wissen?')))dhDo('/api/dhl/clear',{},'dhClear')};
+$('pnClear').onclick=async()=>{if(!confirm(t('PostNL-koppeling van de server wissen?')))return;const r=await api('/api/postnl/clear',{});toast(r.message||'');pnUI(r);pkLoad()};
 /* Tab Huis: subtabjes Energie en Voorraad (later meer, bv. pakketjes); de keuze onthouden */
 let huisTab='energie';try{huisTab=localStorage.getItem('huisTab')||'energie'}catch(e){}
-function huisShow(){if(!['energie','voorraad'].includes(huisTab))huisTab='energie';
+function huisShow(){if(!['energie','voorraad','pakketjes'].includes(huisTab))huisTab='energie';
   document.querySelectorAll('#huisTabs .btn').forEach(b=>{b.classList.toggle('on',b.dataset.h===huisTab);b.setAttribute('aria-selected',b.dataset.h===huisTab)});
-  $('huisEnergie').classList.toggle('hidden',huisTab!=='energie');$('huisVoorraad').classList.toggle('hidden',huisTab!=='voorraad');
-  if(huisTab==='energie')enLoad();else stockLoad()}
+  $('huisEnergie').classList.toggle('hidden',huisTab!=='energie');$('huisVoorraad').classList.toggle('hidden',huisTab!=='voorraad');$('huisPakketjes').classList.toggle('hidden',huisTab!=='pakketjes');
+  if(huisTab==='energie')enLoad();else if(huisTab==='voorraad')stockLoad();pkLoad()}
 document.querySelectorAll('#huisTabs .btn').forEach(b=>b.onclick=()=>{huisTab=b.dataset.h;try{localStorage.setItem('huisTab',huisTab)}catch(e){}huisShow()});
 /* Apple Woning (HomeKit-brug op de hub): koppelcode en stappen, of "gekoppeld" */
 async function hkLoad(){if(!SRV||!S||S.role!=='owner')return;let r;try{r=await api('/api/homekit')}catch(e){return}
@@ -4002,7 +4087,7 @@ function eneUI(s){if(!s)return;const ph=(id,base,set)=>{$(id).placeholder=t(base
   const r=s.test;let txt=s.configured?t('Ingevuld.'):t('Nog niet (helemaal) ingevuld.');
   if(r)txt=r.ok?t('Verbonden. Meetpunten: {p}',{p:(r.points||[]).map(p=>p.label+(p.dayMax?' ('+t('t/m {d}',{d:p.dayMax.slice(0,10)})+')':'')).join(', ')||t('geen')}):t('Fout: {e}',{e:r.error});
   $('eneState').textContent=txt;$('eneClear').classList.toggle('hidden',!s.configured&&!s.email)}
-async function eneLoad(){if(!SRV)return;try{eneUI(await api('/api/enelogic'))}catch(e){}try{gwUI(await api('/api/growatt'))}catch(e){}}
+async function eneLoad(){if(!SRV)return;try{eneUI(await api('/api/enelogic'))}catch(e){}try{gwUI(await api('/api/growatt'))}catch(e){}try{pnUI(await api('/api/postnl'))}catch(e){}try{dhUI(await api('/api/dhl'))}catch(e){}}
 /* Growatt: het wachtwoord komt nooit terug; het veld toont alleen "al ingevuld" */
 function gwUI(s){if(!s)return;$('gwToken').placeholder=t('Growatt API-token')+(s.configured?' · '+t('al ingevuld'):'');
   const r=s.test;let txt=s.configured?t('Ingevuld.'):t('Nog niet (helemaal) ingevuld.');
