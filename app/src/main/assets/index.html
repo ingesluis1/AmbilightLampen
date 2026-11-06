@@ -286,7 +286,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
 .endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum{grid-template-columns:repeat(3,minmax(0,1fr))!important}.endaysum b{white-space:nowrap;font-size:16px}.endaysum small.ensub{white-space:nowrap}
 .entable small.encsplit{display:block;font-size:11px;opacity:.75;font-weight:400;line-height:1.3;margin-top:2px;white-space:nowrap}
-.huistabs{margin:0 0 10px;display:flex}.huistabs .btn{flex:1}#pkTab:not(:empty){background:#3f6fa8;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}.pkrow .stname small{opacity:.8}.pkrow .stname{cursor:pointer}.pkrow .stname b::after{content:' ▸';opacity:.5;font-size:.8em}.pkrow.open .stname b::after{content:' ▾'}.pkrow.open{border-bottom:0}
+.huistabs{margin:0 0 10px;display:flex}.huistabs .btn{flex:1}#pkTab:not(:empty){background:#3f6fa8;color:#fff;border-radius:9px;padding:0 6px;font-size:12px;margin-left:4px}.pkrow .stname small{opacity:.8}.pkrow .stname{cursor:pointer}.pkrow{min-height:57px;box-sizing:border-box}.pkrow .pksub{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pkrow.open .pksub{white-space:normal}.pkrow .stname b::after{content:' ▸';opacity:.5;font-size:.8em}.pkrow.open .stname b::after{content:' ▾'}.pkrow.open{border-bottom:0}
 .pkdet{padding:2px 0 10px 4px;font-size:14px}.pkfacts{display:grid;grid-template-columns:auto 1fr;gap:2px 12px;margin:0 0 8px}.pkfacts dt{opacity:.7}.pkfacts dd{margin:0;overflow-wrap:anywhere}
 .pktl{list-style:none;margin:0;padding:0 0 0 12px;border-left:2px solid rgba(58,28,14,.25)}.pktl li{position:relative;padding:3px 0 5px 8px;display:flex;flex-direction:column}
 .pktl li::before{content:'';position:absolute;left:-19px;top:8px;width:10px;height:10px;border-radius:50%;background:#e8d4a8;border:2px solid rgba(58,28,14,.4)}.pktl li.now::before{background:#e8a33a;border-color:#7a4a12}
@@ -3244,11 +3244,11 @@ function pkRender(){const r=pkData||{},on=pkItems.filter(x=>x.dir==='in'&&!x.del
   const none=!(r.configured||r.dhl||r.accounts||pkItems.length);
   $('pkState').textContent=none?t('Koppel PostNL, DPD of Vinted Go bij Instellingen, API-sleutels, of voeg een pakketje toe met een code.'):!r.configured?'':r.error?r.error:r.at?t('Bijgewerkt om {h}',{h:pkHm(new Date(r.at))}):t('Even geduld, de pakketjes worden opgehaald...');
   $('pkRefresh').classList.toggle('hidden',!any);
-  const st=x=>x.status&&x.status!=='Pakket is bezorgd'?x.status:'';
+  const st=x=>x.status&&!x.delivered?x.status:'';
   const row=x=>{const w=pkWhen(x),today=!x.delivered&&x.from&&pkDayN(new Date(x.from.length<=10?x.from+'T12:00:00':x.from))===0;
     const open=pkOpen.has(x.key);
     return `<div class="strow pkrow${today?' today':''}${open?' open':''}" data-pkkey="${esc(x.key)}" data-pkdir="${esc(x.dir)}"><span class="stname" role="button" tabindex="0" aria-expanded="${open}"><b>${esc(x.sender||x.title||x.barcode||'')}</b>${x.sender&&x.title&&x.title!==x.sender?` <small>${esc(x.title)}</small>`:''}`
-    +`<br><small>${PK_CAR[x.carrier]?`<span class="pkcar ${x.carrier}">${PK_CAR[x.carrier]}</span> `:''}${esc(st(x))}${st(x)&&w?' · ':''}${esc(w)}${x.error?' · '+esc(x.error):''}</small></span>`
+    +`<small class="pksub">${PK_CAR[x.carrier]?`<span class="pkcar ${x.carrier}">${PK_CAR[x.carrier]}</span> `:''}${esc(st(x))}${st(x)&&w?' · ':''}${esc(w)}${x.error?' · '+esc(x.error):''}</small></span>`
     +(x.url?`<a class="btn" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(t('Bekijk bij {c}',{c:PK_CAR[x.carrier]||'PostNL'}))}">↗</a>`:'')
     +(x.manual?`<button class="btn red" data-pkdel="${esc(x.key)}" aria-label="${esc(t('Weghalen'))}">✕</button>`:'')+`</div>`
     +(open?`<div class="pkdet" data-pkdet="${esc(x.key)}">${pkDetHtml(x.key)}</div>`:'')};
