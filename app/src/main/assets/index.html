@@ -3952,6 +3952,12 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   const sub=x=>`<small class="ensub">${esc(x)}</small>`;
   const solCell=(hasS||fcd!=null)?`<div><small>${esc(t('Opwek'))}</small><b>${hasS?esc(nl1(totS,2)+' kWh'):'–'}</b>${fcd!=null?sub(t('verwacht {n}',{n:nl1(fcd,1)})):''}</div>`:'';
   const tcell=solCell+(aIn!=null||aOut!=null?`<div><small>${esc(t('Binnen'))}</small><b>${aIn!=null?esc(nl1(aIn,1)+'°'):'–'}</b>${aOut!=null?sub(t('buiten {n}°',{n:nl1(aOut,1)})):''}</div>`:'');
+  // Tabje Gas of Temperatuur: vakjes van dat tabje (totaal, piekuur, kosten / gemiddeld, laagste, hoogste)
+  if(enDayTab==='gas'&&hasG){const gt=g.reduce((a,v)=>a+(v||0),0),gp=Math.max(...g.map(v=>v||0)),gi=g.indexOf(gp),gc=enCostGas({...dd,gas:dd.gas??gt});
+    $('enDaySum').innerHTML=cell('Totaal',nl1(gt,2)+' m³')+(gp>0?cell(t('Piek')+' '+String(gi).padStart(2,'0')+':00',nl1(gp,2)+' m³'):'')+(gc!=null?cell('Kosten','≈ '+enEUR(gc)):'')+(aOut!=null?cell('Buiten',nl1(aOut,1)+'°'):'');return}
+  if(enDayTab==='temp'&&hasT){const mm=a=>{const v=a.filter(x=>x!=null);return v.length?[Math.min(...v),Math.max(...v)]:null},mi=mm(tIn),mo=mm(tOut);
+    $('enDaySum').innerHTML=(aIn!=null?`<div><small>${esc(t('Binnen'))}</small><b>${esc(nl1(aIn,1)+'°')}</b>${mi?sub(nl1(mi[0],1)+'° – '+nl1(mi[1],1)+'°'):''}</div>`:'')
+      +(aOut!=null?`<div><small>${esc(t('Buiten'))}</small><b>${esc(nl1(aOut,1)+'°')}</b>${mo?sub(nl1(mo[0],1)+'° – '+nl1(mo[1],1)+'°'):''}</div>`:'');return}
   $('enDaySum').innerHTML=noMeter?(plugTot>0?cell('Stekkers tot nu',nl1(plugTot,2)+' kWh'):'')+tcell
     :cell('Totaal',nl1(tot,2)+' kWh')+cell(t('Piek')+' '+hhmm(pk),nl1(peak,0)+' W')+(totB>0?cell('Terug',nl1(totB,2)+' kWh'):'')+(c!=null?`<div><small>${esc(t('Kosten'))}</small><b>≈ ${esc(enEUR(c))}</b><small class="ensub">${esc(t('verbruik'))} ${esc(enEUR(c-enFixedParts(dd)[0]+enFixedParts(dd)[1]))}</small><small class="ensub">${esc(t('vast'))} ${esc(enEUR(enFixedParts(dd)[0]))}</small>${enFixedParts(dd)[1]>0?`<small class="ensub">${esc(t('korting'))} −${esc(enEUR(enFixedParts(dd)[1]))}</small>`:''}</div>`:'')+tcell}
 /* ---------- Energie: extra blokken (deze maand, jaarafrekening, apparaten, patronen) ----------
