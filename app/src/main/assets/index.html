@@ -283,7 +283,7 @@ body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneS
 .hkpin{font:600 28px/1.2 ui-monospace,Consolas,monospace;letter-spacing:3px;background:#fff6e4;border:2px solid #d8c090;padding:8px 12px;display:inline-block;margin:2px 0 6px}
 .strow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(58,28,14,.15)}.strow:first-child{border-top:0}.strow>b{min-width:2.2ch;text-align:center;font-size:18px}.strow .btn{padding:4px 12px;min-width:0}.strow .stname{flex:1;min-width:0}.strow.low .stname{color:#b33a2a;font-weight:600}.strow.low .stname small{font-weight:400}.strow.ed{flex-wrap:wrap}.stlow{color:#b33a2a;font-size:14px;margin-left:6px}
 .logday{margin-top:6px}.logday>summary{cursor:pointer;font-weight:700;padding:4px 0}.logday>summary small{font-weight:400;opacity:.7}
-.endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum{grid-template-columns:repeat(3,minmax(0,1fr))!important}.endaysum b{white-space:nowrap;font-size:16px}.endaysum small.ensub{white-space:nowrap}@media (min-width:700px){.endaysum{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+.endaysum{display:grid;grid-template-columns:repeat(auto-fit,minmax(62px,1fr));gap:6px;margin:8px 0 4px}.endaysum:empty{display:none}.endaysum>div{background:var(--cream);border:3px solid var(--ink);padding:4px 6px;font-family:var(--ensans)}.endaysum{grid-template-columns:repeat(3,minmax(0,1fr))!important}.endaysum b{white-space:nowrap;font-size:16px}.endaysum small.ensub{white-space:nowrap}
 .entabs{margin:8px 0 2px;width:100%;display:flex}.entabs .btn{flex:1}
 .endaysum small.ensub{font-size:11px;opacity:.75;margin-top:1px}.endaysum small{display:block;font-size:11px;opacity:.75}.endaysum b{display:block;font-size:15px;font-variant-numeric:tabular-nums}
 .enkpi{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:0 0 10px}.enkpi>div{background:var(--cream);border:3px solid var(--ink);padding:6px 8px}.enkpi b{display:block;font-size:20px;font-family:var(--ensans)}.enkpi small{display:block;opacity:.75;font-size:12px;font-family:var(--ensans)}.enkpi .up{color:#a02a1a}.enkpi>div[data-info]{cursor:pointer}.enkpi>div[data-info]::after{content:'ⓘ';float:right;margin-top:-34px;opacity:.5;font-size:12px}.enkpi>div.open{outline:3px solid #f0b050}.eninfo{grid-column:1/-1;background:#fff6e4;border:3px dashed var(--ink);padding:6px 8px;font-family:var(--ensans);font-size:13px}.eninfo div{display:flex;justify-content:space-between;gap:8px}.enkpi .down{color:#3a7a2a}
@@ -709,7 +709,8 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="row" style="align-items:center"><button class="btn" id="enPrev" aria-label="Dag eerder">&#9664;</button><h2 class="grow" id="enDayTitle" style="margin:0;text-align:center"></h2><button class="btn" id="enNext" aria-label="Dag later">&#9654;</button></div>
   <div class="endaysum" id="enDaySum"></div>
   <div class="seg entabs" id="enDayTabs" role="tablist"><button class="btn on" data-t="kwh" role="tab" title="Stroom per kwartier">&#991; Stroom</button><button class="btn" data-t="gas" role="tab" title="Gas per uur"><svg class="pxic" viewBox="0 0 7 9" aria-hidden="true"><path d="M3 0h1v1h-1zM3 1h1v1h-1zM4 1h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM5 3h1v1h-1zM1 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM5 4h1v1h-1zM1 5h1v1h-1zM2 5h1v1h-1zM4 5h1v1h-1zM5 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM0 7h1v1h-1zM1 7h1v1h-1zM5 7h1v1h-1zM6 7h1v1h-1zM1 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1z" fill="currentColor"/></svg> Gas</button><button class="btn" data-t="temp" role="tab" title="Temperatuur binnen en buiten"><svg class="pxic" viewBox="0 0 7 9" aria-hidden="true"><path d="M3 0h1v1h-1zM2 1h1v1h-1zM4 1h1v1h-1zM2 2h1v1h-1zM4 2h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM2 5h1v1h-1zM3 5h1v1h-1zM4 5h1v1h-1zM1 6h5v1h-5zM1 7h5v1h-5zM2 8h3v1h-3z" fill="currentColor"/></svg> Temp</button></div>
-  <div data-dt="kwh"><div class="enchart tall" id="enDay"></div><div class="ennote" id="enDayLegend"></div></div>
+  <div data-dt="kwh"><div class="enchart tall" id="enDay"></div><div class="ennote" id="enDayLegend"></div>
+    <div id="enDaySolarBox" class="hidden"><div class="enlbl">Opwek</div><div class="enchart small" id="enDaySolar"></div><div class="ennote" id="enDaySolarLegend"></div></div></div>
   <div data-dt="gas" class="hidden"><div class="enchart tall" id="enDayGas"></div></div>
   <div data-dt="temp" class="hidden"><div class="enchart tall" id="enDayTemp"></div><div class="ennote" id="enDayTempLegend"></div></div>
   <div id="enSplitBox" class="hidden">
@@ -3337,14 +3338,19 @@ async function enDayLoad(){const d=enDay;if(!d)return;$('enDayTitle').textConten
   const bw=(r.back||[]).map(v=>v==null?null:v*4000),hasB=bw.some(v=>v>0);
   // Opwek (en verwachting) als lijn in dezelfde grafiek: zelfde eenheid (W per kwartier), zo zie je wat je zelf gebruikte
   const sol=r.solarW||[],hasS=sol.some(v=>v>0),fc=r.solarFc||null,hasF=!!(fc&&fc.some(v=>v>0)),lines=[];
-  if(hasF)lines.push({vals:fc,color:EN_COL.solar,dash:'4 4',width:2,skipZero:true});if(hasS)lines.push({vals:sol,color:EN_COL.solar,skipZero:true});
   const hrs=(n,per)=>Array.from({length:n},(_,k)=>k%(6*per)===0?String(k/per):'');
   enBars($('enDay'),w,{color:EN_COL.kwh,min:100,neg:hasB?bw:null,negColor:EN_COL.back,stack:stack.length?stack:null,lines,labels:hrs(96,4),fixedLabels:true,title:t('Stroom per kwartier'),
-    tip:(k,v,b)=>hhmm(k)+'–'+hhmm(k+1)+': '+(v!=null?t(noMeter?'stekkers samen {n} W':'verbruik {n} W',{n:nl1(v||0,0)}):'')+(b?' · '+t('terug {n} W',{n:nl1(b,0)}):'')+(hasS&&sol[k]>0?' · '+t('opwek {n} W',{n:nl1(sol[k],0)}):'')+(hasF&&fc[k]>0?' · '+t('verwacht {n} W',{n:nl1(fc[k],0)}):'')+stack.filter(st=>st.vals[k]>=1).map(st=>' · '+st.name+' '+nl1(st.vals[k],0)+' W').join('')});
+    tip:(k,v,b)=>hhmm(k)+'–'+hhmm(k+1)+': '+(v!=null?t(noMeter?'stekkers samen {n} W':'verbruik {n} W',{n:nl1(v||0,0)}):'')+(b?' · '+t('terug {n} W',{n:nl1(b,0)}):'')+stack.filter(st=>st.vals[k]>=1).map(st=>' · '+st.name+' '+nl1(st.vals[k],0)+' W').join('')});
   const sw=c=>`<i class="ensw" style="background:${c}"></i>`,noE=!r.kwh.some(v=>v!=null);
   const lnSw=(c,dash)=>`<i class="ensw" style="height:3px;vertical-align:middle;background:${dash?`repeating-linear-gradient(90deg,${c} 0 4px,transparent 4px 7px)`:c}"></i>`;
   $('enDayLegend').innerHTML=(noE?(stack.length?esc(t('alleen stekkers')):esc(t('meter volgt morgen'))):sw(EN_COL.kwh)+esc(t('verbruik'))+(hasB?' &nbsp; '+sw(EN_COL.back)+esc(t('terug')):''))
-    +(hasS?' &nbsp; '+lnSw(EN_COL.solar)+esc(t('opwek')):'')+(hasF?' &nbsp; '+lnSw(EN_COL.solar,1)+esc(t('verwacht')):'')+stack.map(st=>' &nbsp; '+sw(st.color)+esc(st.name)).join('');
+    +stack.map(st=>' &nbsp; '+sw(st.color)+esc(st.name)).join('');
+  // Opwek: staafjes, verwachting als stippellijn
+  $('enDaySolarBox').classList.toggle('hidden',!(hasS||hasF));
+  if(hasS||hasF){const sv=hasS?sol:sol.map(()=>null);
+    enBars($('enDaySolar'),sv,{color:EN_COL.solar,min:50,lines:hasF?[{vals:fc,color:'var(--ink)',dash:'4 4',width:2,skipZero:true}]:[],labels:hrs(96,4),fixedLabels:true,title:t('Opwek per kwartier'),
+      tip:k=>hhmm(k)+'–'+hhmm(k+1)+': '+(hasS?t('opwek {n} W',{n:nl1(sol[k]||0,0)}):'')+(hasF&&fc[k]>0?(hasS?' · ':'')+t('verwacht {n} W',{n:nl1(fc[k],0)}):'')});
+    $('enDaySolarLegend').innerHTML=(hasS?sw(EN_COL.solar)+esc(t('opwek')):'')+(hasF?(hasS?' &nbsp; ':'')+lnSw('var(--ink)',1)+esc(t('verwacht')):'')}
   const g=r.gas||[],hasG=g.some(v=>v!=null);
   if(hasG)enBars($('enDayGas'),g,{color:EN_COL.gas,min:.05,labels:hrs(24,1),fixedLabels:true,title:t('Gas per uur'),tip:(k,v)=>String(k).padStart(2,'0')+':00: '+nl1(v,3)+' m³'});
   const tp=r.temp,tIn=tp?tp.in:[],tOut=tp?tp.out:[],hasTI=tIn.some(v=>v!=null),hasTO=tOut.some(v=>v!=null),hasT=hasTI||hasTO;
