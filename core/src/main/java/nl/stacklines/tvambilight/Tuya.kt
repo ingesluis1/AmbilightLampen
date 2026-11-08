@@ -206,6 +206,14 @@ class TuyaLamp(val lamp: Lamp, private val keepOpen: Boolean = false) {
     /** Stand opnieuw opvragen zonder te wachten (het antwoord komt in allDps). */
     fun refresh() { queryWanted = true; synchronized(lock) { lock.notifyAll() } }
 
+    /**
+     * Verbinding netjes loslaten en pas weer verbinden als er iets te doen is (Tuya). Voor als de tv uitgaat: in stand-by valt
+     * het netwerk weg en blijft de lamp aan een dode verbinding vastzitten; een 3.3-lamp weigert dan een nieuwe tot die verloopt.
+     */
+    fun park() { parkWanted = true; synchronized(lock) { lock.notifyAll() } }
+    @Volatile private var parkWanted = false
+    @Volatile private var parked = false
+
     fun noteState(d: Map<String, Any?>) {
         synchronized(known) { for (k in STATE_KEYS) d[k]?.let { known[k] = it } }
         powered = known["20"] as? Boolean
@@ -530,13 +538,18 @@ class TuyaLamp(val lamp: Lamp, private val keepOpen: Boolean = false) {
         if (ikea) { hubLoop(Dirigera); return }
         var lastSend = 0L
         var lastBeat = 0L
-        var connectedOnce = false
+        // Hub: lampen in de tv-kamer niet bij het opstarten even vastpakken (de tv kan dan net willen syncen);
+        // pas verbinden als er iets te sturen of op te vragen is
+        var connectedOnce = !keepOpen && Platform.idleCloseMs > 0 && lamp.inTvRoom
         var failSince = 0L
         val idleClose = if (keepOpen) 0L else Platform.idleCloseMs
         while (running) {
             try {
+                if (parkWanted && !hasWork()) { parkWanted = false; parked = true; if (sock != null) close() }
                 if (sock == null) {
                     if (ip.isBlank() || !lamp.supported) { online = false; sleepQuiet(2000); continue }
+                    // Losgelaten (tv uit): pas weer verbinden als er iets te sturen of op te vragen is
+                    if (parked) { if (!hasWork()) { idleWait(5000); continue }; parked = false }
                     // Server: pas verbinden als er iets te sturen is (de tv moet de lamp ook kunnen bereiken)
                     if (idleClose > 0 && connectedOnce && !hasWork()) { idleWait(5000); continue }
                     if (idleClose > 0 && lastError != null) {

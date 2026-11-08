@@ -419,6 +419,9 @@ object Engine {
     /** Eén lamp aan of uit (buiten sync en scènes). */
     fun power(id: String, on: Boolean) { syncWorkers(); workers[id]?.send(mapOf("20" to on)) }
 
+    /** Alle Tuya-verbindingen netjes loslaten (tv gaat uit); ze komen vanzelf terug bij de volgende opdracht. */
+    fun parkAll() { for (w in workers.values) w.park() }
+
     /** Alle lampen na elkaar testen, zodat je ziet welke welke is. */
     fun testAll() {
         syncWorkers()

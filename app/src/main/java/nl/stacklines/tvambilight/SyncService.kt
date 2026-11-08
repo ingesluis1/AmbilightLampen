@@ -56,17 +56,27 @@ class SyncService : Service() {
     private var offScene: Scene? = null
     /** Scherm uit/aan na elkaar afhandelen, in volgorde en niet op de hoofdthread (stoppen kan even duren). */
     private val screenQueue = java.util.concurrent.Executors.newSingleThreadExecutor()
+    /** Lampen loslaten een paar seconden na scherm uit (na het terugzetten/vloeien); scherm weer aan = niet meer nodig. */
+    private val parkTimer = java.util.concurrent.Executors.newSingleThreadScheduledExecutor()
+    @Volatile private var parkJob: java.util.concurrent.ScheduledFuture<*>? = null
 
     private val screen = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             val action = i.action
             screenQueue.execute {
                 when (action) {
-                    Intent.ACTION_SCREEN_OFF -> if (Engine.running) {
-                        pausedByScreen = true
-                        offScene = Engine.stopThen(if (Store.settings.followAmbi) SceneEngine.find(Store.settings.offScene) else null)
+                    Intent.ACTION_SCREEN_OFF -> {
+                        if (Engine.running) {
+                            pausedByScreen = true
+                            offScene = Engine.stopThen(if (Store.settings.followAmbi) SceneEngine.find(Store.settings.offScene) else null)
+                        }
+                        // In stand-by valt het netwerk weg: verbindingen nu netjes sluiten, anders blijven 3.3-lampen (spotjes)
+                        // na het aanzetten nog even aan de dode verbinding hangen. Niet als er een scène speelt (tv-uit-scène).
+                        parkJob?.cancel(false)
+                        parkJob = parkTimer.schedule({ if (!SceneEngine.anyActive() && !Engine.running) Engine.parkAll() }, 8, java.util.concurrent.TimeUnit.SECONDS)
                     }
                     Intent.ACTION_SCREEN_ON -> {
+                        parkJob?.cancel(false); parkJob = null
                         // Alleen als het nog onze scène is (niet als je intussen zelf een andere hebt gekozen)
                         offScene?.let { if (SceneEngine.active === it) SceneEngine.stop() }; offScene = null
                         if (pausedByScreen) { pausedByScreen = false; if (Store.syncWanted && AutoDark.mayAutostart()) Engine.start() }
