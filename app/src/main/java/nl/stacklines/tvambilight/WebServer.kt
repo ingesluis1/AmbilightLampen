@@ -22,6 +22,27 @@ class WebServer(private val ctx: Context) {
     var port = 0
         private set
 
+    /**
+     * Backup met sleutels alleen met een code die de tv zelf toont (3 minuten geldig, één keer te gebruiken):
+     * zo kan niet iedereen op het wifi de sleutels van de lampen ophalen.
+     */
+    @Volatile private var keyCode: Pair<String, Long>? = null
+    private fun newKeyCode(): String {
+        val c = (1000 + java.security.SecureRandom().nextInt(9000)).toString()
+        keyCode = c to SystemClock.elapsedRealtime() + 180_000
+        val text = tr("Ambilight Lampen: code voor de backup met sleutels: $c", "Ambilight Lampen: code for the backup with keys: $c")
+        // Een tekst-toast mag ook vanaf de achtergrond; twee keer, zodat hij ±7 s in beeld staat
+        android.os.Handler(android.os.Looper.getMainLooper()).post {
+            repeat(2) { android.widget.Toast.makeText(ctx, text, android.widget.Toast.LENGTH_LONG).show() }
+        }
+        return c
+    }
+    private fun useKeyCode(c: String?): Boolean {
+        val k = keyCode ?: return false
+        if (c == null || c != k.first || SystemClock.elapsedRealtime() > k.second) return false
+        keyCode = null; return true
+    }
+
     fun start(): Boolean {
         if (running) return true
         for (p in listOf(8790, 8791, 8792, 0)) {
@@ -117,6 +138,12 @@ class WebServer(private val ctx: Context) {
                         send("200 OK", "image/png", bos.toByteArray())
                     }
                     path == "/api/state" -> json(state())
+                    path == "/api/backup/code" && method == "POST" -> { newKeyCode()
+                        msg(true, tr("Kijk op de tv voor de code (3 minuten geldig)", "Look at the TV for the code (valid for 3 minutes)")) }
+                    method == "GET" && path == "/api/backup" && query.split('&').contains("keys=1") &&
+                        !useKeyCode(query.split('&').firstOrNull { it.startsWith("code=") }?.substringAfter('=')) ->
+                        send("403 Forbidden", "application/json; charset=utf-8", JSONObject().put("ok", false)
+                            .put("message", tr("Code klopt niet of is verlopen. Vraag een nieuwe.", "Code is wrong or expired. Ask for a new one.")).toString().toByteArray())
                     method == "GET" && path == "/api/backup" -> {
                         val keys = query.split('&').contains("keys=1")
                         val name = "ambilight-lampen-backup-" + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(java.util.Date()) + ".json"

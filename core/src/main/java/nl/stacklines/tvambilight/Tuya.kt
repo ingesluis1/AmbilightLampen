@@ -176,6 +176,14 @@ object TuyaCodec {
 class TuyaLamp(val lamp: Lamp, private val keepOpen: Boolean = false) {
     @Volatile var online = false
         private set
+    /**
+     * Wat de pagina als online toont. Op de hub laat de verbinding na 10 s los en blijft [online] op de laatste stand staan;
+     * zonder verbinding kijken we dan of de lamp zich nog via de UDP-melding (Discovery) meldt.
+     */
+    val shownOnline: Boolean get() =
+        if (sock == null && !keepOpen && Platform.idleCloseMs > 0 && lamp.version in setOf("3.1", "3.3", "3.4", "3.5"))
+            Discovery.heardRecently(lamp.id) && (lastError == null || online)
+        else online
     @Volatile var lastError: String? = null
         private set
     @Volatile var reconnects = 0

@@ -8,14 +8,17 @@ import java.util.Locale
 object AppLog {
     private val lines = ArrayDeque<String>()
     private var last = ""; private var repeat = 0
+    /** Ook naar de console schrijven (de hub: dan staan lampfouten in `docker logs`). */
+    @Volatile var toConsole = false
 
     @Synchronized
     fun add(msg: String) {
         // Dezelfde fout die zich steeds herhaalt (lamp die blijft weigeren) maar één keer, met een teller
         if (msg == last) { repeat++; return }
-        if (repeat > 0) lines.addLast("   (nog ${repeat}x)")
+        if (repeat > 0) lines.addLast("   (nog ${repeat}x)").also { if (toConsole) println("   (nog ${repeat}x)") }
         last = msg; repeat = 0
         lines.addLast(SimpleDateFormat("HH:mm:ss", Locale.ROOT).format(Date()) + " " + msg)
+        if (toConsole) println(java.time.LocalDateTime.now().withNano(0).toString() + " " + msg)
         while (lines.size > 40) lines.removeFirst()
     }
 

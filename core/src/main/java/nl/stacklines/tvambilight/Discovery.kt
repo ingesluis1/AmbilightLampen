@@ -17,6 +17,13 @@ object Discovery {
     /** Alle lampen die zich gemeld hebben (id naar ip en versie), ook die nog niet in de lijst staan. */
     private val seen = java.util.concurrent.ConcurrentHashMap<String, Pair<String, String>>()
     private var found: ((String, String, String) -> Unit)? = null
+    /** Wanneer elk apparaat zich voor het laatst meldde (ms, elapsedRealtime). */
+    private val heardAt = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    /** Hoe vaak we "wie is er?" vragen na de eerste minuten; de hub vraagt vaker, zodat "online" klopt zonder verbinding. */
+    @Volatile var askEveryMs = 120_000L
+
+    /** Heeft dit apparaat zich de laatste [withinMs] gemeld? */
+    fun heardRecently(id: String, withinMs: Long = 90_000) = heardAt[id]?.let { SystemClock.elapsedRealtime() - it < withinMs } == true
 
     /**
      * Lampen die net zijn toegevoegd (cloud, devices.json) meteen hun adres geven als ze zich al gemeld hadden,
@@ -46,7 +53,7 @@ object Discovery {
             while (true) {
                 try { ask() } catch (_: Exception) { }
                 n++
-                Thread.sleep(if (n < 12) 15_000L else 120_000L)
+                Thread.sleep(if (n < 12) 15_000L else askEveryMs)
             }
         }, "discovery-ask").apply { isDaemon = true; start() }
     }
@@ -69,6 +76,7 @@ object Discovery {
 
     private fun report(id: String, ip: String, version: String, onFound: (String, String, String) -> Unit) {
         seen[id] = ip to version
+        heardAt[id] = SystemClock.elapsedRealtime()
         onFound(id, ip, version)
     }
 

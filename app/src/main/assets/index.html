@@ -266,15 +266,17 @@ body.srv .tabbar .btn{font-size:11px;padding:6px 0;min-width:0}
 .netrow .row{flex-wrap:wrap;gap:6px;margin-top:6px}
 .dotg{display:inline-block;width:9px;height:9px;border-radius:50%;background:#4e8a3c;margin-right:5px}
 body.guest .rcard.add,body.member .rcard.add{display:none!important}
-body.member .tabbar .btn:not([data-tab=home]):not([data-tab=energy]){display:none!important}
-body.member .tabbar{grid-template-columns:1fr 1fr!important}
+body.member .tabbar .btn:not([data-tab=home]):not([data-tab=energy]):not([data-tab=settings]){display:none!important}
+body.member .tabbar{grid-template-columns:1fr 1fr 1fr!important}
+/* Huisgenoot: in Instellingen alleen Mijn poppetje en Meldingen */
+body.member #page-settings>:not(#wpPanel):not(#avPanel){display:none!important}
 body.member .ownonly,body.member .scard .x,body.member #fullSave,body.member #sceneSaveRow,body.member #enTarDet,body.member [data-mode],body.member [data-out]{display:none!important}
 #gate{position:fixed;inset:0;z-index:50;background:var(--void);overflow:auto;padding:0 16px}
 body.gated .tabbar,body.gated main{display:none!important}
 /* Gast: alleen Bediening, niets wat iets instelt of opslaat */
 body.guest .tabbar .btn:not([data-tab=home]){display:none!important}
 body.guest .tabbar{grid-template-columns:1fr!important}
-body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneSaveRow{display:none!important}
+body.guest #wpPanel,body.guest .ownonly,body.guest .scard .x,body.guest #fullSave,body.guest #sceneSaveRow{display:none!important}
 .accrow{background:var(--cream);border:3px solid var(--ink);padding:8px 10px;margin-top:8px}
 .mgrp{border-bottom:2px solid rgba(0,0,0,.15)}.mgrp>div{padding:0 0 10px}
 .apigrp{border-top:2px solid rgba(0,0,0,.15);padding:8px 0}.sect+.apigrp{border-top:0}.apigrp>summary{cursor:pointer}.apigrp>p:first-of-type{margin-top:6px!important}
@@ -384,7 +386,6 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 <section class="panel srvonly hidden" id="homePeople">
   <h2>Thuis</h2>
   <div class="people" id="peopleRow"></div>
-  <details id="myAvatarBox" style="margin-top:10px"><summary><b>Mijn poppetje</b></summary><div id="myAvatarEd"></div></details>
 </section>
 
 <section class="panel" id="homeMapPanel">
@@ -692,7 +693,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <p class="hint" id="enStamp" style="margin:0 0 8px"></p>
   <div id="enMonth"></div>
   <div class="entiles" id="enTiles"></div>
-  <div class="hint hidden" id="enSetup">Koppel eerst Enelogic onder Instellingen, API-sleutels.</div>
+  <div class="hint hidden" id="enSetup">Koppel eerst Enelogic onder Instellingen, Koppelingen.</div>
 </section>
 <section class="panel enneeds" id="enYearPanel">
   <h2>Jaarafrekening</h2>
@@ -753,10 +754,6 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 </section>
 </div>
 <div id="huisPakketjes" class="hidden">
-<section class="panel hidden" id="mailPanel">
-  <h2 style="margin:0 0 6px">Post</h2>
-  <div id="mailList"></div>
-</section>
 <div class="mailbig hidden" id="mailBig" role="dialog" aria-label="Brief"><img id="mailBigImg" alt=""><button class="btn" id="mailBigX" aria-label="Sluiten">✕</button></div>
 <section class="panel" id="pkPanel">
   <div class="row" style="align-items:center"><h2 style="margin:0;flex:1">Pakketjes</h2><button class="btn gold pkic hidden" id="pkPlus" aria-label="Pakketje toevoegen" title="Pakketje toevoegen">+</button><button class="btn pkic" id="pkRefresh" aria-label="Vernieuwen" title="Vernieuwen"><span>↻</span></button></div>
@@ -768,6 +765,9 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
     <div class="row" style="margin-top:6px"><input type="text" id="pkPc" class="grow" placeholder="Postcode (nodig voor GLS en Trunkrs)" maxlength="10" autocomplete="postal-code" autocapitalize="characters"><input type="text" id="pkName" class="grow" placeholder="Wat is het? (mag leeg)" maxlength="40" autocomplete="off"></div>
     <div class="row" style="margin-top:6px"><button class="btn gold grow" id="pkAdd">Toevoegen</button><button class="btn" id="pkCancel" aria-label="Annuleren">✕</button></div>
   </div>
+</section>
+<section class="panel hidden" id="mailPanel">
+  <details class="fold" id="mailFold"><summary><h2 style="display:inline;margin:0">Post</h2> <small id="mailCnt" style="opacity:.7"></small></summary><div id="mailList" style="margin-top:6px"></div></details>
 </section>
 </div>
 </div>
@@ -889,26 +889,6 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="row hidden" id="mensenNewRow" style="margin-top:10px;align-items:center"><input type="text" id="mensenNew" class="grow" placeholder="Naam" maxlength="30" autocomplete="off"><button class="btn gold" id="mensenAdd">Toevoegen</button><button class="btn" id="mensenCancel" aria-label="Annuleren">✕</button></div>
 </section>
 
-<section class="panel srvonly ownonly" id="hkPanel">
-  <details class="fold" id="hkFold"><summary><h2 style="display:inline;margin:0">Apple Woning</h2></summary>
-  <div id="hkBox" style="margin-top:8px"></div>
-  </details>
-</section>
-
-<section class="panel srvonly ownonly" id="keysPanel">
-  <details class="fold" id="keysFold"><summary><h2 style="display:inline;margin:0">Opdrachten (iPhone)</h2></summary>
-  <div id="keysList" style="margin-top:8px"></div>
-  <button class="btn gold" id="keysPlus" style="margin-top:8px">+ Sleutel</button>
-  <div class="hidden" id="keysNewRow" style="margin-top:8px">
-    <div class="row" style="align-items:center"><input type="text" id="keysName" class="grow" placeholder="Bijvoorbeeld: iPhone Inge" maxlength="40" autocomplete="off">
-      <select id="keysRole" style="width:auto"><option value="member">Huisgenoot</option><option value="owner">Hoofdgebruiker</option></select></div>
-    <div class="row" style="margin-top:6px"><button class="btn gold grow" id="keysMake">Sleutel maken</button><button class="btn" id="keysCancel" aria-label="Annuleren">✕</button></div>
-  </div>
-  <div class="hidden" id="keysNew"></div>
-  <div id="keysGuide"></div>
-  </details>
-</section>
-
 <section class="panel srvonly ownonly" id="catPanel">
   <details class="fold" id="catFold"><summary><h2 style="display:inline;margin:0">Huisdieren</h2></summary>
   <p class="hint" style="margin:8px 0 6px">Je huisdieren lopen door het huis op de kaart. Het gewicht gebruikt de kattenbak om te zien welke kat er ging.</p>
@@ -918,15 +898,28 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 </section>
 
 <section class="panel srvonly ownonly" id="logPanel">
-  <details id="logDet"><summary style="cursor:pointer"><b>Logboek</b> <span class="hint">wie deed wat</span></summary>
+  <details class="fold" id="logDet"><summary><h2 style="display:inline;margin:0">Logboek</h2> <span class="hint">wie deed wat</span></summary>
     <div class="row" style="margin-top:8px;align-items:center"><select id="logWho" class="grow" aria-label="Wie"><option value="">Iedereen</option></select><select id="logWhat" class="grow" aria-label="Wat"></select></div>
     <div id="logList"></div>
   </details>
 </section>
 
+<section class="panel srvonly" id="avPanel">
+  <details class="fold" id="myAvatarBox"><summary><h2 style="display:inline;margin:0">Mijn poppetje</h2> <span class="hint">zo zien anderen je bij Thuis</span></summary><div id="myAvatarEd"></div></details>
+</section>
+<section class="panel srvonly" id="wpPanel">
+  <details class="fold" id="wpFold"><summary><h2 style="display:inline;margin:0">Meldingen</h2> <span class="hint" id="wpState"></span></summary>
+    <p style="margin:6px 0 8px" id="wpHelp">Meldingen van de hub op deze telefoon: de was is klaar, een pakketje komt vandaag, een brief. Zet het aan op elke telefoon die ze moet krijgen en kies daarna welke.</p>
+    <div class="ownonly" id="wpViaBox"><div class="lbl">Jouw meldingen komen via</div>
+      <div class="seg" id="wpVia"><button class="btn" data-via="hub">De hub</button><button class="btn" data-via="pushover">Pushover</button><button class="btn" data-via="beide">Allebei</button></div>
+      <p class="hint" id="wpViaHint" style="margin:6px 0 0"></p></div>
+    <div class="row" style="margin-top:8px"><button class="btn gold grow" id="wpOn">Meldingen aanzetten</button><button class="btn grow hidden" id="wpTest">Testen</button><button class="btn red hidden" id="wpOff">Uitzetten</button></div>
+    <div id="wpKinds" class="hidden"><div class="lbl" style="margin-top:10px">Welke meldingen op deze telefoon</div><div id="wpKindList" style="display:grid;grid-template-columns:1fr 1fr;gap:6px"></div></div>
+  </details>
+</section>
 <section class="panel srvonly ownonly" id="apiPanel">
-  <h2>API-sleutels</h2>
-  <p class="hint" style="margin:0 0 6px">Koppelingen met andere diensten. De sleutels blijven op de server.</p>
+  <details class="fold" id="apiFold"><summary><h2 style="display:inline;margin:0">Koppelingen</h2></summary>
+  <p class="hint" style="margin:8px 0 6px">Koppelingen met andere diensten. De sleutels blijven op de server.</p>
   <div class="sect">Energie</div>
   <details class="apigrp" id="enePanel"><summary><b>Slimme meter (Enelogic)</b> <span class="hint" id="eneSum"></span></summary>
   <p style="margin:0 0 8px">Verbruik van je slimme meter via Enelogic. Vul de API-sleutel van je Enelogic-account in. Hij blijft op de server.</p>
@@ -980,6 +973,21 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="row" style="margin-top:8px"><button class="btn gold grow" id="vgConfirm">Koppelen</button><button class="btn red" id="vgClear">Wissen</button></div>
   <div class="hint" id="vgState"></div>
   </details>
+  <div class="sect">Apple</div>
+  <details class="apigrp" id="hkFold"><summary><b>Apple Woning</b></summary>
+  <div id="hkBox" style="margin-top:8px"></div>
+  </details>
+  <details class="apigrp" id="keysFold"><summary><b>Opdrachten (iPhone)</b></summary>
+  <div id="keysList" style="margin-top:8px"></div>
+  <button class="btn gold" id="keysPlus" style="margin-top:8px">+ Sleutel</button>
+  <div class="hidden" id="keysNewRow" style="margin-top:8px">
+    <div class="row" style="align-items:center"><input type="text" id="keysName" class="grow" placeholder="Bijvoorbeeld: iPhone Inge" maxlength="40" autocomplete="off">
+      <select id="keysRole" style="width:auto"><option value="member">Huisgenoot</option><option value="owner">Hoofdgebruiker</option></select></div>
+    <div class="row" style="margin-top:6px"><button class="btn gold grow" id="keysMake">Sleutel maken</button><button class="btn" id="keysCancel" aria-label="Annuleren">✕</button></div>
+  </div>
+  <div class="hidden" id="keysNew"></div>
+  <div id="keysGuide"></div>
+  </details>
   <div class="sect">Overig</div>
   <details class="apigrp" id="poPanel"><summary><b>Meldingen (Pushover)</b> <span class="hint" id="poState"></span></summary>
     <p style="margin:6px 0 8px">Meldingen op je telefoon, bijvoorbeeld als de was klaar is. Je <b>gebruikerssleutel</b> staat op <b>pushover.net</b> bovenaan na het inloggen. Maak daar onder <i>Create an Application/API Token</i> een app "House hub" aan voor het <b>app-token</b>.</p>
@@ -993,6 +1001,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
     <input type="password" id="cfToken" placeholder="Cloudflare API-token" autocomplete="off">
     <div class="row" style="margin-top:6px"><button class="btn gold grow" id="cfSave">Opslaan en bijwerken</button><button class="btn" id="cfClear">Wissen</button></div>
     </details>
+  </details>
 </section>
 
 <section class="panel">
@@ -1003,6 +1012,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <div class="hint tvonly">Lampen, Tuya, Hue en tv-koppeling. Bewaar het bestand dan goed: wie het heeft, kan je lampen bedienen.</div>
   <div class="hint srvonly">Sleutels van je lampen en koppelingen. Bewaar het bestand dan goed: wie het heeft, kan je lampen bedienen.</div>
   <div class="row" style="margin-top:6px"><a class="btn" id="bkDown" href="/api/backup" download>Bestand downloaden</a></div>
+  <div class="row hidden" id="bkCodeRow" style="margin-top:6px;align-items:center"><input id="bkCode" inputmode="numeric" maxlength="4" placeholder="Code op de tv" style="width:9em"><button class="btn gold" id="bkCodeGo">Downloaden</button></div>
   <p style="margin:10px 0 6px">Terugzetten uit een bestand. Sleutels die niet in het bestand staan, blijven zoals ze nu zijn.</p>
   <label class="btn" for="bkFile">Bestand kiezen</label><input type="file" id="bkFile" accept=".json,application/json" class="hidden">
 </section>
@@ -2068,6 +2078,11 @@ const ST_OUT=[['off','Uit'],['on','Aan'],['memory','Zoals hij was']];
 const stW=w=>w==null?'–':(w>=100?Math.round(w):nl1(w,1))+' W';
 const stKwh=k=>nl1(k||0,k>=10?1:2)+' kWh';
 function stPrice(day){try{if(!enData||!enHasT())return null;const P=enTP(day);return P.stroom!=null?P.stroom:null}catch(e){return null}}
+/* "weg sinds": vandaag alleen de tijd, gisteren "gisteren 22:19", deze week "za 22:19", langer geleden "31 okt" */
+function awaySince(ms,loc){const d=new Date(ms),a=new Date();a.setHours(0,0,0,0);const b=new Date(d);b.setHours(0,0,0,0);
+  const n=Math.round((a-b)/864e5),hm=d.toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'});
+  return n<=0?hm:n===1?t('gisteren')+' '+hm:n<6?d.toLocaleDateString(loc,{weekday:'short'})+' '+hm
+    :d.toLocaleDateString(loc,{day:'numeric',month:'short',...(d.getFullYear()!==new Date().getFullYear()?{year:'numeric'}:{})})}
 function stLine(p){const loc=I18N.lang==='en'?'en-GB':'nl-NL',hm=ms=>new Date(ms).toLocaleTimeString(loc,{hour:'2-digit',minute:'2-digit'});
   const run=(p.mode==='wasmachine'||p.mode==='vaatwasser')?(p.running?t('bezig sinds {t}',{t:hm(p.runningSince)}):p.lastDone&&Date.now()-p.lastDone<12*3600e3?t('klaar om {t}',{t:hm(p.lastDone)}):''):'';
   return [t(p.on?'aan':'uit'),p.on?stW(p.watt):'',run,t('{k} vandaag',{k:stKwh(p.today)})].filter(Boolean).join(' · ')+((p.faults||[]).length?' · ⚠':'')}
@@ -2083,6 +2098,7 @@ function stCard(l){const p=stOf(l.id),d=document.createElement('div');d.classNam
     <button class="btn${p.on?' on':''}" data-on="1" style="width:100%;margin-top:10px">${esc(t(p.on?'Uitzetten':'Aanzetten'))}</button>
     ${own?`<div class="lbl">${esc(t('Wat mag de hub'))}</div><div class="seg" style="display:grid;grid-template-columns:1fr 1fr;gap:6px">${stModes(l,p).map(([v,n])=>`<button class="btn${p.mode===v?' on':''}" data-mode="${v}">${esc(t(n))}</button>`).join('')}</div>
       <div class="lbl">${esc(t('Na een stroomstoring'))}</div><div class="seg">${ST_OUT.map(([v,n])=>`<button class="btn${p.afterOutage===v?' on':''}" data-out="${v}">${esc(t(n))}</button>`).join('')}</div>
+      <div class="lbl">${esc(t('Telt als sluipverbruik'))}</div><div class="seg"><button class="btn${!p.needed?' on':''}" data-need="0">${esc(t('Ja'))}</button><button class="btn${p.needed?' on':''}" data-need="1">${esc(t('Nee, moet altijd aan'))}</button></div>
       ${p.mode!=='meten'?`<div class="lbl">${esc(t('Uit als iedereen weg is'))}</div><div class="seg"><button class="btn${p.awayOff!==false?' on':''}" data-away="1">${esc(t('Ja'))}</button><button class="btn${p.awayOff===false?' on':''}" data-away="0">${esc(t('Nee'))}</button></div>
       <div class="lbl">${esc(t('Schema'))}</div><div class="seg"><button class="btn${!(p.sched&&p.sched.on)?' on':''}" data-sch="0">${esc(t('Geen'))}</button><button class="btn${p.sched&&p.sched.on?' on':''}" data-sch="1">${esc(t('Aan als er iemand thuis is'))}</button></div>
       ${p.sched&&p.sched.on?`<div class="row" style="align-items:center;margin-top:6px"><span>${esc(t('van'))}</span><input type="time" data-from value="${esc(p.sched.from||'17:00')}" style="width:auto"><span>${esc(t('tot'))}</span><input type="time" data-to value="${esc(p.sched.to||'01:00')}" style="width:auto"></div>
@@ -2091,6 +2107,7 @@ function stCard(l){const p=stOf(l.id),d=document.createElement('div');d.classNam
   d.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>stSet(l.id,{mode:b.dataset.mode}));
   d.querySelectorAll('[data-out]').forEach(b=>b.onclick=()=>stSet(l.id,{afterOutage:b.dataset.out}));
   d.querySelectorAll('[data-away]').forEach(b=>b.onclick=()=>stSet(l.id,{awayOff:b.dataset.away==='1'}));
+  d.querySelectorAll('[data-need]').forEach(b=>b.onclick=()=>{const v=b.dataset.need==='1';stSet(l.id,{needed:v});const q=(enPlugsAll||[]).find(x=>x.id===l.id);if(q){q.needed=v;if(enProfile)enPatUI()}});
   d.querySelectorAll('[data-sch]').forEach(b=>b.onclick=()=>stSet(l.id,{sched:{...(p.sched||{}),on:b.dataset.sch==='1'}}));
   const tf=d.querySelector('[data-from]'),tt=d.querySelector('[data-to]');
   if(tf)tf.onchange=()=>stSet(l.id,{sched:{...(p.sched||{}),on:true,from:tf.value}});if(tt)tt.onchange=()=>stSet(l.id,{sched:{...(p.sched||{}),on:true,to:tt.value}});
@@ -2593,12 +2610,12 @@ setInterval(()=>{if(curTab!=='home'||document.hidden)return;const now=Date.now()
 async function peopleLoad(force){if(!SRV||!S)return;if(!force&&Date.now()-peopleAt<20000&&peopleData){peopleRender();return}
   try{const r=await api('/api/people');peopleData=r.people||[];peopleAt=Date.now()}catch(e){return}peopleRender()}
 function peopleRender(){const box=$('peopleRow'),list=peopleData||[];$('homePeople').classList.toggle('hidden',!(SRV&&isHouse()));
-  box.innerHTML=list.length?'':`<p class="hint" style="margin:0">${esc(t('Nog niemand. Maak hieronder je poppetje.'))}</p>`;
+  box.innerHTML=list.length?'':`<p class="hint" style="margin:0">${esc(t('Nog niemand. Maak je poppetje bij Instellingen.'))}</p>`;
   const loc=I18N.lang==='en'?'en-GB':'nl-NL';
   // Thuis eerst, daarna wie het laatst thuis was; nooit gezien achteraan
   for(const p of list.slice().sort((a,b)=>(b.home-a.home)||((b.last||0)-(a.last||0))||a.name.localeCompare(b.name))){const d=document.createElement('div');d.className='person'+(p.home?'':' away');
     const pc=drawAvatar(document.createElement('canvas'),p.avatar);if(p.home){pc.dataset.home='1';pc._av=p.avatar;pc._phase=Math.random()*1400;pc._next=Date.now()+1000+Math.random()*4000}d.append(pc);const n=document.createElement('b');n.textContent=p.name;d.append(n);
-    const sm=document.createElement('small');sm.textContent=p.home?t('thuis'):p.last?t('weg sinds {d}',{d:new Date(p.last).toLocaleString(loc,{weekday:'short',hour:'2-digit',minute:'2-digit'})}):t('nog niet gezien');d.append(sm);box.append(d)}
+    const sm=document.createElement('small');sm.textContent=p.home?t('thuis'):p.last?t('weg sinds {d}',{d:awaySince(p.last,loc)}):t('nog niet gezien');d.append(sm);box.append(d)}
   avWelcome(list);
   const me=list.find(p=>p.me);if(!$('myAvatarEd').dataset.done){$('myAvatarEd').dataset.done='1';avEditor($('myAvatarEd'),me?me.avatar:{},null,()=>peopleLoad(true))}
   if(S&&S.role==='owner'&&curTab==='settings')peopleAdmin()}
@@ -3222,7 +3239,7 @@ $('stockPlus').onclick=()=>stockNewShow(true);$('stockCancel').onclick=()=>stock
 $('stockAdd').onclick=async()=>{const n=$('stockName').value.trim();if(!n){$('stockName').focus();return}
   const r=await api('/api/voorraad',{name:n,count:+$('stockCount').value||0,min:+$('stockMin').value||0,icon:stockGuess(n)});if(!r.ok){toast(r.message||'');return}stockItems=r.items||[];stockNewShow(false);stockRender()};
 /* Pakketjes (PostNL, op de hub): onderweg (binnenkomend), bezorgd en verstuurd. Het tabje telt wat er onderweg is. */
-let pkItems=[],pkData=null;
+let pkItems=[],pkData=null,pkAllDone=false;   // pkAllDone: alle bezorgde tonen in plaats van de laatste 3
 const pkLoc=()=>I18N.lang==='en'?'en-GB':'nl-NL';
 const pkHm=d=>d.toLocaleTimeString(pkLoc(),{hour:'2-digit',minute:'2-digit'});
 const PK_CAR={dhl:'DHL',dpd:'DPD',vintedgo:'Vinted Go',dragonfly:'DragonFly',gls:'GLS',trunkrs:'Trunkrs',budbee:'Budbee'};
@@ -3247,6 +3264,8 @@ function pkDetHtml(k){const d=pkDet[k];if(!d||d.loading)return `<p class="hint" 
 /* Post (PostNL MyMail): foto's van de enveloppen die vandaag (of de laatste dagen) komen, nieuwste eerst */
 function mailRender(){const L=((pkData&&pkData.letters)||[]).slice().sort((a,b)=>(b.date||'').localeCompare(a.date||''));
   const err=pkData&&pkData.mailError;$('mailPanel').classList.toggle('hidden',!L.length&&!err);
+  $('mailCnt').textContent=L.length?'('+L.length+')':'';
+  const fd=$('mailFold');if(!fd.dataset.init){fd.dataset.init='1';try{fd.open=localStorage.getItem('mailOpen')==='1'}catch(e){}fd.addEventListener('toggle',()=>{try{localStorage.setItem('mailOpen',fd.open?'1':'0')}catch(e){}})}
   const day=d=>{if(!d)return '';const n=pkDayN(new Date(d+'T12:00:00'));return n===0?t('Vandaag'):n===-1?t('Gisteren'):pkDay(new Date(d+'T12:00:00'))};
   const groups=[];for(const l of L){const k=day(l.date)||l.title;let g=groups.find(x=>x.k===k);if(!g)groups.push(g={k,a:[]});g.a.push(l)}
   $('mailList').innerHTML=(err&&!L.length?`<p class="hint" style="margin:0">${esc(err)}</p>`:'')
@@ -3260,7 +3279,7 @@ function pkRender(){mailRender();const r=pkData||{},on=pkItems.filter(x=>x.dir==
   $('pkTab').textContent=on.length?String(on.length):'';
   const any=true;$('pkPlus').classList.toggle('hidden',!$('pkNew').classList.contains('hidden'));
   const none=!(r.configured||r.dhl||r.accounts||pkItems.length);
-  $('pkState').textContent=none?t('Koppel PostNL, DPD of Vinted Go bij Instellingen, API-sleutels, of voeg een pakketje toe met een code.'):!r.configured?'':r.error?r.error:r.at?t('Bijgewerkt om {h}',{h:pkHm(new Date(r.at))}):t('Even geduld, de pakketjes worden opgehaald...');
+  $('pkState').textContent=none?t('Koppel PostNL, DPD of Vinted Go bij Instellingen, Koppelingen, of voeg een pakketje toe met een code.'):!r.configured?'':r.error?r.error:r.at?t('Bijgewerkt om {h}',{h:pkHm(new Date(r.at))}):t('Even geduld, de pakketjes worden opgehaald...');
   $('pkRefresh').classList.toggle('hidden',!any);
   const st=x=>x.status&&!x.delivered?x.status:'';
   const row=x=>{const w=pkWhen(x),today=!x.delivered&&x.from&&pkDayN(new Date(x.from.length<=10?x.from+'T12:00:00':x.from))===0;
@@ -3270,8 +3289,11 @@ function pkRender(){mailRender();const r=pkData||{},on=pkItems.filter(x=>x.dir==
     +(x.url?`<a class="btn" href="${esc(x.url)}" target="_blank" rel="noopener" aria-label="${esc(t('Bekijk bij {c}',{c:PK_CAR[x.carrier]||'PostNL'}))}">↗</a>`:'')
     +(x.manual?`<button class="btn red" data-pkdel="${esc(x.key)}" aria-label="${esc(t('Weghalen'))}">✕</button>`:'')+`</div>`
     +(open?`<div class="pkdet" data-pkdet="${esc(x.key)}">${pkDetHtml(x.key)}</div>`:'')};
-  const sect=(h,a)=>a.length?`<div class="sect pksect">${esc(t(h))} <span class="pkcnt">${a.length}</span></div>`+a.map(row).join(''):'';
-  $('pkList').innerHTML=any?((sect('Onderweg',on)+sect('Bezorgd',done)+sect('Verstuurd',out))||`<p class="hint" style="margin:0">${esc(t('Geen pakketjes onderweg.'))}</p>`):'';
+  const sect=(h,a,max)=>{if(!a.length)return '';const cut=max&&!pkAllDone&&a.length>max,shown=cut?a.slice(0,max):a;
+    return `<div class="sect pksect">${esc(t(h))} <span class="pkcnt">${a.length}</span></div>`+shown.map(row).join('')
+      +(max&&a.length>max?`<button class="btn" id="pkMore" style="width:100%;margin-top:6px">${esc(cut?t('Toon alle {n}',{n:a.length}):t('Minder tonen'))}</button>`:'')};
+  $('pkList').innerHTML=any?((sect('Onderweg',on)+sect('Bezorgd',done,3)+sect('Verstuurd',out))||`<p class="hint" style="margin:0">${esc(t('Geen pakketjes onderweg.'))}</p>`):'';
+  if($('pkMore'))$('pkMore').onclick=()=>{pkAllDone=!pkAllDone;pkRender()};
   $('pkList').querySelectorAll('.pkrow .stname').forEach(n=>{const go=()=>{const row=n.closest('.pkrow'),k=row.dataset.pkkey;
       if(pkOpen.has(k))pkOpen.delete(k);else{pkOpen.add(k);pkDetLoad(k,row.dataset.pkdir)}pkRender()};
     n.onclick=go;n.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}}});
@@ -3397,6 +3419,36 @@ $('mensenPlus').onclick=()=>mensenNewShow(true);$('mensenCancel').onclick=()=>me
 $('mensenNew').onkeydown=e=>{if(e.key==='Enter')$('mensenAdd').click();if(e.key==='Escape')mensenNewShow(false)};
 $('mensenAdd').onclick=async()=>{const v=$('mensenNew').value.trim();if(!v){$('mensenNew').focus();return}await api('/api/people/save',{id:'',name:v});mensenNewShow(false);peopleLoad(true);peopleAdmin()};
 $('cfSave').onclick=async()=>{const v=$('cfToken').value.trim();if(!v)return;toast(t('Bezig...'));const r=await api('/api/cloudflare/save',{token:v});$('cfToken').value='';toast(r.message||'');peopleAdmin()};
+/* Meldingen op deze telefoon (Web Push via de hub zelf; op de iPhone alleen vanaf het beginscherm, iOS 16.4+) */
+const wpCan=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+const wpIOS=/iPhone|iPad|iPod/.test(navigator.userAgent),wpHome=()=>navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+const wpKey=s=>{const b=atob((s+'='.repeat((4-s.length%4)%4)).replace(/-/g,'+').replace(/_/g,'/'));return Uint8Array.from(b,c=>c.charCodeAt(0))};
+async function wpSub(){if(!wpCan())return null;const r=await navigator.serviceWorker.getRegistration('/');return r?r.pushManager.getSubscription():null}
+/* Hoofdgebruiker: meldingen via de hub (Web Push), via Pushover of allebei. Huisgenoten krijgen altijd die van de hub. */
+function wpViaShow(r){if(!r||!r.ok)return;$('wpVia').querySelectorAll('[data-via]').forEach(b=>{const on=b.dataset.via===r.via;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});
+  $('wpViaHint').textContent=r.via!=='pushover'&&!r.devices?t('Nog geen telefoon van jou aangemeld: tot die tijd komen ze via Pushover.')
+    :r.via!=='hub'&&!r.pushover?t('Pushover is nog niet ingevuld (Koppelingen): tot die tijd via ntfy.'):''}
+async function wpViaLoad(){if(!SRV||!S||S.role!=='owner')return;try{wpViaShow(await api('/api/notify/via'))}catch(e){}}
+$('wpVia').querySelectorAll('[data-via]').forEach(b=>b.onclick=async()=>{const r=await api('/api/notify/via',{via:b.dataset.via});wpViaShow(r);if(r.message)toast(r.message)});
+async function wpLoad(){if(!SRV)return;wpViaLoad();const show=(on,can)=>{$('wpOn').classList.toggle('hidden',on||!can);$('wpTest').classList.toggle('hidden',!on);$('wpOff').classList.toggle('hidden',!on)};
+  if(!wpCan()){const ios=wpIOS&&!wpHome();$('wpState').textContent='· '+t(ios?'eerst op je beginscherm':'kan niet op dit toestel');
+    if(ios)$('wpHelp').innerHTML=t('Op de iPhone kan dit alleen vanaf het beginscherm: open de hub in <b>Safari</b>, tik op <b>Deel</b>, <b>Zet op beginscherm</b>. Open de hub daarna vanaf het beginscherm en kom hier terug (iOS 16.4 of nieuwer).');
+    show(false,false);return}
+  try{const s=await wpSub();const r=await api('/api/webpush',{endpoint:s?s.endpoint:''});const on=!!(s&&r.subscribed);
+    $('wpState').textContent='· '+(on?t('aan'):t('uit'))+(r.count&&S&&S.role==='owner'?' · '+r.count+' '+t(r.count===1?'toestel':'toestellen'):'');show(on,true);
+    $('wpKinds').classList.toggle('hidden',!on);if(on)wpKinds(s.endpoint,r.off||[],r.kinds)}catch(e){}}
+/* Per toestel kiezen welke soorten meldingen het krijgt (de hub bewaart wat uit staat) */
+const WP_KINDS=[['was','Was of vaatwasser klaar'],['pakket','Pakketje komt vandaag'],['bezorgd','Pakketje bezorgd'],['post','Brief komt vandaag'],['weg','Alles uit bij weggaan'],['koppeling','Koppeling verlopen']];
+function wpKinds(ep,off,kinds){const box=$('wpKindList');   // kinds: wat jouw rol mag krijgen (van de hub)
+  box.innerHTML=WP_KINDS.filter(([k])=>!kinds||kinds.includes(k)).map(([k,n])=>`<button class="btn${off.includes(k)?'':' on'}" data-wpk="${k}" aria-pressed="${!off.includes(k)}">${esc(t(n))}</button>`).join('');
+  box.querySelectorAll('[data-wpk]').forEach(b=>b.onclick=async()=>{const k=b.dataset.wpk,next=off.includes(k)?off.filter(x=>x!==k):[...off,k];
+    const r=await api('/api/webpush/prefs',{endpoint:ep,off:next});if(r.ok){off=next;wpKinds(ep,off,kinds)}else toast(r.message||'')})}
+$('wpOn').onclick=async()=>{try{if(await Notification.requestPermission()!=='granted'){toast(t('Meldingen zijn niet toegestaan. Zet ze aan bij Instellingen van je telefoon, Meldingen, House hub.'));return}
+  const k=await api('/api/webpush',{});const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/'});await navigator.serviceWorker.ready;
+  let s=await reg.pushManager.getSubscription();if(!s)s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:wpKey(k.publicKey)});
+  const j=s.toJSON();const r=await api('/api/webpush/subscribe',{endpoint:j.endpoint,keys:j.keys});toast(r.message||'')}catch(e){toast(t('Lukt niet: ')+(e.message||e))}wpLoad()};
+$('wpTest').onclick=async()=>{const s=await wpSub();const r=await api('/api/webpush/test',{endpoint:s?s.endpoint:''});toast(r.message||'')};
+$('wpOff').onclick=async()=>{const s=await wpSub();if(s){await api('/api/webpush/unsubscribe',{endpoint:s.endpoint});try{await s.unsubscribe()}catch(e){}}toast(t('Meldingen staan uit op dit toestel'));wpLoad()};
 async function poLoad(){try{const r=await api('/api/pushover');$('poState').textContent='· '+t(r.configured?'ingevuld':'nog niet ingevuld')}catch(e){}}
 const poDone=r=>{toast(r.message||'');$('poState').textContent='· '+t(r.configured?'ingevuld':'nog niet ingevuld')};
 $('poSave').onclick=async()=>{const u=$('poUser').value.trim(),k=$('poToken').value.trim();if(!u||!k){toast(t('Vul de gebruikerssleutel en het app-token in'));return}const r=await api('/api/pushover/save',{user:u,token:k});if(r.ok){$('poUser').value='';$('poToken').value=''}poDone(r)};
@@ -3435,7 +3487,7 @@ async function gateCheck(){let st;try{st=await (await fetch('/api/access/status'
 $('gateAsk').onclick=async()=>{const n=$('gateName').value.trim();if(!n){$('gateName').focus();return}
   try{const r=await (await fetch('/api/access/request',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n})})).json();toast(r.message||'')}catch(e){}gateCheck()};
 /* Rol toepassen: gast ziet alleen Bediening */
-function roleUI(s){const g=s&&s.role==='guest',mb=s&&s.role==='member';document.body.classList.toggle('member',mb);if(mb&&curTab!=='home'&&curTab!=='energy')showTab('home');$('notHomeBar').classList.toggle('hidden',!(g&&s.canControl===false));document.body.classList.toggle('guest',g);if(g&&curTab!=='home')showTab('home');
+function roleUI(s){const g=s&&s.role==='guest',mb=s&&s.role==='member';document.body.classList.toggle('member',mb);if(mb&&curTab!=='home'&&curTab!=='energy'&&curTab!=='settings')showTab('home');$('notHomeBar').classList.toggle('hidden',!(g&&s.canControl===false));document.body.classList.toggle('guest',g);if(g&&curTab!=='home')showTab('home');
   const n=s&&s.role==='owner'?s.accessPending||0:0;$('accBanner').classList.toggle('hidden',!n);
   if(n)$('accBanner').textContent=t('{n} apparaat vraagt toegang. Tik om te bekijken.',{n});
   $('tvBanner').classList.toggle('hidden',!(s&&s.role==='owner'&&s.tvPending>0))}
@@ -4086,8 +4138,11 @@ function enDevUI(){const list=enPlugsAll||[],box=$('enDev');$('enDevPanel').clas
 /* Patronen: sluipverbruik, gemiddeld per uur van de dag (werkdag/weekend), gas per uur, per dag van de week */
 async function enPatLoad(){let r;try{r=await api('/api/energy/profile')}catch(e){return}enProfile=r;enPatUI();if(r.busy&&!r.hourW)setTimeout(()=>{if(curTab==='energy')enPatLoad()},15000)}
 function enPatUI(){const r=enProfile,box=$('enPat');if(!r||!r.hourW){box.innerHTML=`<p class="hint" style="margin:0">${esc(t('De hub rekent je patronen uit de afgelopen 4 weken uit. Even geduld...'))}</p>`;return}
-  const pr=enTP(enToday()).stroom,bw=r.baseW,loc=I18N.lang==='en'?'en-GB':'nl-NL';
-  const iB=enInfo([t('Per nacht het laagste kwartier tussen 1 en 5 uur; daarvan het middelste getal over {n} dagen.',{n:r.days}),t('Meestal: koelkast, router, server, apparaten op stand-by, laders.'),...(bw!=null&&pr!=null?[[t('Per jaar'),nl1(bw*8.76,0)+' kWh · '+enEUR0(bw*8.76*pr,true)],[t('10 W minder scheelt'),enEUR0(10*8.76*pr,true)+' '+t('per jaar')]]:[])]);
+  const pr=enTP(enToday()).stroom,loc=I18N.lang==='en'?'en-GB':'nl-NL';
+  // Apparaten die altijd aan moeten (koelkast): niet als sluipverbruik rekenen; hun gemiddelde 's nachts gaat eraf
+  const need=(enPlugsAll||[]).filter(p=>p.needed&&p.nightW!=null),needW=need.reduce((a,p)=>a+p.nightW,0);
+  const bw=r.baseW!=null?Math.max(0,r.baseW-needW):null;
+  const iB=enInfo([t('Per nacht het laagste kwartier tussen 1 en 5 uur; daarvan het middelste getal over {n} dagen.',{n:r.days}),...(need.length?[t('Zonder {a} (moet altijd aan): ±{w} W gaat eraf.',{a:need.map(p=>p.name).join(', '),w:nl1(needW,0)})]:[]),t('Meestal: router, server, apparaten op stand-by, laders.'),...(bw!=null&&pr!=null?[[t('Per jaar'),nl1(bw*8.76,0)+' kWh · '+enEUR0(bw*8.76*pr,true)],[t('10 W minder scheelt'),enEUR0(10*8.76*pr,true)+' '+t('per jaar')]]:[])]);
   let h=`<div class="enkpi"><div style="grid-column:1/-1" data-info="${iB}"><small>${esc(t('Sluipverbruik: wat je huis altijd verbruikt (laagste stand \'s nachts)'))}</small><b>${bw!=null?esc(nl1(bw,0)+' W'):'–'}</b>${bw!=null?`<small>${esc(t('≈ {k} kWh per jaar',{k:nl1(bw*8.76,0)}))}${pr!=null?' · ≈ '+esc(enEUR0(bw*8.76*pr,true))+' '+esc(t('per jaar')):''}</small>`:''}</div></div>
     <div class="seg" id="enPatQ" style="margin:10px 0 2px"><button class="btn" data-q="kwh">${esc(t('Stroom'))}</button>${(r.gasHour||[]).some(v=>v>0)?`<button class="btn" data-q="gas">${esc(t('Gas'))}</button>`:''}</div>
     <div class="row" style="align-items:center"><div class="enlbl grow" style="margin:0">${esc(t(enPatQ==='gas'?'Gas per uur van de dag':'Stroom per uur van de dag'))}</div><div class="seg" id="enPatSeg"><button class="btn" data-m="all">${esc(t('Alles'))}</button><button class="btn" data-m="wd">${esc(t('Werkdag'))}</button><button class="btn" data-m="we">${esc(t('Vrij'))}</button></div></div>
@@ -4096,15 +4151,15 @@ function enPatUI(){const r=enProfile,box=$('enPat');if(!r||!r.hourW){box.innerHT
     <div class="enlbl">${esc(t(enPatQ==='gas'?'Gas per dag van de week':'Stroom per dag van de week'))}</div><div class="enchart small" id="enPatWk"></div>
     <p class="ennote">${esc(t('Over {n} dagen: {a} t/m {b}.',{n:r.days,a:enLong(r.from),b:enLong(r.to)}))}</p>`;
   // Per apparaat: wat de stekkers 's nachts gemiddeld gebruiken; de rest van het sluipverbruik zit niet aan een stekker
-  const nw=(enPlugsAll||[]).filter(p=>p.nightW!=null).sort((x,y)=>y.nightW-x.nightW);
-  // vergelijken met het gemiddelde van de meter tussen 1 en 5 uur (niet het laagste kwartier: een koelkast slaat aan en uit)
-  const hw=r.hourW||[],nightAvg=[1,2,3,4].map(k=>hw[k]).filter(v=>v!=null),na=nightAvg.length?nightAvg.reduce((a,v)=>a+v,0)/nightAvg.length:bw;
+  const nw=(enPlugsAll||[]).filter(p=>p.nightW!=null&&!p.needed).sort((x,y)=>y.nightW-x.nightW);
+  // vergelijken met het gemiddelde van de meter tussen 1 en 5 uur (niet het laagste kwartier: een koelkast slaat aan en uit), zonder wat altijd aan moet
+  const hw=r.hourW||[],nightAvg=[1,2,3,4].map(k=>hw[k]).filter(v=>v!=null),na=nightAvg.length?Math.max(0,nightAvg.reduce((a,v)=>a+v,0)/nightAvg.length-needW):bw;
   if(nw.length&&na!=null){const sum=nw.reduce((a,p)=>a+p.nightW,0),rest=Math.max(0,na-sum),yr=w=>pr!=null?' · ≈ '+enEUR0(w*8.76*pr,true)+' '+t('per jaar'):'';
     const rows=nw.map(p=>({n:p.name,w:p.nightW,c:enPlugCol(p.id)})).concat([{n:t('Rest van het huis (router, server, laders, ...)'),w:rest,c:'#c8bca8'}]),tot=Math.max(na,sum);
     h=h.replace('<div class="seg" id="enPatQ"',`<div class="enlbl">${esc(t("Waar zit het sluipverbruik? (gemiddeld tussen 1 en 5 uur 's nachts)"))}</div>
       <div class="ensplit">${rows.map(x=>x.w>0?`<i style="flex:${x.w};background:${x.c}" title="${esc(x.n)}"></i>`:'').join('')}</div>
       ${rows.map(x=>`<div class="kbrow"><span><i class="ensw" style="background:${x.c}"></i>${esc(x.n)}</span><span>${esc(nl1(x.w,x.w<10?1:0)+' W')}${tot>0?' · '+Math.round(x.w/tot*100)+'%':''}${esc(yr(x.w))}</span></div>`).join('')}
-      <p class="hint" style="margin:4px 0 0">${esc(t('Het huis gebruikt dan gemiddeld {w} W.',{w:nl1(na,0)}))}</p>
+      <p class="hint" style="margin:4px 0 0">${esc(t('Het huis gebruikt dan gemiddeld {w} W.',{w:nl1(na,0)}))}${need.length?' '+esc(t('Niet meegeteld (moet altijd aan): {l}.',{l:need.map(p=>p.name+' '+nl1(p.nightW,0)+' W').join(', ')})):''}</p>
       <div class="seg" id="enPatQ"`)}
   box.innerHTML=h;enInfoWire(box);
   const vals=enPatMode==='wd'&&r.hourWorkday.length?r.hourWorkday:enPatMode==='we'&&r.hourWeekend.length?r.hourWeekend:r.hourW;
@@ -4186,7 +4241,16 @@ $('wizScan').onclick=async()=>{const b=$('wizScan');b.disabled=true;b.textConten
 $('cloudRefresh').onclick=async()=>{const b=$('cloudRefresh');b.disabled=true;b.textContent=t('Zoeken...');
   const r=await api('/api/cloud/refresh',{});b.disabled=false;b.textContent=dv('Nieuwe lampen zoeken');toast(r.message);load()};
 $('cloudChange').onclick=()=>{$('cloudSetup').classList.remove('hidden');$('cloudOn').classList.add('hidden')};
-$('bkKeys').onchange=()=>{$('bkDown').href='/api/backup'+($('bkKeys').checked?'?keys=1':'')};
+$('bkKeys').onchange=()=>{$('bkDown').href='/api/backup'+($('bkKeys').checked?'?keys=1':'');$('bkCodeRow').classList.add('hidden')};
+/* Op de tv: backup met sleutels alleen met de code die de tv toont (de hub regelt dat met inloggen) */
+$('bkDown').addEventListener('click',async e=>{if(SRV||!$('bkKeys').checked)return;e.preventDefault();
+  const r=await api('/api/backup/code',{});toast(r.message||'');$('bkCodeRow').classList.remove('hidden');$('bkCode').value='';$('bkCode').focus()});
+$('bkCodeGo').onclick=async()=>{const c=$('bkCode').value.trim();if(!/^\d{4}$/.test(c)){toast(t('Typ de 4 cijfers van de tv'));return}
+  try{const res=await fetch('/api/backup?keys=1&code='+c,{cache:'no-store'});
+    if(!res.ok){let m='';try{m=(await res.json()).message}catch(_){}toast(m||('HTTP '+res.status));return}
+    const name=(res.headers.get('Content-Disposition')||'').match(/filename="([^"]+)"/)?.[1]||'ambilight-lampen-backup.json';
+    const url=URL.createObjectURL(await res.blob()),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),5000);$('bkCodeRow').classList.add('hidden')}catch(err){toast(t('Lukt niet: ')+(err.message||err))}};
 $('bkFile').onchange=async e=>{const f=e.target.files[0];if(!f)return;
   if(!confirm(t('Alles terugzetten uit "{n}"? Je huidige kamer, lampen en instellingen worden vervangen.',{n:f.name}))){e.target.value='';return}
   const r=await api('/api/restore',JSON.parse(await f.text()));toast(r.message);e.target.value='';if(r.ok){dirty=false;load()}};
@@ -4448,6 +4512,10 @@ async function load(){
 }
 async function poll(){try{const s=await api('/api/state');S=s;roleUI(s);if(!peopleData&&SRV)peopleLoad();syncLayouts(false);useRoom(wantRoom());liveFrom(s);chips();showLamp();lampList();draw();airAll()}catch(e){}}
 // Tabbladen
+/* Alles van Instellingen ophalen. Ook na de eerste load(): opent de pagina meteen op Instellingen, dan is S
+   (en dus de rol) er nog niet en slaan de blokken voor de hoofdgebruiker zich over. */
+function settingsLoad(){if(document.body.classList.contains('member')){peopleLoad(true);wpLoad();return}   // huisgenoot: alleen Mijn poppetje en Meldingen
+  eneLoad();poLoad();wpLoad();catLoad();hubLoad();tvSyncLoad();keysLoad();hkLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}
 function showTab(n){
   if(n==='settings'&&grpOpen){grpOpen=null;placeSettings()}
   document.querySelectorAll('.page').forEach(p=>p.classList.toggle('hidden',p.id!=='page-'+n));
@@ -4455,12 +4523,12 @@ function showTab(n){
   try{localStorage.setItem('tab',n)}catch(e){}
   curTab=n;$(n==='home'?'homeMapSlot':'roomMapSlot').append($('mapwrap'));
   if(S){useRoom(wantRoom());if(n==='room')roomsTabUI();if(n==='home')homeUI();chips()}
-  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings'){eneLoad();poLoad();catLoad();hubLoad();tvSyncLoad();keysLoad();hkLoad();peopleLoad(true).then(()=>{peopleAdmin();autoLoad();accLoad()})}if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(document.body.classList.contains('member')&&n!=='home'&&n!=='energy'){showTab('home');return}if(n==='energy'){huisShow();if(Date.now()-stockAt>60e3)stockLoad()}
+  window.scrollTo(0,0);if(n==='room'||n==='home')setTimeout(draw,0);if(n==='settings')settingsLoad();if(n==='home')peopleLoad();if(document.body.classList.contains('guest')&&n!=='home'){showTab('home');return}if(document.body.classList.contains('member')&&n!=='home'&&n!=='energy'&&n!=='settings'){showTab('home');return}if(n==='energy'){huisShow();if(Date.now()-stockAt>60e3)stockLoad()}
 }
 // Nog eens op Kamers tikken: terug naar de lijst met kamers
 document.querySelectorAll('.tabbar .btn').forEach(b=>b.onclick=()=>{if(b.dataset.tab==='room'&&curTab==='room'){editRoom=null;roomAdding=false}showTab(b.dataset.tab)});
 $('roomLampSettings').onclick=()=>{showTab('lamps');selectLamp(selLamp);setTimeout(()=>{const r=[...$('lampList').children].find(r=>r.dataset.id===selLamp);(r||$('lampDetailPanel')).scrollIntoView({block:'start'})},50)};
-(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang);hostMode(s);document.body.classList.toggle('guest',s.role==='guest');document.body.classList.toggle('member',s.role==='member')}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';homeView='house';showTab(tb);load()})();
+(async()=>{try{const s=await api('/api/state');I18N.set(s.settings.lang);hostMode(s);document.body.classList.toggle('guest',s.role==='guest');document.body.classList.toggle('member',s.role==='member')}catch(e){}I18N.apply();tvSizes();buildTools();setTool('floor');let tb=location.hash.slice(1)||'home';if(!location.hash)try{tb=localStorage.getItem('tab')||'home'}catch(e){}if(!$('page-'+tb))tb='home';homeView='house';showTab(tb);load().then(()=>{if(curTab==='settings')settingsLoad()}).catch(()=>{})})();
 const fast=()=>S&&(S.sync||S.activeScene||(S.rooms||[]).some(r=>r.scene));
 setInterval(()=>{if(fast())poll()},500);
 setInterval(()=>{if(!fast())poll()},1500);

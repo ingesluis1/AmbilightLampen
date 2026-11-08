@@ -105,7 +105,7 @@ object TuyaCloud {
             val a: JSONArray = call("GET", "/v1.0/users/$uid/devices", token).getJSONArray("result")
             for (i in 0 until a.length()) devices += a.getJSONObject(i)
         }
-        val added = mutableListOf<String>(); var updated = 0; var skipped = 0
+        val added = mutableListOf<String>(); val updated = mutableListOf<String>(); var skipped = 0
         synchronized(Store) {
             for (d in devices) {
                 val id = d.optString("id"); val key = d.optString("local_key")
@@ -114,7 +114,7 @@ object TuyaCloud {
                 if (id in Store.hidden || id in Store.forgotten) continue
                 val ex = Store.lamps.firstOrNull { it.id == id }
                 if (ex != null) {
-                    if (ex.key != key) { ex.key = key; updated++ }
+                    if (ex.key != key) { ex.key = key; updated += ex.name }
                     ex.category = d.optString("category", ex.category)
                 } else if (d.optBoolean("online", true)) {   // offline registraties (oude lampen) overslaan
                     val name = d.optString("name", id).replace(Regex("\\s+"), " ").trim().take(60).ifBlank { id }
@@ -132,8 +132,9 @@ object TuyaCloud {
         Store.save(); Engine.syncWorkers()
         if (added.isNotEmpty()) Discovery.lookupNew()
         return buildString {
-            append(if (added.isEmpty()) tr("Geen nieuwe apparaten gevonden.", "No new devices found.") else tr("Nieuw: ", "New: ") + added.joinToString(", ") + tr(". Zet ze in hun kamer op de kaart.", ". Put them in their room on the map."))
-            if (updated > 0) append(tr(" $updated sleutel(s) bijgewerkt.", " $updated key(s) updated."))
+            if (added.isNotEmpty()) append(tr("Nieuw: ", "New: ") + added.joinToString(", ") + tr(". Zet ze in hun kamer op de kaart.", ". Put them in their room on the map."))
+            else if (updated.isEmpty()) append(tr("Geen nieuwe apparaten gevonden.", "No new devices found."))
+            if (updated.isNotEmpty()) append((if (added.isEmpty()) "" else " ") + tr("Nieuwe sleutel (opnieuw gekoppeld): ", "New key (paired again): ") + updated.joinToString(", ") + ".")
             if (added.isNotEmpty()) append(tr(" Het ip-adres wordt binnen een halve minuut vanzelf gevonden.", " The IP address is found automatically within half a minute."))
         }
     }

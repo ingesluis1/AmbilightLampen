@@ -22,7 +22,8 @@ object Airco {
     /** Verbindingen bijhouden: één per apparaat (airco, kattenbak) met ip-adres, open zolang de hub draait. */
     fun sync() {
         val airs = if (enabled) Store.lampsSnapshot().filter { it.kind != "light" && it.ip.isNotBlank() && it.supported }.associateBy { it.id } else emptyMap()
-        for ((id, c) in conns) { val l = airs[id]; if (l == null || l.ip != c.lamp.ip || l.key != c.lamp.key) { c.stop(); conns.remove(id) } }
+        // Vergelijken met de waarden waarmee de verbinding startte: de Lamp zelf wordt ter plekke aangepast (nieuwe sleutel na opnieuw koppelen)
+        for ((id, c) in conns) { val l = airs[id]; if (l == null || l.ip != c.connIp || l.key != c.connKey || l.version != c.connVersion) { c.stop(); conns.remove(id) } }
         for (l in airs.values) if (!conns.containsKey(l.id)) conns[l.id] = TuyaLamp(l, keepOpen = true)
     }
 
