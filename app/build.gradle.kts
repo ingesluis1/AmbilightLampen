@@ -11,8 +11,8 @@ android {
         applicationId = "nl.stacklines.tvambilight"
         minSdk = 26
         targetSdk = 34
-        versionCode = 53
-        versionName = "0.23.0"
+        versionCode = 54
+        versionName = "0.24.0"
     }
 
     buildTypes {
