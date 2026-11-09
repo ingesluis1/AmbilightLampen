@@ -337,6 +337,8 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 .aircard .tgt{display:flex;align-items:center;gap:10px}
 .aircard .tgt b{font-size:20px;min-width:64px;text-align:center}
 .aircard.off .ctl{opacity:.55}
+.thnum,#thHome .in,#thHome .tgt b,#thSchBox b,#thSchBox input[type=time]{font-family:var(--ensans,system-ui,-apple-system,'Segoe UI',sans-serif);font-variant-numeric:tabular-nums}
+.thnum{font-weight:normal;font-size:15px;margin-left:4px}
 .isair .aironly{display:block}
 .airlooks{grid-template-columns:repeat(2,1fr)!important;gap:6px!important}
 .airlooks .btn{flex-direction:row!important;gap:8px!important;font-size:13px!important;padding:5px 7px!important;text-align:left;line-height:1.15}
@@ -2047,7 +2049,8 @@ function thStep(d){const z=S&&S.thermo;if(!z)return;const st=z.step||.5;
 async function thSchedule(){clearTimeout(thTimer);thWant=null;const r=await api('/api/thermostaat',{schedule:true});if(r.ok&&r.thermo)S.thermo=r.thermo;else if(r.message)toast(r.message);thDraw()}
 function thDraw(){const z=S&&S.thermo,box=$('thHome');$('thFold').classList.toggle('hidden',!z||S.role!=='owner');if(!z)return;
   const sp=thWant??z.setpoint,heat=z.temp!=null&&sp>z.temp;
-  $('thSum').textContent=t('Verwarming')+' · '+(z.temp!=null?thNum(z.temp)+' °C · ':'')+(heat?'🔥 ':'')+thNum(sp)+' °C';
+  // Cijfers in het gewone lettertype (pixelletters maken 18,5 en 5 slecht leesbaar), met erbij wat ze betekenen
+  $('thSum').innerHTML=esc(t('Verwarming'))+' <span class="thnum">'+(z.temp!=null?esc(t('binnen'))+' '+thNum(z.temp)+'°, ':'')+esc(t(heat?'verwarmt tot':'staat op'))+' '+thNum(sp)+'°</span>';
   box.innerHTML=`<div class="aircard"><div class="top"><b class="grow">${esc(t('Thermostaat'))}</b>${z.temp!=null?`<span class="in" title="${esc(t('Binnen'))}">${thNum(z.temp)} °C</span>`:''}</div>
     ${z.available===false?`<div class="hint">${esc(t('De thermostaat is nu niet bereikbaar.'))}</div>`:''}
     <div class="ctl"><div class="lbl">${esc(t('Gewenst'))} · ${esc(thWant!=null?t('even geduld...'):thMode(z))}</div>
