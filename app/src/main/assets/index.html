@@ -351,6 +351,8 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 .thstate.heat{background:#f2a65a}.thstate.on{background:var(--gold)}.thstate.wait{opacity:.7}
 .thquick .btn{flex:1;min-width:0}.thgrid+.thquick{margin-top:12px}
 #thSchFold{margin-top:10px;border-top:2px dashed rgba(58,28,14,.25);padding-top:6px}
+.thmom{border:2px solid var(--ink);background:#fff8ea;padding:6px;margin-top:6px}.thmv{min-width:52px;text-align:center;font-size:18px}
+.thdays{margin-top:6px}.thdays .btn{flex:1;min-width:0;padding-left:0;padding-right:0}
 .isair .aironly{display:block}
 .airlooks{grid-template-columns:repeat(2,1fr)!important;gap:6px!important}
 .airlooks .btn{flex-direction:row!important;gap:8px!important;font-size:13px!important;padding:5px 7px!important;text-align:left;line-height:1.15}
@@ -2082,37 +2084,39 @@ function thDraw(){const z=S&&S.thermo,box=$('thHome');$('thFold').classList.togg
 /* Verwarmingsschema: per dag 1 tot 6 momenten; vanaf elk moment geldt die temperatuur tot het volgende (ook over middernacht).
    Wordt pas bij Opslaan naar Honeywell gestuurd. */
 const TH_DAYS=['ma','di','wo','do','vr','za','zo'];
-let thSch=null,thDay=0,thDirty=false;
+/* In de pagina als lijst van momenten: { t: "23:00", v: 5, d: [true x 7] } (maandag eerst). Honeywell wil per dag een lijst;
+   dat zetten we pas bij Opslaan om. Momenten met dezelfde tijd en temperatuur op meerdere dagen worden één regel. */
+let thSch=null,thMoments=[],thDirty=false;
+function thToMoments(days){const m=new Map();days.forEach((list,i)=>list.forEach(p=>{const k=p.t+'|'+p.v;if(!m.has(k))m.set(k,{t:p.t,v:p.v,d:[0,0,0,0,0,0,0].map(()=>false)});m.get(k).d[i]=true}));
+  return [...m.values()].sort((x,y)=>x.t.localeCompare(y.t)||x.v-y.v)}
+function thToDays(){return TH_DAYS.map((_,i)=>thMoments.filter(m=>m.d[i]).map(m=>({t:m.t,v:m.v})).sort((x,y)=>x.t.localeCompare(y.t)))}
 async function thSchLoad(){const r=await api('/api/thermostaat/schema');if(!r.ok){$('thSchBox').innerHTML=`<div class="hint">${esc(r.message||t('Het schema kon niet worden opgehaald.'))}</div>`;return}
-  thSch=r;thDirty=false;thDay=(new Date().getDay()+6)%7;thSchDraw()}
+  thSch=r;thMoments=thToMoments(r.days);thDirty=false;thSchDraw()}
 $('thSchFold').addEventListener('toggle',()=>{if($('thSchFold').open&&!thDirty)thSchLoad()});
-function thSchExample(){const wk=[['06:30',19.5],['08:30',16],['17:30',20],['22:30',16]],we=[['08:00',19.5],['23:00',16]];
-  thSch.days=TH_DAYS.map((_,i)=>(i<5?wk:we).map(([tt,v])=>({t:tt,v})));thDirty=true;thSchDraw()}
-function thSchDraw(){const box=$('thSchBox');if(!thSch)return;const d=thSch.days[thDay],st=thSch.step||.5,empty=thSch.days.every(x=>!x.length);
-  $('thSchSum').textContent=empty?t('leeg'):thDirty?t('niet opgeslagen'):'';
-  box.innerHTML=`<div class="seg" style="margin-top:6px">${TH_DAYS.map((n,i)=>`<button class="btn${i===thDay?' on':''}" data-day="${i}">${esc(t(n))}</button>`).join('')}</div>
-    <div class="hint" style="margin:6px 0">${esc(t('Vanaf elk moment geldt die temperatuur tot het volgende moment.'))}</div>
-    ${d.map((p,i)=>`<div class="row" style="align-items:center;gap:6px;margin-top:4px"><input type="time" step="600" value="${esc(p.t)}" data-tm="${i}" style="flex:1;min-width:0">
-      <button class="btn" data-dn="${i}">−</button><b style="min-width:58px;text-align:center">${thNum(p.v)} °C</b><button class="btn" data-up="${i}">+</button><button class="btn red" data-rm="${i}" title="${esc(t('Weg'))}">×</button></div>`).join('')}
-    ${d.length?'':`<div class="hint">${esc(t('Nog geen momenten op deze dag.'))}</div>`}
-    <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">${d.length<(thSch.maxPerDay||6)?`<button class="btn" data-add="1">${esc(t('+ Moment'))}</button>`:''}${empty?`<button class="btn" data-ex="1">${esc(t('Voorbeeld invullen'))}</button>`:''}</div>
-    ${d.length?`<div class="lbl">${esc(t('Deze dag kopiëren naar'))}</div><div class="seg"><button class="btn" data-cp="wk">${esc(t('werkdagen'))}</button><button class="btn" data-cp="we">${esc(t('weekend'))}</button><button class="btn" data-cp="all">${esc(t('alle dagen'))}</button></div>`:''}
-    <div class="row" style="margin-top:10px"><button class="btn gold grow" data-save="1"${thDirty?'':' disabled'}>${esc(t('Opslaan'))}</button>${thDirty?`<button class="btn" data-undo="1">${esc(t('Terugdraaien'))}</button>`:''}</div>`;
+function thSchDraw(){const box=$('thSchBox');if(!thSch)return;const st=thSch.step||.5;
+  $('thSchSum').textContent=!thMoments.length?t('leeg'):thDirty?t('niet opgeslagen'):t('{n} momenten',{n:thMoments.length});
+  box.innerHTML=`<div class="hint" style="margin:6px 0">${esc(t('Vanaf elk moment geldt die temperatuur tot het volgende moment, ook over middernacht.'))}</div>
+    ${thMoments.map((m,i)=>`<div class="thmom">
+      <div class="row" style="align-items:center;gap:6px"><input type="time" step="600" value="${esc(m.t)}" data-tm="${i}" style="flex:1;min-width:0">
+        <button class="btn" data-dn="${i}">−</button><b class="thmv">${thNum(m.v)}°</b><button class="btn" data-up="${i}">+</button><button class="btn red" data-rm="${i}" title="${esc(t('Weg'))}">×</button></div>
+      <div class="seg thdays">${TH_DAYS.map((n,j)=>`<button class="btn${m.d[j]?' on':''}" data-dy="${i},${j}">${esc(t(n))}</button>`).join('')}</div></div>`).join('')}
+    ${thMoments.length?'':`<div class="hint">${esc(t('Nog geen momenten. Zonder schema staat de thermostaat op 5 °C.'))}</div>`}
+    <button class="btn" data-add="1" style="width:100%;margin-top:8px">${esc(t('+ Moment'))}</button>
+    <div class="row" style="margin-top:8px"><button class="btn gold grow" data-save="1"${thDirty?'':' disabled'}>${esc(t('Opslaan'))}</button>${thDirty?`<button class="btn" data-undo="1">${esc(t('Terugdraaien'))}</button>`:''}</div>`;
   const ch=()=>{thDirty=true;thSchDraw()};
-  box.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{thDay=+b.dataset.day;thSchDraw()});
-  box.querySelectorAll('[data-tm]').forEach(i=>i.onchange=()=>{d[+i.dataset.tm].t=i.value;d.sort((a,b)=>a.t.localeCompare(b.t));ch()});
-  const bump=(i,s)=>{d[i].v=Math.max(thSch.min??5,Math.min(thSch.max??30,Math.round((d[i].v+s*st)/st)*st));ch()};
+  box.querySelectorAll('[data-tm]').forEach(i=>i.onchange=()=>{if(!i.value)return;thMoments[+i.dataset.tm].t=i.value;thMoments.sort((x,y)=>x.t.localeCompare(y.t));ch()});
+  const bump=(i,d)=>{const m=thMoments[i];m.v=Math.max(thSch.min??5,Math.min(thSch.max??30,Math.round((m.v+d*st)/st)*st));ch()};
   box.querySelectorAll('[data-dn]').forEach(b=>b.onclick=()=>bump(+b.dataset.dn,-1));
   box.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>bump(+b.dataset.up,1));
-  box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{d.splice(+b.dataset.rm,1);ch()});
-  const add=box.querySelector('[data-add]');if(add)add.onclick=()=>{const last=d[d.length-1];let h=last?Math.min(23,+last.t.slice(0,2)+2):7;
-    let tt=String(h).padStart(2,'0')+':00';while(d.some(p=>p.t===tt)&&h<23){h++;tt=String(h).padStart(2,'0')+':00'}d.push({t:tt,v:last?last.v:19});d.sort((a,b)=>a.t.localeCompare(b.t));ch()};
-  const ex=box.querySelector('[data-ex]');if(ex)ex.onclick=thSchExample;
-  box.querySelectorAll('[data-cp]').forEach(b=>b.onclick=()=>{const to=b.dataset.cp==='wk'?[0,1,2,3,4]:b.dataset.cp==='we'?[5,6]:[0,1,2,3,4,5,6];
-    to.forEach(i=>{if(i!==thDay)thSch.days[i]=d.map(p=>({...p}))});toast(t('Gekopieerd, nog niet opgeslagen'));ch()});
-  const sv=box.querySelector('[data-save]');if(sv)sv.onclick=async()=>{const miss=thSch.days.findIndex(x=>!x.length);
-    if(miss>=0){thDay=miss;thSchDraw();toast(t('Elke dag heeft minstens één moment nodig'));return}
-    sv.disabled=true;sv.textContent=t('Bezig...');const r=await api('/api/thermostaat/schema',{days:thSch.days});toast(r.message||'');
+  box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{thMoments.splice(+b.dataset.rm,1);ch()});
+  box.querySelectorAll('[data-dy]').forEach(b=>b.onclick=()=>{const [i,j]=b.dataset.dy.split(',').map(Number);thMoments[i].d[j]=!thMoments[i].d[j];ch()});
+  box.querySelector('[data-add]').onclick=()=>{let h=7,tt='07:00';while(thMoments.some(m=>m.t===tt)&&h<23){h++;tt=String(h).padStart(2,'0')+':00'}
+    thMoments.push({t:tt,v:20,d:[0,0,0,0,0,0,0].map(()=>true)});thMoments.sort((x,y)=>x.t.localeCompare(y.t));ch()};
+  const sv=box.querySelector('[data-save]');if(sv)sv.onclick=async()=>{const days=thToDays();
+    const none=days.findIndex(x=>!x.length);if(none>=0){toast(t('Op {d} staat nog geen moment. Elke dag heeft er minstens één nodig.',{d:t(TH_DAYS[none])}));return}
+    const many=days.findIndex(x=>x.length>(thSch.maxPerDay||6));if(many>=0){toast(t('Op {d} staan meer dan {n} momenten.',{d:t(TH_DAYS[many]),n:thSch.maxPerDay||6}));return}
+    const dup=days.findIndex(x=>new Set(x.map(p=>p.t)).size!==x.length);if(dup>=0){toast(t('Op {d} staan twee momenten op dezelfde tijd.',{d:t(TH_DAYS[dup])}));return}
+    sv.disabled=true;sv.textContent=t('Bezig...');const r=await api('/api/thermostaat/schema',{days});toast(r.message||'');
     if(r.ok){thDirty=false;thSchDraw()}else{sv.disabled=false;sv.textContent=t('Opslaan')}};
   const un=box.querySelector('[data-undo]');if(un)un.onclick=()=>{thDirty=false;thSchLoad()}}
 /* Kattenbak (alleen op de hub; stand uit /api/state als lamp.litter). Status, bezoeken vandaag, gewicht, storingen, schoonmaken. */
