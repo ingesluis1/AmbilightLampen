@@ -348,7 +348,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 .thbig{font-size:30px;font-weight:700;line-height:1.1}
 .thset{display:flex;align-items:center;justify-content:center;gap:10px}.thset .btn{min-width:40px;font-size:18px;padding:2px 0}.thset .thbig{min-width:72px}
 .thstate{margin:10px 0 8px;text-align:center;padding:4px 6px;border:2px solid var(--ink);background:#e9dcc2;font-size:14px}
-.thstate.heat{background:#f2a65a}.thstate.on{background:var(--gold)}.thstate.wait{opacity:.7}
+.thstate.warn{background:#f3c0b0;font-size:13px}.thstate.heat{background:#f2a65a}.thstate.on{background:var(--gold)}.thstate.wait{opacity:.7}
 .thquick .btn{flex:1;min-width:0}.thgrid+.thquick{margin-top:12px}
 #thSchFold{margin-top:10px;border-top:2px dashed rgba(58,28,14,.25);padding-top:6px}
 .thmom{border:2px solid var(--ink);background:#fff8ea;padding:6px;margin-top:6px}.thmv{min-width:52px;text-align:center;font-size:18px}
@@ -2068,13 +2068,13 @@ function thDraw(){const z=S&&S.thermo,box=$('thHome');$('thFold').classList.togg
   const sp=thWant??z.setpoint,min=z.min??5,off=sp<=min,heat=!off&&z.temp!=null&&sp>z.temp;
   const until=z.mode==='TemporaryOverride'&&z.until&&thWant==null?' · '+t('tot {t}',{t:new Date(z.until).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}):'';
   const state=thWant!=null?['wait',t('Even geduld...')]:off?['off',t('Uit')]:heat?['heat','🔥 '+t('Verwarmt')+until]:['on',t('Aan, warm genoeg')+until];
-  $('thSum').innerHTML=esc(t('Verwarming'))+' <span class="thchip '+state[0]+'">'+(off?esc(t('uit')):(heat?'🔥 ':'')+thNum(sp)+'°')+'</span>';
+  $('thSum').innerHTML=esc(t('Verwarming'))+' <span class="thchip '+state[0]+'">'+(z.offlineSince?esc(t('offline')):off?esc(t('uit')):(heat?'🔥 ':'')+thNum(sp)+'°')+'</span>';
   box.innerHTML=`<div class="thgrid">
       <div class="thcol"><div class="thlbl">${esc(t('Binnen'))}</div><div class="thbig">${z.temp!=null?thNum(z.temp)+'°':'–'}</div></div>
       <div class="thcol"><div class="thlbl">${esc(t('Gewenst'))}</div><div class="thset"><button class="btn" data-t="-1" aria-label="${esc(t('Lager'))}">−</button><span class="thbig">${thNum(sp)}°</span><button class="btn" data-t="1" aria-label="${esc(t('Hoger'))}">+</button></div></div>
     </div>
     ${state[0]==='off'?'':`<div class="thstate ${state[0]}">${esc(state[1])}</div>`}
-    ${z.available===false?`<div class="hint">${esc(t('De thermostaat is nu niet bereikbaar.'))}</div>`:''}
+    ${z.offlineSince?`<div class="thstate warn">${esc(t('De Honeywell-gateway is offline sinds {t}. Kijk of het kastje stroom en internet heeft.',{t:new Date(z.offlineSince).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}))}</div>`:z.available===false?`<div class="hint">${esc(t('De thermostaat is nu niet bereikbaar.'))}</div>`:''}
     <div class="seg thquick">${TH_QUICK.map(v=>`<button class="btn${!off&&sp===v?' on':''}" data-q="${v}">${v}°</button>`).join('')}<button class="btn${off?' on':''}" data-q="${min}">${esc(t('Uit'))}</button></div>
     ${z.mode!=='FollowSchedule'&&z.schedule!==false&&thWant==null?`<button class="btn" data-sch="1" style="width:100%;margin-top:6px">${esc(t('Terug naar schema'))}</button>`:''}`;
   box.title=t('Honeywell werkt via de cloud: een wijziging duurt soms een paar minuten.');
