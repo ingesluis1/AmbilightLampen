@@ -329,6 +329,16 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 .entar label{font-size:14px}
 .entar span{white-space:nowrap;font-weight:600}
 .entar input{width:92px!important;text-align:right}
+/* Bediening: tegeltjes (lampen aan/uit, alle lampen, airco, verwarming, kattenbak). Een tegel opent zijn uitklapper eronder. */
+.ctiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-top:8px}
+.ctile{border:3px solid var(--ink);background:var(--cream);padding:8px 4px 6px;display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;min-width:0;box-shadow:inset 0 -3px 0 rgba(0,0,0,.12);font:inherit;color:inherit}
+.ctile .ic{height:40px;display:grid;place-items:center;color:#7a6a5c}.ctile .ic canvas{image-rendering:pixelated}
+.ctile b{font-size:13px;line-height:1.15;text-align:center}
+.ctile small{font-size:12px;opacity:.8;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;font-variant-numeric:tabular-nums;text-align:center;min-height:15px}
+.ctile.on{background:var(--gold)}.ctile.on .ic{color:#fff3a0}.ctile.heat{background:#f2a65a}
+.ctile.sel{border-color:var(--gold-dk)}
+.ctile:disabled{opacity:.5;cursor:default}
+#ctrlPanel details.tiled>summary{display:none}#ctrlPanel details.tiled{margin-top:8px!important}
 .aircard{border:3px solid var(--ink);background:var(--cream);padding:8px;margin-top:10px}
 .aircard .top{display:flex;align-items:center;gap:8px}
 .aircard .in{font-size:22px;font-weight:bold}
@@ -415,7 +425,8 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 <section class="panel" id="ctrlPanel">
   <h2>Bediening</h2>
   <button id="syncBtn" class="btn gold big tvonly">Sync starten</button>
-  <button id="offBtn" class="btn big" style="margin-top:8px">Lampen uit</button>
+  <button id="offBtn" class="btn big hidden" style="margin-top:8px">Lampen uit</button>
+  <div class="ctiles" id="ctrlTiles"></div>
   <details id="roomAll" style="margin-top:10px"><summary><b>Alle lampen tegelijk</b></summary>
     <label class="s">Helderheid <span id="v_allBri"></span></label><input type="range" id="allBri" min="0.05" max="1" step="0.05">
     <div class="swatches" id="allCols"></div>
@@ -2080,7 +2091,40 @@ function thDraw(){const z=S&&S.thermo,box=$('thHome');$('thFold').classList.togg
   box.title=t('Honeywell werkt via de cloud: een wijziging duurt soms een paar minuten.');
   box.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>thStep(+b.dataset.t));
   box.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>thSet(+b.dataset.q));
+  ctrlTiles();
   const s=box.querySelector('[data-sch]');if(s)s.onclick=thSchedule}
+/* ---------- Bediening als tegeltjes ---------- */
+// Pixel-iconen (zelfde stijl als BULB): staande lamp met kap, en een radiator (met vlammetje als hij verwarmt)
+const LAMP_IC='<svg viewBox="0 0 10 12" width="30" height="36" aria-hidden="true" shape-rendering="crispEdges"><path fill="currentColor" d="M3 0h4v1h1v1h1v2h1v1H0V4h1V2h1V1h1z"/><path fill="#3a1c0e" d="M4 5h2v5H4zM2 10h6v2H2z"/><path fill="#fff3a0" opacity=".85" d="M2 6h1v1H2zM7 6h1v1H7zM1 7h1v1H1zM8 7h1v1H8z"/></svg>';
+const RAD_IC=(fire)=>'<svg viewBox="0 0 14 12" width="38" height="33" aria-hidden="true" shape-rendering="crispEdges">'+
+  (fire?'<path fill="#e8552a" d="M6 0h1v1h1v1h1v2H8v1H5V4H4V2h1V1h1z"/><path fill="#ffd34d" d="M6 2h1v1h1v1H6V3H5V2h1z"/>':'')+
+  '<path fill="#3a1c0e" d="M0 5h14v1H0zM0 11h14v1H0zM1 6h1v5H1zM4 6h1v5H4zM7 6h1v5H7zM10 6h1v5H10zM13 6h1v5h-1z"/>'+
+  '<path fill="'+(fire?'#f6d7a8':'#cfd6dc')+'" d="M2 6h2v5H2zM5 6h2v5H5zM8 6h2v5H8zM11 6h2v5h-2z"/></svg>';
+let ctrlSel=null;   // id van de uitklapper die open staat via een tegel
+const CTRL_FOLDS=['roomAll','airFold','thFold','kbFold'];
+function ctrlOpen(id){ctrlSel=ctrlSel===id?null:id;for(const f of CTRL_FOLDS){const d=$(f);if(d)d.open=f===ctrlSel}ctrlTiles()}
+function ctrlTiles(){const box=$('ctrlTiles');if(!box||!S)return;const rid=homeRoomId();
+  for(const f of CTRL_FOLDS){const d=$(f);if(d){d.classList.add('tiled');if(d.classList.contains('hidden')&&ctrlSel===f)ctrlSel=null;d.open=f===ctrlSel}}
+  const tiles=[];
+  // Lampen aan/uit (direct)
+  const lightsOn=hasRooms()?roomAnyOn(rid):!S.lampsOff;
+  tiles.push({k:'off',ic:BULB.replace('width="16" height="20"','width="28" height="35"'),on:lightsOn,lbl:t('Lampen'),st:t(lightsOn?'aan':'uit'),dis:$('offBtn').disabled,act:()=>$('offBtn').click()});
+  if(!$('roomAll').classList.contains('hidden'))tiles.push({k:'roomAll',ic:LAMP_IC,lbl:t('Alle lampen'),st:t('kleur en licht')});
+  const air=isHouse()?[]:lampsIn(rid).filter(isAir);
+  if(air.length&&!$('airFold').classList.contains('hidden')){const a=airOf(air[0].id);
+    tiles.push({k:'airFold',ic:airIcon(air[0].look,16,40),on:!!(a&&a.on),lbl:t('Airco'),st:a&&a.known?t(a.on?'aan':'uit')+(a.inside!=null?' · '+a.inside+'°':''):''})}
+  const z=S.thermo;
+  if(z&&!$('thFold').classList.contains('hidden')){const off=z.setpoint<=(z.min??5),heat=!off&&z.temp!=null&&z.setpoint>z.temp;
+    tiles.push({k:'thFold',ic:RAD_IC(heat),heat,on:!off&&!heat,lbl:t('Verwarming'),st:z.offlineSince?t('offline'):off?t('uit')+(z.temp!=null?' · '+thNum(z.temp)+'°':''):thNum(z.setpoint)+'°'+(z.temp!=null?' · '+t('nu')+' '+thNum(z.temp)+'°':'')})}
+  const kb=isHouse()?[]:lampsIn(rid).filter(l=>isKat(l)&&!isLocked(l));
+  if(kb.length&&!$('kbFold').classList.contains('hidden')){const k=kbOf(kb[0].id);
+    tiles.push({k:'kbFold',ic:devIcon(kb[0],40),lbl:t('Kattenbak'),st:k&&k.known?kbStatus(k)+((k.faults||[]).length?' ⚠':''):''})}
+  const key=JSON.stringify(tiles.map(x=>[x.k,x.on,x.heat,x.lbl,x.st,x.dis,typeof x.ic==='string'?x.ic.length:0]))+ctrlSel+I18N.lang;
+  if(box.dataset.k===key)return;box.dataset.k=key;box.innerHTML='';
+  for(const x of tiles){const b=document.createElement('button');b.type='button';b.className='ctile'+(x.on?' on':'')+(x.heat?' heat':'')+(ctrlSel===x.k?' sel':'');b.disabled=!!x.dis;
+    b.innerHTML='<span class="ic"></span><b></b><small></small>';const ic=b.querySelector('.ic');if(typeof x.ic==='string')ic.innerHTML=x.ic;else ic.append(x.ic);
+    b.querySelector('b').textContent=x.lbl;b.querySelector('small').textContent=x.st;b.setAttribute('aria-expanded',x.act?'':String(ctrlSel===x.k));
+    b.onclick=x.act||(()=>ctrlOpen(x.k));box.append(b)}}
 /* Verwarmingsschema: per dag 1 tot 6 momenten; vanaf elk moment geldt die temperatuur tot het volgende (ook over middernacht).
    Wordt pas bij Opslaan naar Honeywell gestuurd. */
 const TH_DAYS=['ma','di','wo','do','vr','za','zo'];
@@ -3622,6 +3666,7 @@ function airAll(){if(!S)return;const sel=lamps.find(l=>l.id===selLamp);airFill($
   const kb=isHouse()?[]:lampsIn(homeRoomId()).filter(l=>isKat(l)&&!isLocked(l));airFill($('kbHome'),kb);$('kbFold').classList.toggle('hidden',!kb.length);
   const k1=kb.length===1&&kbOf(kb[0].id);$('kbSum').textContent=t('Kattenbak')+(k1&&k1.known?' · '+kbStatus(k1)+' · '+t('{n}× vandaag',{n:k1.visits??0})+((k1.faults||[]).length?' · ⚠':''):'');
   thDraw();
+  setTimeout(ctrlTiles,0);
   const here=isHouse()?[]:lampsIn(homeRoomId()).filter(isAir);airFill($('airHome'),here);$('airFold').classList.toggle('hidden',!here.length);
   // In de kop: aan/uit en de temperatuur binnen, zodat je hem ook dichtgeklapt ziet
   const a=here.length===1&&airOf(here[0].id);
@@ -4455,6 +4500,7 @@ function homeUI(){if(!S)return;roomBar();const house=isHouse();
   $('fullOpen').classList.toggle('hidden',!lights.length&&multi());allUI(rid,lights);
   if(hasRooms()){$('offBtn').textContent=t(roomAnyOn(rid)?'Lampen uit':'Lampen aan');$('offBtn').disabled=offBusy||!lights.length}
   else $('offBtn').textContent=t(S.lampsOff?'Lampen aan':'Lampen uit');
+  ctrlTiles();
   $('homeStatus').classList.toggle('hidden',multi()&&!isTv)}
 function houseCards(){const rs=roomsList(),all=lamps.filter(l=>lampRoom(l)&&isLight(l)),nOn=all.filter(l=>lampIsOn(l.id)).length;
   $('houseSum').textContent=t('{a} van {b} lampen aan',{a:nOn,b:all.length});
