@@ -2054,7 +2054,7 @@ function airCard(l){const a=airOf(l.id),d=document.createElement('div');d.classN
    + en − gelden tot het volgende schakelmoment van het schema, net als op de thermostaat. */
 let thTimer=0,thWant=null;
 const thNum=v=>String(v).replace('.',',');
-function thMode(z){if(z.mode==='FollowSchedule')return t(z.schedule===false?'geen schema (vorststand)':'volgt schema');if(z.mode==='TemporaryOverride'&&z.until){const d=new Date(z.until);return t('tot {t}',{t:d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})})}return t('vast')}
+function thMode(z){if(z.followsPlan)return t('volgt schema');if(z.until){const d=new Date(z.until);return t('tot {t}',{t:d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})})}return t('vast')}
 function thStep(d){const z=S&&S.thermo;if(!z)return;const st=z.step||.5;
   // Vanuit de vorststand (5°) niet in halve graden omhoog: begin bij de temperatuur van nu
   let base=thWant??(z.setpoint<10&&z.temp!=null?Math.round(z.temp/st)*st:z.setpoint);
@@ -2066,7 +2066,7 @@ const TH_QUICK=[19,20,21];
 async function thSet(v){clearTimeout(thTimer);thWant=v;thDraw();const r=await api('/api/thermostaat',{value:v});thWant=null;if(r.ok&&r.thermo)S.thermo=r.thermo;else if(r.message)toast(r.message);thDraw()}
 function thDraw(){const z=S&&S.thermo,box=$('thHome');$('thFold').classList.toggle('hidden',!z||S.role!=='owner');if(!z)return;
   const sp=thWant??z.setpoint,min=z.min??5,off=sp<=min,heat=!off&&z.temp!=null&&sp>z.temp;
-  const until=z.mode==='TemporaryOverride'&&z.until&&thWant==null?' · '+t('tot {t}',{t:new Date(z.until).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}):'';
+  const until=z.until&&thWant==null?' · '+t('tot {t}',{t:new Date(z.until).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}):'';
   const state=thWant!=null?['wait',t('Even geduld...')]:off?['off',t('Uit')]:heat?['heat','🔥 '+t('Verwarmt')+until]:['on',t('Aan, warm genoeg')+until];
   $('thSum').innerHTML=esc(t('Verwarming'))+' <span class="thchip '+state[0]+'">'+(z.offlineSince?esc(t('offline')):off?esc(t('uit')):(heat?'🔥 ':'')+thNum(sp)+'°')+'</span>';
   box.innerHTML=`<div class="thgrid">
@@ -2076,7 +2076,7 @@ function thDraw(){const z=S&&S.thermo,box=$('thHome');$('thFold').classList.togg
     ${state[0]==='off'?'':`<div class="thstate ${state[0]}">${esc(state[1])}</div>`}
     ${z.offlineSince?`<div class="thstate warn">${esc(t('De Honeywell-gateway is offline sinds {t}. Kijk of het kastje stroom en internet heeft.',{t:new Date(z.offlineSince).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}))}</div>`:z.available===false?`<div class="hint">${esc(t('De thermostaat is nu niet bereikbaar.'))}</div>`:''}
     <div class="seg thquick">${TH_QUICK.map(v=>`<button class="btn${!off&&sp===v?' on':''}" data-q="${v}">${v}°</button>`).join('')}<button class="btn${off?' on':''}" data-q="${min}">${esc(t('Uit'))}</button></div>
-    ${z.mode!=='FollowSchedule'&&z.schedule!==false&&thWant==null?`<button class="btn" data-sch="1" style="width:100%;margin-top:6px">${esc(t('Terug naar schema'))}</button>`:''}`;
+    ${z.schedule&&!z.followsPlan&&thWant==null?`<button class="btn" data-sch="1" style="width:100%;margin-top:6px">${esc(t('Terug naar schema'))}</button>`:''}`;
   box.title=t('Honeywell werkt via de cloud: een wijziging duurt soms een paar minuten.');
   box.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>thStep(+b.dataset.t));
   box.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>thSet(+b.dataset.q));
@@ -2095,12 +2095,12 @@ async function thSchLoad(){const r=await api('/api/thermostaat/schema');if(!r.ok
 $('thSchFold').addEventListener('toggle',()=>{if($('thSchFold').open&&!thDirty)thSchLoad()});
 function thSchDraw(){const box=$('thSchBox');if(!thSch)return;const st=thSch.step||.5;
   $('thSchSum').textContent=!thMoments.length?t('leeg'):thDirty?t('niet opgeslagen'):t('{n} momenten',{n:thMoments.length});
-  box.innerHTML=`<div class="hint" style="margin:6px 0">${esc(t('Vanaf elk moment geldt die temperatuur tot het volgende moment, ook over middernacht.'))}</div>
+  box.innerHTML=`<div class="hint" style="margin:6px 0">${esc(t('Op elk moment zet de hub de thermostaat op die temperatuur. Zet je hem zelf anders, dan geldt dat tot het volgende moment.'))}</div>
     ${thMoments.map((m,i)=>`<div class="thmom">
       <div class="row" style="align-items:center;gap:6px"><input type="time" step="600" value="${esc(m.t)}" data-tm="${i}" style="flex:1;min-width:0">
         <button class="btn" data-dn="${i}">−</button><b class="thmv">${thNum(m.v)}°</b><button class="btn" data-up="${i}">+</button><button class="btn red" data-rm="${i}" title="${esc(t('Weg'))}">×</button></div>
       <div class="seg thdays">${TH_DAYS.map((n,j)=>`<button class="btn${m.d[j]?' on':''}" data-dy="${i},${j}">${esc(t(n))}</button>`).join('')}</div></div>`).join('')}
-    ${thMoments.length?'':`<div class="hint">${esc(t('Nog geen momenten. Zonder schema staat de thermostaat op 5 °C.'))}</div>`}
+    ${thMoments.length?'':`<div class="hint">${esc(t('Nog geen momenten. Zonder schema blijft de thermostaat staan waar je hem zet.'))}</div>`}
     <button class="btn" data-add="1" style="width:100%;margin-top:8px">${esc(t('+ Moment'))}</button>
     <div class="row" style="margin-top:8px"><button class="btn gold grow" data-save="1"${thDirty?'':' disabled'}>${esc(t('Opslaan'))}</button>${thDirty?`<button class="btn" data-undo="1">${esc(t('Terugdraaien'))}</button>`:''}</div>`;
   const ch=()=>{thDirty=true;thSchDraw()};
@@ -2113,7 +2113,6 @@ function thSchDraw(){const box=$('thSchBox');if(!thSch)return;const st=thSch.ste
   box.querySelector('[data-add]').onclick=()=>{let h=7,tt='07:00';while(thMoments.some(m=>m.t===tt)&&h<23){h++;tt=String(h).padStart(2,'0')+':00'}
     thMoments.push({t:tt,v:20,d:[0,0,0,0,0,0,0].map(()=>true)});thMoments.sort((x,y)=>x.t.localeCompare(y.t));ch()};
   const sv=box.querySelector('[data-save]');if(sv)sv.onclick=async()=>{const days=thToDays();
-    const none=days.findIndex(x=>!x.length);if(none>=0){toast(t('Op {d} staat nog geen moment. Elke dag heeft er minstens één nodig.',{d:t(TH_DAYS[none])}));return}
     const many=days.findIndex(x=>x.length>(thSch.maxPerDay||6));if(many>=0){toast(t('Op {d} staan meer dan {n} momenten.',{d:t(TH_DAYS[many]),n:thSch.maxPerDay||6}));return}
     const dup=days.findIndex(x=>new Set(x.map(p=>p.t)).size!==x.length);if(dup>=0){toast(t('Op {d} staan twee momenten op dezelfde tijd.',{d:t(TH_DAYS[dup])}));return}
     sv.disabled=true;sv.textContent=t('Bezig...');const r=await api('/api/thermostaat/schema',{days});toast(r.message||'');
