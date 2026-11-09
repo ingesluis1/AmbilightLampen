@@ -337,8 +337,20 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 .aircard .tgt{display:flex;align-items:center;gap:10px}
 .aircard .tgt b{font-size:20px;min-width:64px;text-align:center}
 .aircard.off .ctl{opacity:.55}
-.thnum,#thHome .in,#thHome .tgt b,#thSchBox b,#thSchBox input[type=time]{font-family:var(--ensans,system-ui,-apple-system,'Segoe UI',sans-serif);font-variant-numeric:tabular-nums}
-.thnum{font-weight:normal;font-size:15px;margin-left:4px}
+/* Verwarming: cijfers in het gewone lettertype (pixelletters maken 18,5 slecht leesbaar) */
+.thchip,.thbig,#thSchBox b,#thSchBox input[type=time]{font-family:var(--ensans,system-ui,-apple-system,'Segoe UI',sans-serif);font-variant-numeric:tabular-nums}
+.thchip{font-weight:600;font-size:13px;margin-left:6px;padding:1px 7px;border:2px solid var(--ink);background:#e9dcc2}
+.thchip.heat{background:#f2a65a}.thchip.on{background:var(--gold)}
+.thcard{border:3px solid var(--ink);background:var(--cream);padding:10px;margin-top:8px}
+.thgrid{display:grid;grid-template-columns:1fr 1.4fr;gap:8px;align-items:end}
+.thcol{text-align:center}.thcol+.thcol{border-left:2px dashed rgba(58,28,14,.25)}
+.thlbl{font-size:12px;opacity:.75;margin-bottom:2px}
+.thbig{font-size:30px;font-weight:700;line-height:1.1}
+.thset{display:flex;align-items:center;justify-content:center;gap:10px}.thset .btn{min-width:40px;font-size:18px;padding:2px 0}.thset .thbig{min-width:72px}
+.thstate{margin:10px 0 8px;text-align:center;padding:4px 6px;border:2px solid var(--ink);background:#e9dcc2;font-size:14px}
+.thstate.heat{background:#f2a65a}.thstate.on{background:var(--gold)}.thstate.wait{opacity:.7}
+.thquick .btn{flex:1;min-width:0}.thgrid+.thquick{margin-top:12px}
+#thSchFold{margin-top:10px;border-top:2px dashed rgba(58,28,14,.25);padding-top:6px}
 .isair .aironly{display:block}
 .airlooks{grid-template-columns:repeat(2,1fr)!important;gap:6px!important}
 .airlooks .btn{flex-direction:row!important;gap:8px!important;font-size:13px!important;padding:5px 7px!important;text-align:left;line-height:1.15}
@@ -410,8 +422,8 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
     <p class="hint" style="margin:6px 0 0">Een kleur of effect zet alle lampen hier aan. De helderheid verandert alleen de lampen die al aan staan.</p>
   </details>
   <details id="airFold" class="hidden" style="margin-top:10px"><summary><b id="airSum">Airco</b></summary><div id="airHome"></div></details>
-  <details id="thFold" class="hidden" style="margin-top:10px"><summary><b id="thSum">Verwarming</b></summary><div id="thHome"></div>
-    <details id="thSchFold" class="aircard" style="margin-top:8px"><summary><b>Schema</b> <span class="hint" id="thSchSum"></span></summary><div id="thSchBox"><div class="hint">Laden...</div></div></details></details>
+  <details id="thFold" class="hidden" style="margin-top:10px"><summary><b id="thSum">Verwarming</b></summary><div class="thcard"><div id="thHome"></div>
+    <details id="thSchFold"><summary><b>Schema</b> <span class="hint" id="thSchSum"></span></summary><div id="thSchBox"><div class="hint">Laden...</div></div></details></div></details>
   <details id="kbFold" class="hidden" style="margin-top:10px"><summary><b id="kbSum">Kattenbak</b></summary><div id="kbHome"></div></details>
   <div id="homeStatus" class="hint"></div>
 </section>
@@ -2047,17 +2059,25 @@ function thStep(d){const z=S&&S.thermo;if(!z)return;const st=z.step||.5;
   thWant=Math.max(z.min??5,Math.min(z.max??30,Math.round((base+d*st)/st)*st));thDraw();clearTimeout(thTimer);
   thTimer=setTimeout(async()=>{const v=thWant;const r=await api('/api/thermostaat',{value:v});thWant=null;if(r.ok&&r.thermo)S.thermo=r.thermo;else if(r.message)toast(r.message);thDraw()},1200)}
 async function thSchedule(){clearTimeout(thTimer);thWant=null;const r=await api('/api/thermostaat',{schedule:true});if(r.ok&&r.thermo)S.thermo=r.thermo;else if(r.message)toast(r.message);thDraw()}
+/* Kaart: links de temperatuur nu, rechts gewenst met − en +; daaronder een labeltje (uit / verwarmt / aan) en snelknoppen. */
+const TH_QUICK=[19,20,21];
+async function thSet(v){clearTimeout(thTimer);thWant=v;thDraw();const r=await api('/api/thermostaat',{value:v});thWant=null;if(r.ok&&r.thermo)S.thermo=r.thermo;else if(r.message)toast(r.message);thDraw()}
 function thDraw(){const z=S&&S.thermo,box=$('thHome');$('thFold').classList.toggle('hidden',!z||S.role!=='owner');if(!z)return;
-  const sp=thWant??z.setpoint,heat=z.temp!=null&&sp>z.temp;
-  // Cijfers in het gewone lettertype (pixelletters maken 18,5 en 5 slecht leesbaar), met erbij wat ze betekenen
-  $('thSum').innerHTML=esc(t('Verwarming'))+' <span class="thnum">'+(z.temp!=null?esc(t('binnen'))+' '+thNum(z.temp)+'°, ':'')+esc(t(heat?'verwarmt tot':'staat op'))+' '+thNum(sp)+'°</span>';
-  box.innerHTML=`<div class="aircard"><div class="top"><b class="grow">${esc(t('Thermostaat'))}</b>${z.temp!=null?`<span class="in" title="${esc(t('Binnen'))}">${thNum(z.temp)} °C</span>`:''}</div>
+  const sp=thWant??z.setpoint,min=z.min??5,off=sp<=min,heat=!off&&z.temp!=null&&sp>z.temp;
+  const until=z.mode==='TemporaryOverride'&&z.until&&thWant==null?' · '+t('tot {t}',{t:new Date(z.until).toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})}):'';
+  const state=thWant!=null?['wait',t('Even geduld...')]:off?['off',t('Uit')]:heat?['heat','🔥 '+t('Verwarmt')+until]:['on',t('Aan, warm genoeg')+until];
+  $('thSum').innerHTML=esc(t('Verwarming'))+' <span class="thchip '+state[0]+'">'+(off?esc(t('uit')):(heat?'🔥 ':'')+thNum(sp)+'°')+'</span>';
+  box.innerHTML=`<div class="thgrid">
+      <div class="thcol"><div class="thlbl">${esc(t('Binnen'))}</div><div class="thbig">${z.temp!=null?thNum(z.temp)+'°':'–'}</div></div>
+      <div class="thcol"><div class="thlbl">${esc(t('Gewenst'))}</div><div class="thset"><button class="btn" data-t="-1" aria-label="${esc(t('Lager'))}">−</button><span class="thbig">${thNum(sp)}°</span><button class="btn" data-t="1" aria-label="${esc(t('Hoger'))}">+</button></div></div>
+    </div>
+    ${state[0]==='off'?'':`<div class="thstate ${state[0]}">${esc(state[1])}</div>`}
     ${z.available===false?`<div class="hint">${esc(t('De thermostaat is nu niet bereikbaar.'))}</div>`:''}
-    <div class="ctl"><div class="lbl">${esc(t('Gewenst'))} · ${esc(thWant!=null?t('even geduld...'):thMode(z))}</div>
-    <div class="tgt"><button class="btn" data-t="-1">−</button><b>${thNum(sp)} °C</b><button class="btn" data-t="1">+</button></div>
-    ${z.mode!=='FollowSchedule'&&z.schedule!==false&&thWant==null?`<div class="row" style="margin-top:8px"><button class="btn grow" data-sch="1">${esc(t('Terug naar schema'))}</button></div>`:''}
-    <div class="hint" style="margin-top:6px">${esc(t('Honeywell werkt via de cloud: een wijziging duurt soms een paar minuten.'))}</div></div></div>`;
+    <div class="seg thquick">${TH_QUICK.map(v=>`<button class="btn${!off&&sp===v?' on':''}" data-q="${v}">${v}°</button>`).join('')}<button class="btn${off?' on':''}" data-q="${min}">${esc(t('Uit'))}</button></div>
+    ${z.mode!=='FollowSchedule'&&z.schedule!==false&&thWant==null?`<button class="btn" data-sch="1" style="width:100%;margin-top:6px">${esc(t('Terug naar schema'))}</button>`:''}`;
+  box.title=t('Honeywell werkt via de cloud: een wijziging duurt soms een paar minuten.');
   box.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>thStep(+b.dataset.t));
+  box.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>thSet(+b.dataset.q));
   const s=box.querySelector('[data-sch]');if(s)s.onclick=thSchedule}
 /* Verwarmingsschema: per dag 1 tot 6 momenten; vanaf elk moment geldt die temperatuur tot het volgende (ook over middernacht).
    Wordt pas bij Opslaan naar Honeywell gestuurd. */
