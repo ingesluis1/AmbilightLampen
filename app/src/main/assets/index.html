@@ -408,6 +408,8 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
     <p class="hint" style="margin:6px 0 0">Een kleur of effect zet alle lampen hier aan. De helderheid verandert alleen de lampen die al aan staan.</p>
   </details>
   <details id="airFold" class="hidden" style="margin-top:10px"><summary><b id="airSum">Airco</b></summary><div id="airHome"></div></details>
+  <details id="thFold" class="hidden" style="margin-top:10px"><summary><b id="thSum">Verwarming</b></summary><div id="thHome"></div>
+    <details id="thSchFold" class="aircard" style="margin-top:8px"><summary><b>Schema</b> <span class="hint" id="thSchSum"></span></summary><div id="thSchBox"><div class="hint">Laden...</div></div></details></details>
   <details id="kbFold" class="hidden" style="margin-top:10px"><summary><b id="kbSum">Kattenbak</b></summary><div id="kbHome"></div></details>
   <div id="homeStatus" class="hint"></div>
 </section>
@@ -938,6 +940,13 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
   <input type="password" id="gwToken" placeholder="Growatt API-token" autocomplete="new-password">
   <div class="row" style="margin-top:8px"><button class="btn gold grow" id="gwSave">Opslaan en testen</button><button class="btn" id="gwTest">Testen</button><button class="btn red" id="gwClear">Wissen</button></div>
   <div class="hint" id="gwState"></div>
+  </details>
+  <details class="apigrp" id="hwPanel"><summary><b>Thermostaat (Honeywell)</b> <span class="hint" id="hwSum"></span></summary>
+  <p style="margin:0 0 8px">Je thermostaat via de Honeywell-gateway (RFG100). Vul het e-mailadres en wachtwoord van de <b>Total Connect Comfort</b>-app in. Het wachtwoord blijft op de server.</p>
+  <input type="email" id="hwEmail" placeholder="E-mailadres Total Connect Comfort" autocomplete="off" autocapitalize="off">
+  <input type="password" id="hwPass" placeholder="Wachtwoord Total Connect Comfort" autocomplete="new-password" style="margin-top:6px">
+  <div class="row" style="margin-top:8px"><button class="btn gold grow" id="hwSave">Koppelen</button><button class="btn red" id="hwClear">Wissen</button></div>
+  <div class="hint" id="hwState"></div>
   </details>
   <div class="sect">Pakketjes</div>
   <details class="apigrp" id="pnPanel"><summary><b>PostNL</b> <span class="hint" id="pnSum"></span></summary>
@@ -2025,6 +2034,64 @@ function airCard(l){const a=airOf(l.id),d=document.createElement('div');d.classN
   d.querySelector('[data-sw]').onclick=()=>airSet(l.id,{swing:!a.swing});
   d.querySelector('[data-sl]').onclick=()=>airSet(l.id,{sleep:!a.sleep});
   return d}
+/* Verwarming (Honeywell-thermostaat, alleen hub en alleen hoofdgebruiker; stand uit /api/state als S.thermo).
+   + en − gelden tot het volgende schakelmoment van het schema, net als op de thermostaat. */
+let thTimer=0,thWant=null;
+const thNum=v=>String(v).replace('.',',');
+function thMode(z){if(z.mode==='FollowSchedule')return t(z.schedule===false?'geen schema (vorststand)':'volgt schema');if(z.mode==='TemporaryOverride'&&z.until){const d=new Date(z.until);return t('tot {t}',{t:d.toLocaleTimeString('nl-NL',{hour:'2-digit',minute:'2-digit'})})}return t('vast')}
+function thStep(d){const z=S&&S.thermo;if(!z)return;const st=z.step||.5;
+  // Vanuit de vorststand (5°) niet in halve graden omhoog: begin bij de temperatuur van nu
+  let base=thWant??(z.setpoint<10&&z.temp!=null?Math.round(z.temp/st)*st:z.setpoint);
+  thWant=Math.max(z.min??5,Math.min(z.max??30,Math.round((base+d*st)/st)*st));thDraw();clearTimeout(thTimer);
+  thTimer=setTimeout(async()=>{const v=thWant;const r=await api('/api/thermostaat',{value:v});thWant=null;if(r.ok&&r.thermo)S.thermo=r.thermo;else if(r.message)toast(r.message);thDraw()},1200)}
+async function thSchedule(){clearTimeout(thTimer);thWant=null;const r=await api('/api/thermostaat',{schedule:true});if(r.ok&&r.thermo)S.thermo=r.thermo;else if(r.message)toast(r.message);thDraw()}
+function thDraw(){const z=S&&S.thermo,box=$('thHome');$('thFold').classList.toggle('hidden',!z||S.role!=='owner');if(!z)return;
+  const sp=thWant??z.setpoint,heat=z.temp!=null&&sp>z.temp;
+  $('thSum').textContent=t('Verwarming')+' · '+(z.temp!=null?thNum(z.temp)+' °C · ':'')+(heat?'🔥 ':'')+thNum(sp)+' °C';
+  box.innerHTML=`<div class="aircard"><div class="top"><b class="grow">${esc(t('Thermostaat'))}</b>${z.temp!=null?`<span class="in" title="${esc(t('Binnen'))}">${thNum(z.temp)} °C</span>`:''}</div>
+    ${z.available===false?`<div class="hint">${esc(t('De thermostaat is nu niet bereikbaar.'))}</div>`:''}
+    <div class="ctl"><div class="lbl">${esc(t('Gewenst'))} · ${esc(thWant!=null?t('even geduld...'):thMode(z))}</div>
+    <div class="tgt"><button class="btn" data-t="-1">−</button><b>${thNum(sp)} °C</b><button class="btn" data-t="1">+</button></div>
+    ${z.mode!=='FollowSchedule'&&z.schedule!==false&&thWant==null?`<div class="row" style="margin-top:8px"><button class="btn grow" data-sch="1">${esc(t('Terug naar schema'))}</button></div>`:''}
+    <div class="hint" style="margin-top:6px">${esc(t('Honeywell werkt via de cloud: een wijziging duurt soms een paar minuten.'))}</div></div></div>`;
+  box.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>thStep(+b.dataset.t));
+  const s=box.querySelector('[data-sch]');if(s)s.onclick=thSchedule}
+/* Verwarmingsschema: per dag 1 tot 6 momenten; vanaf elk moment geldt die temperatuur tot het volgende (ook over middernacht).
+   Wordt pas bij Opslaan naar Honeywell gestuurd. */
+const TH_DAYS=['ma','di','wo','do','vr','za','zo'];
+let thSch=null,thDay=0,thDirty=false;
+async function thSchLoad(){const r=await api('/api/thermostaat/schema');if(!r.ok){$('thSchBox').innerHTML=`<div class="hint">${esc(r.message||t('Het schema kon niet worden opgehaald.'))}</div>`;return}
+  thSch=r;thDirty=false;thDay=(new Date().getDay()+6)%7;thSchDraw()}
+$('thSchFold').addEventListener('toggle',()=>{if($('thSchFold').open&&!thDirty)thSchLoad()});
+function thSchExample(){const wk=[['06:30',19.5],['08:30',16],['17:30',20],['22:30',16]],we=[['08:00',19.5],['23:00',16]];
+  thSch.days=TH_DAYS.map((_,i)=>(i<5?wk:we).map(([tt,v])=>({t:tt,v})));thDirty=true;thSchDraw()}
+function thSchDraw(){const box=$('thSchBox');if(!thSch)return;const d=thSch.days[thDay],st=thSch.step||.5,empty=thSch.days.every(x=>!x.length);
+  $('thSchSum').textContent=empty?t('leeg'):thDirty?t('niet opgeslagen'):'';
+  box.innerHTML=`<div class="seg" style="margin-top:6px">${TH_DAYS.map((n,i)=>`<button class="btn${i===thDay?' on':''}" data-day="${i}">${esc(t(n))}</button>`).join('')}</div>
+    <div class="hint" style="margin:6px 0">${esc(t('Vanaf elk moment geldt die temperatuur tot het volgende moment.'))}</div>
+    ${d.map((p,i)=>`<div class="row" style="align-items:center;gap:6px;margin-top:4px"><input type="time" step="600" value="${esc(p.t)}" data-tm="${i}" style="flex:1;min-width:0">
+      <button class="btn" data-dn="${i}">−</button><b style="min-width:58px;text-align:center">${thNum(p.v)} °C</b><button class="btn" data-up="${i}">+</button><button class="btn red" data-rm="${i}" title="${esc(t('Weg'))}">×</button></div>`).join('')}
+    ${d.length?'':`<div class="hint">${esc(t('Nog geen momenten op deze dag.'))}</div>`}
+    <div class="row" style="margin-top:8px;flex-wrap:wrap;gap:6px">${d.length<(thSch.maxPerDay||6)?`<button class="btn" data-add="1">${esc(t('+ Moment'))}</button>`:''}${empty?`<button class="btn" data-ex="1">${esc(t('Voorbeeld invullen'))}</button>`:''}</div>
+    ${d.length?`<div class="lbl">${esc(t('Deze dag kopiëren naar'))}</div><div class="seg"><button class="btn" data-cp="wk">${esc(t('werkdagen'))}</button><button class="btn" data-cp="we">${esc(t('weekend'))}</button><button class="btn" data-cp="all">${esc(t('alle dagen'))}</button></div>`:''}
+    <div class="row" style="margin-top:10px"><button class="btn gold grow" data-save="1"${thDirty?'':' disabled'}>${esc(t('Opslaan'))}</button>${thDirty?`<button class="btn" data-undo="1">${esc(t('Terugdraaien'))}</button>`:''}</div>`;
+  const ch=()=>{thDirty=true;thSchDraw()};
+  box.querySelectorAll('[data-day]').forEach(b=>b.onclick=()=>{thDay=+b.dataset.day;thSchDraw()});
+  box.querySelectorAll('[data-tm]').forEach(i=>i.onchange=()=>{d[+i.dataset.tm].t=i.value;d.sort((a,b)=>a.t.localeCompare(b.t));ch()});
+  const bump=(i,s)=>{d[i].v=Math.max(thSch.min??5,Math.min(thSch.max??30,Math.round((d[i].v+s*st)/st)*st));ch()};
+  box.querySelectorAll('[data-dn]').forEach(b=>b.onclick=()=>bump(+b.dataset.dn,-1));
+  box.querySelectorAll('[data-up]').forEach(b=>b.onclick=()=>bump(+b.dataset.up,1));
+  box.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{d.splice(+b.dataset.rm,1);ch()});
+  const add=box.querySelector('[data-add]');if(add)add.onclick=()=>{const last=d[d.length-1];let h=last?Math.min(23,+last.t.slice(0,2)+2):7;
+    let tt=String(h).padStart(2,'0')+':00';while(d.some(p=>p.t===tt)&&h<23){h++;tt=String(h).padStart(2,'0')+':00'}d.push({t:tt,v:last?last.v:19});d.sort((a,b)=>a.t.localeCompare(b.t));ch()};
+  const ex=box.querySelector('[data-ex]');if(ex)ex.onclick=thSchExample;
+  box.querySelectorAll('[data-cp]').forEach(b=>b.onclick=()=>{const to=b.dataset.cp==='wk'?[0,1,2,3,4]:b.dataset.cp==='we'?[5,6]:[0,1,2,3,4,5,6];
+    to.forEach(i=>{if(i!==thDay)thSch.days[i]=d.map(p=>({...p}))});toast(t('Gekopieerd, nog niet opgeslagen'));ch()});
+  const sv=box.querySelector('[data-save]');if(sv)sv.onclick=async()=>{const miss=thSch.days.findIndex(x=>!x.length);
+    if(miss>=0){thDay=miss;thSchDraw();toast(t('Elke dag heeft minstens één moment nodig'));return}
+    sv.disabled=true;sv.textContent=t('Bezig...');const r=await api('/api/thermostaat/schema',{days:thSch.days});toast(r.message||'');
+    if(r.ok){thDirty=false;thSchDraw()}else{sv.disabled=false;sv.textContent=t('Opslaan')}};
+  const un=box.querySelector('[data-undo]');if(un)un.onclick=()=>{thDirty=false;thSchLoad()}}
 /* Kattenbak (alleen op de hub; stand uit /api/state als lamp.litter). Status, bezoeken vandaag, gewicht, storingen, schoonmaken. */
 const KB_CSS=document.head.appendChild(document.createElement('style'));KB_CSS.textContent='.kbic{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.kbic .btn.ic{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:7px 2px 5px;min-width:0}.kbic .btn.ic svg{width:26px;height:26px}.kbic .btn.ic span{font-size:11px;line-height:1.1;text-align:center;overflow-wrap:anywhere}.kbavg{font-family:system-ui,-apple-system,Roboto,sans-serif;font-size:13px;margin:4px 0 0;display:flex;flex-wrap:wrap;gap:4px 12px}.kbavg i{display:inline-block;width:10px;height:10px;border:2px solid #2a1a2e;margin-right:4px;vertical-align:-1px}';
 const KB_SHORT={clean:'Schoonmaken',pour:'Zand bijvullen',smooth:'Egaliseren',uv:'Steriliseren',auto:'Automatisch',light:'Lampje',lock:'Kinderslot'};
@@ -3328,6 +3395,11 @@ function acUI(p,s){if(!s)return;$(p+'Sum').textContent=s.authLost?t('verlopen'):
 async function acDo(p,path,body,btn,done){const b=$(btn),old=b.textContent;b.disabled=true;b.textContent=t('Bezig...');
   try{const r=await api(path,body||{});toast(r.message||'');acUI(p,r);if(r.ok&&done)done()}finally{b.disabled=false;b.textContent=old}}
 $('dpSave').onclick=()=>acDo('dp','/api/dpd/save',{email:$('dpEmail').value,password:$('dpPass').value},'dpSave',()=>{$('dpPass').value='';setTimeout(pkLoad,8000)});
+function hwUI(s){acUI('hw',s);if(!s)return;if(s.user&&!$('hwEmail').value)$('hwEmail').value=s.user;
+  const z=(s.zones||[])[0],n=v=>String(v).replace('.',',');if(z&&s.configured&&!s.authLost)$('hwState').textContent+=' · '+(z.temp!=null?n(z.temp)+'° '+t('binnen')+', ':'')+t('ingesteld')+' '+n(z.setpoint)+'°'}
+$('hwSave').onclick=async()=>{const b=$('hwSave'),old=b.textContent;b.disabled=true;b.textContent=t('Bezig...');
+  try{const r=await api('/api/honeywell/save',{email:$('hwEmail').value,password:$('hwPass').value});toast(r.message||'');hwUI(r);if(r.ok)$('hwPass').value=''}finally{b.disabled=false;b.textContent=old}};
+$('hwClear').onclick=async()=>{if(!confirm(t('Honeywell-gegevens van de server wissen?')))return;const r=await api('/api/honeywell/clear',{});toast(r.message||'');hwUI(r)};
 $('dpClear').onclick=()=>{if(confirm(t('DPD-gegevens van de server wissen?')))acDo('dp','/api/dpd/clear',{},'dpClear')};
 $('vgSend').onclick=()=>acDo('vg','/api/vintedgo/register',{email:$('vgEmail').value},'vgSend',()=>$('vgLink').focus());
 $('vgConfirm').onclick=()=>acDo('vg','/api/vintedgo/confirm',{link:$('vgLink').value},'vgConfirm',()=>{$('vgLink').value='';setTimeout(pkLoad,8000)});
@@ -3523,6 +3595,7 @@ function airAll(){if(!S)return;const sel=lamps.find(l=>l.id===selLamp);airFill($
   houseDevs();
   const kb=isHouse()?[]:lampsIn(homeRoomId()).filter(l=>isKat(l)&&!isLocked(l));airFill($('kbHome'),kb);$('kbFold').classList.toggle('hidden',!kb.length);
   const k1=kb.length===1&&kbOf(kb[0].id);$('kbSum').textContent=t('Kattenbak')+(k1&&k1.known?' · '+kbStatus(k1)+' · '+t('{n}× vandaag',{n:k1.visits??0})+((k1.faults||[]).length?' · ⚠':''):'');
+  thDraw();
   const here=isHouse()?[]:lampsIn(homeRoomId()).filter(isAir);airFill($('airHome'),here);$('airFold').classList.toggle('hidden',!here.length);
   // In de kop: aan/uit en de temperatuur binnen, zodat je hem ook dichtgeklapt ziet
   const a=here.length===1&&airOf(here[0].id);
@@ -4217,7 +4290,7 @@ function eneUI(s){if(!s)return;const ph=(id,base,set)=>{$(id).placeholder=t(base
   const r=s.test;let txt=s.configured?t('Ingevuld.'):t('Nog niet (helemaal) ingevuld.');
   if(r)txt=r.ok?t('Verbonden. Meetpunten: {p}',{p:(r.points||[]).map(p=>p.label+(p.dayMax?' ('+t('t/m {d}',{d:p.dayMax.slice(0,10)})+')':'')).join(', ')||t('geen')}):t('Fout: {e}',{e:r.error});
   $('eneState').textContent=txt;$('eneClear').classList.toggle('hidden',!s.configured&&!s.email)}
-async function eneLoad(){if(!SRV)return;try{eneUI(await api('/api/enelogic'))}catch(e){}try{gwUI(await api('/api/growatt'))}catch(e){}try{pnUI(await api('/api/postnl'))}catch(e){}try{dhUI(await api('/api/dhl'))}catch(e){}try{const d=await api('/api/dpd');acUI('dp',d);if(d.user&&!$('dpEmail').value)$('dpEmail').value=d.user}catch(e){}try{const v=await api('/api/vintedgo');acUI('vg',v);if(v.user&&!$('vgEmail').value)$('vgEmail').value=v.user}catch(e){}}
+async function eneLoad(){if(!SRV)return;try{eneUI(await api('/api/enelogic'))}catch(e){}try{gwUI(await api('/api/growatt'))}catch(e){}try{hwUI(await api('/api/honeywell'))}catch(e){}try{pnUI(await api('/api/postnl'))}catch(e){}try{dhUI(await api('/api/dhl'))}catch(e){}try{const d=await api('/api/dpd');acUI('dp',d);if(d.user&&!$('dpEmail').value)$('dpEmail').value=d.user}catch(e){}try{const v=await api('/api/vintedgo');acUI('vg',v);if(v.user&&!$('vgEmail').value)$('vgEmail').value=v.user}catch(e){}}
 /* Growatt: het wachtwoord komt nooit terug; het veld toont alleen "al ingevuld" */
 function gwUI(s){if(!s)return;$('gwToken').placeholder=t('Growatt API-token')+(s.configured?' · '+t('al ingevuld'):'');
   const r=s.test;let txt=s.configured?t('Ingevuld.'):t('Nog niet (helemaal) ingevuld.');
