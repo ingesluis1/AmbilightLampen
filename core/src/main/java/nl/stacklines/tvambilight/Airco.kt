@@ -18,6 +18,8 @@ object Airco {
     val FANS = mapOf("low" to "3", "mid" to "2", "high" to "1")
     const val MIN_TEMP = 16
     const val MAX_TEMP = 31
+    /** Wanneer de hub zelf (pagina, HomeKit) de airco het laatst aanzette: zo is "vanzelf aan" (afstandsbediening, knop, kat) te herkennen. */
+    val lastOnCmd = ConcurrentHashMap<String, Long>()
 
     /** Verbindingen bijhouden: één per apparaat (airco, kattenbak) met ip-adres, open zolang de hub draait. */
     fun sync() {
@@ -50,6 +52,7 @@ object Airco {
         val c = conns[id] ?: return tr("Airco niet verbonden", "Air conditioner not connected")
         val dps = LinkedHashMap<String, Any>()
         if (j.has("on")) dps["1"] = j.optBoolean("on")
+        if (j.optBoolean("on")) lastOnCmd[id] = System.currentTimeMillis()
         j.optString("mode").takeIf { it.isNotEmpty() }?.let { m -> dps["101"] = MODES[m] ?: return tr("Onbekende stand", "Unknown mode") }
         if (j.has("target")) dps["2"] = j.optInt("target").coerceIn(MIN_TEMP, MAX_TEMP)
         j.optString("fan").takeIf { it.isNotEmpty() }?.let { f -> dps["104"] = FANS[f] ?: return tr("Onbekende ventilatorstand", "Unknown fan speed") }
