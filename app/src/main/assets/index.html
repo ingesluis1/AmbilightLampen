@@ -414,6 +414,7 @@ h2.ttl{display:flex;align-items:center;gap:8px}.btn.pen{padding:2px 8px;font-siz
 .rcard.empty{min-height:0;padding-top:4px;padding-bottom:4px;opacity:.7}.rcard.empty .sw,.rcard.empty .bulb{display:none}
 /* Apparaat-iconen (pixel) */
 .devpx{width:24px;height:24px;image-rendering:pixelated;flex:none}
+.devbox{width:48px;height:48px;flex:none;display:flex;align-items:flex-end;justify-content:center;overflow:hidden}.devbox canvas{flex:none;max-width:none}
 /* Instellingen in tabjes */
 .settabs{display:flex;flex-wrap:wrap;margin:0 0 10px}.settabs .btn{flex:1;min-width:0}
 .sthide{display:none!important}
@@ -2405,7 +2406,31 @@ const PLUG_PX={tv:['................','.1111111111111..','.1222222222221..','.12
   koel:['....11111111....','....12222221....','....12222121....','....12222121....','....11111111....','....12222221....','....12222121....','....12222121....','....12222121....','....12222221....','....12222221....','....11111111....'],
   pc:['................','.111111111111...','.122222222221...','.123333333321...','.123333333321...','.123333333321...','.122222222221...','.111111111111.11','......11......11','....111111....11','..............11']};
 function plugKind(l){const n=(l.name||'').toLowerCase();return /\btv\b|televis/.test(n)?'tv':/vaat/.test(n)?'vaat':/was/.test(n)?'was':/koel|vries/.test(n)?'koel':/\bpc\b|computer|bureau/.test(n)?'pc':''}
-function plugIcon(kind,px){const rows=PLUG_PX[kind],c=document.createElement('canvas');c.width=c.height=16;const g=c.getContext('2d');const col={1:'#3a1c0e',2:'#f6ead0',3:kind==='tv'||kind==='pc'?'#5a8ad0':kind==='koel'?'#cfe6f2':'#8ac0e8'};
+/* Icoon uit dezelfde meubeltekeningen als het huis (Furniture34, schuin van voren), op ware grootte in een vakje van 24x24 */
+/* Lege (doorzichtige) rand van een icoon wegknippen, zodat het zijn vakje vult */
+function trimCanvas(c){try{const g=c.getContext('2d'),d=g.getImageData(0,0,c.width,c.height).data;let x0=c.width,y0=c.height,x1=-1,y1=-1;
+  for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++)if(d[(y*c.width+x)*4+3]>8){if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y}
+  if(x1<0)return c;const o=document.createElement('canvas');o.width=x1-x0+1;o.height=y1-y0+1;o.getContext('2d').drawImage(c,-x0,-y0);o.className=c.className;return o}catch(e){return c}}
+const PLUG_ITEM={kat:['litterbox',null,null,.75],tv:['tvstand',.9,.35,.9],was:['washer',null,null,.75],vaat:['dishwasher',null,null,.75],koel:['fridge',.65,.65,.42],pc:['computer',null,null,.75]};
+/* Eigen pixel-iconen per apparaat (12-11-2026), in de kleuren van de meubels: donkere rand, gebroken wit met schaduw.
+   Tekens: K rand, W wit, w schaduw, g grijs, D scherm, d scherm licht, b/B glas licht/donker, S glans, G groen lampje, . leeg */
+const DEV_PAL={K:'#2a1a2e',W:'#f2efe8',w:'#d6cfc0',g:'#a9a294',D:'#262a3a',d:'#3c4660',b:'#9cc4ec',B:'#4a7ac0',S:'#e8f4ff',G:'#5ac05a'};
+const DEV_ART={
+  was:['KKKKKKKKKKKKKKKK','KwwwwwwwwwwwwwwK','KwKKKwwwwwwGwKwK','KwwwwwwwwwwwwwwK','KKKKKKKKKKKKKKKK','KWWWWWWWWWWWWWWK','KWWWWWKKKKWWWWWK','KWWWKKggggKKWWWK','KWWKggSbbbbgKWWK','KWKgSbbbbbbbgKWK','KWKgbbbbbbbbgKWK','KWKgbBBBBBBbgKWK','KWKgbBBBBBBbgKWK','KWKgBBBBBBBBgKWK','KWWKgBBBBBBgKWWK','KWWWKKggggKKWWWK','KWWWWWKKKKWWWWWK','KwwwwwwwwwwwwwwK','KKKKKKKKKKKKKKKK','.KK..........KK.'],
+  vaat:['KKKKKKKKKKKKKKKKKK','KwwwwwwwwwwwwwwwwK','KwKwKwKwwwwwwwGwwK','KwwwwwwwwwwwwwwwwK','KKKKKKKKKKKKKKKKKK','KWWWWWWWWWWWWWWWWK','KWWggggggggggggWWK','KWWWWWWWWWWWWWWWWK','KWWWWWWWWWWWWWWWwK','KWWWWWWWWWWWWWWWwK','KWWWWWWWWWWWWWWWwK','KWWWWWWWWWWWWWWWwK','KWWWWWWWWWWWWWWWwK','KWWWWWWWWWWWWWWWwK','KwwwwwwwwwwwwwwwwK','KKKKKKKKKKKKKKKKKK'],
+  koel:['KKKKKKKKKKKK','KWWWWWWWWWwK','KWWWWWWWKWwK','KWWWWWWWKWwK','KWWWWWWWWWwK','KKKKKKKKKKKK','KWWWWWWWWWwK','KWWWWWWWKWwK','KWWWWWWWKWwK','KWWWWWWWKWwK','KWWWWWWWKWwK','KWWWWWWWKWwK','KWWWWWWWWWwK','KWWWWWWWWWwK','KWWWWWWWWWwK','KWWWWWWWWWwK','KWWWWWWWWWwK','KWWWWWWWWWwK','KwwwwwwwwwwK','KKKKKKKKKKKK','.KK......KK.'],
+  tv:['KKKKKKKKKKKKKKKKKKKKKK','KDDDDDDDDDDDDDDDDDDDDK','KDSdDDDDDDDDDDDDDDDDDK','KDdDDDDDDDDDDDDDDDDDDK','KDDDDDDDDDDDDDDDDDDDDK','KDDDDDDDDDDDDDDDDDDDDK','KDDDDDDDDDDDDDDDDDDDDK','KDDDDDDDDDDDDDDDDDDDDK','KDDDDDDDDDDDDDDDDDDDDK','KDDDDDDDDDDDDDDDDDDDDK','KDDDDDDDDDDDDDDDDDDDDK','KKKKKKKKKKKKKKKKKKKKKK','.........KKKK.........','......KKKKKKKKKK......'],
+  pc:['...............KKKKKK','...............KwwwwK','...............KwKKwK','KKKKKKKKKKKKKK.KwwwwK','KDDDDDDDDDDDDK.KwGwwK','KDSdDDDDDDDDDK.KwwwwK','KDdDDDDDDDDDDK.KwwwwK','KDDDDDDDDDDDDK.KwwwwK','KDDDDDDDDDDDDK.KwwwwK','KDDDDDDDDDDDDK.KwwwwK','KKKKKKKKKKKKKK.KwwwwK','.....KKKK......KwwwwK','...KKKKKKKK....KKKKKK']};
+/* Kleuren zoals Inges eigen apparaten: zwarte vaatwasser (greep zilver), grijze koelkast */
+const DEV_PAL_OF={vaat:{K:'#120c16',W:'#34343e',w:'#4a4a56',g:'#b8b8c0'},koel:{W:'#c6cacf',w:'#a3a8ae'}};
+function devArt(kind){const a=DEV_ART[kind];if(!a)return null;const pal={...DEV_PAL,...(DEV_PAL_OF[kind]||{})},w=Math.max(...a.map(r=>r.length)),c=document.createElement('canvas');c.width=w;c.height=a.length;const g=c.getContext('2d');
+  a.forEach((r,y)=>[...r].forEach((ch,x)=>{const col=pal[ch];if(col){g.fillStyle=col;g.fillRect(x,y,1,1)}}));c.className='devpx';return c}
+function plugIcon(kind,px){const art=devArt(kind);if(art)return art;const pi=PLUG_ITEM[kind],F=window.Furniture34,it=pi&&typeof Room!=='undefined'&&Room.ITEMS&&Room.ITEMS[pi[0]];
+  if(pi&&F){try{const r=F.renderItem(pi[0],pi[1]??(it&&it.w)??.6,pi[2]??(it&&it.d)??.6,'S',{hf:pi[3]});
+    if(r&&r.canvas){const src=r.canvas,S2=Math.max(22,src.width,src.height),c=document.createElement('canvas');c.width=c.height=S2;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
+      g.drawImage(src,Math.floor((S2-src.width)/2),S2-src.height);c.className='devpx';c.style.width=c.style.height=px+'px';return c}}catch(e){}}
+  return plugIconPx(kind,px)}
+function plugIconPx(kind,px){const rows=PLUG_PX[kind],c=document.createElement('canvas');c.width=c.height=16;const g=c.getContext('2d');const col={1:'#3a1c0e',2:'#f6ead0',3:kind==='tv'||kind==='pc'?'#5a8ad0':kind==='koel'?'#cfe6f2':'#8ac0e8'};
   rows.forEach((r,y)=>[...r].forEach((ch,x)=>{if(col[ch]){g.fillStyle=col[ch];g.fillRect(x,y+Math.floor((16-rows.length)/2),1,1)}}));c.className='devpx';c.style.width=c.style.height=px+'px';return c}
 /* Nette naam voor fabrieksnamen (alleen tonen; hernoemen kan bij Apparaten) */
 function niceName(l){const n=l.name||'';if(isAir(l)&&/air ?conditioner/i.test(n))return t('Airco');if(isKat(l)&&/^[A-Z0-9 -]{4,}$/.test(n))return t('Kattenbak');return n}
@@ -2417,7 +2442,11 @@ function houseDevs(){const merged=new Set(lamps.filter(isAir).map(a=>aircoPlugOf
   if(box.dataset.k!==key){box.dataset.k=key;box.innerHTML='';
     for(const l of devs){const d=document.createElement('details');d.className='hdev';d.dataset.id=l.id;d.open=houseDevOpen.has(l.id);
       d.ontoggle=()=>{if(d.open)houseDevOpen.add(l.id);else houseDevOpen.delete(l.id)};
-      const sm=document.createElement('summary');sm.append(isPlug(l)&&plugKind(l)?plugIcon(plugKind(l),24):devIcon(l,24));const tx=document.createElement('span');tx.className='grow';tx.innerHTML=`<b></b><small></small>`;sm.append(tx);d.append(sm);
+      const sm=document.createElement('summary');
+      // Icoon op hele pixels vergroot (2x of meer) in een vast vakje, zodat alle apparaten even groot en scherp zijn
+      const ic=trimCanvas(isPlug(l)&&plugKind(l)?plugIcon(plugKind(l),24):isKat(l)?plugIcon('kat',24):devIcon(l,24)),k=Math.max(1,Math.floor(44/Math.max(ic.width,ic.height)));
+      ic.style.width=ic.width*k+'px';ic.style.height=ic.height*k+'px';ic.style.imageRendering='pixelated';
+      const ib=document.createElement('span');ib.className='devbox';ib.append(ic);sm.append(ib);const tx=document.createElement('span');tx.className='grow';tx.innerHTML=`<b></b><small></small>`;sm.append(tx);d.append(sm);
       const body=document.createElement('div');body.className='hdevbody';d.append(body);box.append(d)}}
   for(const d of box.children){const l=lamps.find(x=>x.id===d.dataset.id);if(!l)continue;const rm=roomById(lampRoom(l));
     const ap=isAir(l)?aircoPlugOf(l):null;
