@@ -138,6 +138,7 @@ class WebServer(private val ctx: Context) {
                         send("200 OK", "image/png", bos.toByteArray())
                     }
                     path == "/api/state" -> json(state())
+                    method == "GET" && path == "/api/aanzetlog" -> send("200 OK", "text/plain; charset=utf-8", WakeTrace.dump().toByteArray())
                     path == "/api/backup/code" && method == "POST" -> { newKeyCode()
                         msg(true, tr("Kijk op de tv voor de code (3 minuten geldig)", "Look at the TV for the code (valid for 3 minutes)")) }
                     method == "GET" && path == "/api/backup" && query.split('&').contains("keys=1") &&

@@ -21,6 +21,9 @@ class App : Application() {
         // Gelijk blijven met de House hub (alleen als hij gekoppeld is)
         HubLink.deviceName = (android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL).trim().take(40)
         HubLink.init(filesDir)
+        // Meetlog na aanzetten (spotjes die pas na een tijdje meedoen); ook als de app zelf (opnieuw) opstart
+        WakeTrace.file = java.io.File(filesDir, "aanzetlog.txt")
+        WakeTrace.start("app opgestart")
         Reporter.init(this)
         Foreground.init(this)
         AutoDark.init(this)
@@ -66,6 +69,7 @@ class SyncService : Service() {
             screenQueue.execute {
                 when (action) {
                     Intent.ACTION_SCREEN_OFF -> {
+                        WakeTrace.note("Scherm uit (sync ${if (Engine.running) "aan" else "uit"}, scène ${SceneEngine.active?.name ?: "-"})")
                         if (Engine.running) {
                             pausedByScreen = true
                             offScene = Engine.stopThen(if (Store.settings.followAmbi) SceneEngine.find(Store.settings.offScene) else null)
@@ -73,14 +77,23 @@ class SyncService : Service() {
                         // In stand-by valt het netwerk weg: verbindingen nu netjes sluiten, anders blijven 3.3-lampen (spotjes)
                         // na het aanzetten nog even aan de dode verbinding hangen. Niet als er een scène speelt (tv-uit-scène).
                         parkJob?.cancel(false)
-                        parkJob = parkTimer.schedule({ if (!SceneEngine.anyActive() && !Engine.running) Engine.parkAll() }, 8, java.util.concurrent.TimeUnit.SECONDS)
+                        parkJob = parkTimer.schedule({
+                            if (!SceneEngine.anyActive() && !Engine.running) { Engine.parkAll(); WakeTrace.note("Lampen losgelaten") }
+                            else WakeTrace.note("Lampen niet losgelaten (scène of sync loopt)")
+                        }, 8, java.util.concurrent.TimeUnit.SECONDS)
                     }
                     Intent.ACTION_SCREEN_ON -> {
+                        WakeTrace.start("scherm aan; sync gewenst ${Store.syncWanted}, gepauzeerd door scherm $pausedByScreen")
                         parkJob?.cancel(false); parkJob = null
                         // Alleen als het nog onze scène is (niet als je intussen zelf een andere hebt gekozen)
                         offScene?.let { if (SceneEngine.active === it) SceneEngine.stop() }; offScene = null
-                        if (pausedByScreen) { pausedByScreen = false; if (Store.syncWanted && AutoDark.mayAutostart()) Engine.start() }
-                        AutoDark.check()   // 's avonds aangezet: vanzelf syncen (als die instelling aan staat)
+                        if (pausedByScreen) {
+                            pausedByScreen = false
+                            if (Store.syncWanted && AutoDark.mayAutostart()) { Engine.start(); WakeTrace.note("Sync opnieuw gestart") }
+                            else WakeTrace.note("Sync niet vanzelf opnieuw gestart")
+                        }
+                        AutoDark.check()
+                        WakeTrace.note("Na aanzetten: sync ${if (Engine.running) "aan" else "uit"}")   // 's avonds aangezet: vanzelf syncen (als die instelling aan staat)
                     }
                 }
             }

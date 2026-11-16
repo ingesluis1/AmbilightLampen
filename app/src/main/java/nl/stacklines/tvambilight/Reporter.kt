@@ -74,6 +74,7 @@ object Reporter {
             "Hue: ${if (Store.hueKey != null) "gekoppeld" else "-"} ${Hue.status} ${HueStream.status}\n" +
             "IKEA: ${if (Store.ikeaToken != null) "gekoppeld" else "-"} ${Dirigera.status}\n\n" +
             "Lampen:\n$lamps\n\nLaatste meldingen:\n" + AppLog.dump() +
+            "\n\nAanzetlog (laatste 40 regels):\n" + WakeTrace.dump().lines().takeLast(40).joinToString("\n") +
             (lastSendError?.let { "\n\nVersturen naar ntfy mislukte eerder: $it" } ?: "") + exitReasons() + unsentCrash()
         return scrub(text)
     }

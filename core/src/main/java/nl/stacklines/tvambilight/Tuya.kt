@@ -404,6 +404,7 @@ class TuyaLamp(val lamp: Lamp, private val keepOpen: Boolean = false) {
     private fun noteFailure(e: Exception) {
         lastError = (e.javaClass.simpleName + ": " + (e.message ?: "")).take(120); lastFail = lastError ?: ""
         AppLog.add("${lamp.name}: $lastFail")
+        WakeTrace.failed(lamp.name, lastFail)
         reconnects++; online = false
     }
 
@@ -640,6 +641,7 @@ class TuyaLamp(val lamp: Lamp, private val keepOpen: Boolean = false) {
         key = localKey
         if (modern) negotiate()
         online = true; lastError = null
+        WakeTrace.connected(lamp.name)
     }
 
     /** 3.4/3.5: sessiesleutel afspreken met twee willekeurige getallen (van ons en van de lamp). */
