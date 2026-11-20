@@ -134,7 +134,7 @@ object SceneEngine {
         var rt = restoreTo
         if (tv && Engine.running) { Platform.userStopped(); Store.syncWanted = false; Store.save(); Engine.stop(handOver = true); rt = Engine.handedOver }
         Engine.syncWorkers()
-        val ids = Store.lampsSnapshot().filter { it.room == room }.map { it.id }.toSet()
+        val ids = Store.lampsSnapshot().filter { it.isIn(room) }.map { it.id }.toSet()
         val run = Run(scene, room)
         runs[room] = run
         run.thread = Thread({ loop(scene, only = ids, restoreTo = rt, run = run) }, "scene-$room").apply { isDaemon = true; start() }
@@ -196,7 +196,7 @@ object SceneEngine {
     fun liveLamps(): Map<String, Pair<IntArray, String?>>? {
         val rooms = runs.filterValues { it.scene.id == LIVE }.keys
         if (rooms.isEmpty()) return null
-        val ids = Store.lampsSnapshot().filter { it.room in rooms }.map { it.id }.toSet()
+        val ids = Store.lampsSnapshot().filter { it.room in rooms && !it.elsewhere }.map { it.id }.toSet()
         return livePer.filterKeys { it in ids }.mapValues { (k, c) -> c to liveFx[k] }
     }
 
@@ -212,7 +212,7 @@ object SceneEngine {
         if (activeIn(room)?.id != LIVE) {
             val cur = activeIn(room)
             val running = (room == Store.tvRoom.id && Engine.running) || cur != null
-            val inRoom = Store.lampsSnapshot().filter { it.room == room }
+            val inRoom = Store.lampsSnapshot().filter { it.isIn(room) }
             inRoom.forEach { livePer.remove(it.id); liveFx.remove(it.id); liveOnV.remove(it.id) }
             for (l in inRoom) {
                 val w = Engine.workers[l.id] ?: continue
@@ -247,7 +247,7 @@ object SceneEngine {
         if (Store.room(room) == null) return
         liveSet(null, null, null, null, null, inRoom = room)
         val dimOnly = on == null && colour == null && effect == null
-        for (l in Store.lampsSnapshot().filter { it.room == room && it.enabled && it.kind == "light" }) {
+        for (l in Store.lampsSnapshot().filter { it.isIn(room) && it.enabled && it.kind == "light" }) {
             if (dimOnly && (livePer[l.id]?.get(2) ?: 0) <= 0) continue
             liveSet(l.id, on, colour, bright, effect)
         }
@@ -255,7 +255,7 @@ object SceneEngine {
 
     /** Huidige kleuren van alle lampen opslaan als eigen scène (bij de eigen indeling: met de effecten). */
     fun saveCurrent(name: String, room: String = Store.tvRoom.id): Scene {
-        val inRoom = Store.lampsSnapshot().filter { it.room == room }
+        val inRoom = Store.lampsSnapshot().filter { it.isIn(room) }
         val ids = inRoom.map { it.id }.toSet()
         if (activeIn(room)?.id == LIVE) {
             val s = Scene("c" + System.currentTimeMillis().toString(36), name.ifBlank { tr("Eigen scène", "Own scene") }, "custom",

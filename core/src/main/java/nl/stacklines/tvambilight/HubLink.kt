@@ -150,6 +150,8 @@ object HubLink {
     var deviceName = "Tv"
 
     val paired get() = addr.isNotEmpty() && secret.isNotEmpty()
+    /** Zegt de hub dat deze lamp in een andere kamer staat? */
+    fun isAway(id: String): Boolean = synchronized(lock) { id in away }
 
     fun init(dir: File) {
         file = File(dir, "hubsync.json")

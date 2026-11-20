@@ -492,6 +492,7 @@ class WebServer(private val ctx: Context) {
             val w = Engine.workers[l.id]
             lamps.put(l.toJson(false).apply {
                 put("online", w?.online == true)
+                if (l.elsewhere) put("elsewhere", true)
                 val live = (Engine.running && l.inTvRoom) || SceneEngine.activeIn(l.room) != null
                 val col = (if (live) w?.shownColor else w?.idleColor()) ?: 0x555555
                 put("color", "#%06x".format(col and 0xffffff))

@@ -448,7 +448,7 @@ object Engine {
         }
         syncWorkers()
         val ids = targets.map { it.id }.toSet() + (if (room == "*") setOf("") else emptySet())
-        for (l in Store.lampsSnapshot().filter { it.enabled && it.room in ids }) {
+        for (l in Store.lampsSnapshot().filter { it.enabled && it.room in ids && !it.elsewhere }) {
             val w = workers[l.id] ?: continue
             w.send(if (on) mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 300) else mapOf("20" to false))
             w.shownColor = if (on) 0xFFFFE1B4.toInt() else 0xFF555555.toInt()
@@ -464,7 +464,7 @@ object Engine {
             Store.syncWanted = false; Store.save(); stop(handOver = true); SceneEngine.stopAll(handOver = true)
         }
         syncWorkers()
-        for (l in Store.lampsSnapshot().filter { it.enabled }) {
+        for (l in Store.lampsSnapshot().filter { it.enabled && !it.elsewhere }) {
             val w = workers[l.id] ?: continue
             w.send(if (on) mapOf("20" to true, "21" to "white", "22" to 1000, "23" to 300) else mapOf("20" to false))
             w.shownColor = if (on) 0xFFFFE1B4.toInt() else 0xFF555555.toInt()

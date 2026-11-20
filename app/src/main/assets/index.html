@@ -1290,7 +1290,7 @@ const multi=()=>roomsList().length>1;
 const roomById=id=>roomsList().find(r=>r.id===id);
 const tvRoom=()=>roomsList().find(r=>r.tv)||roomsList()[0];
 // Kamer van een lamp; met één kamer hoort elke lamp daarbij (zo doet de server het ook)
-function lampRoom(l){const rs=roomsList();if(rs.length===1)return rs[0].id;return rs.some(r=>r.id===l.room)?l.room:''}
+function lampRoom(l){const rs=roomsList();if(l&&l.elsewhere)return '';if(rs.length===1)return rs[0].id;return rs.some(r=>r.id===l.room)?l.room:''}
 const lampsIn=id=>lamps.filter(l=>lampRoom(l)===id);
 // Alleen de echte lampen (voor aan/uit, tellingen en de kaartbediening)
 const lightsIn=id=>lampsIn(id).filter(isLight);

@@ -40,6 +40,10 @@ class Lamp(
     val inTvRoom get() = room == Store.tvRoom.id
     /** Doet mee met de sync: geplaatst en in de tv-kamer. */
     val synced get() = placed && inTvRoom
+    /** De hub zegt dat deze lamp in een andere kamer staat (en hij is hier niet geplaatst). Op een tv met één kamer
+     *  staat hij dan toch in die kamer; niet meenemen bij lampen aan/uit en scènes. Op de hub altijd false. */
+    val elsewhere get() = !placed && HubLink.isAway(id)
+    fun isIn(r: String) = room == r && !elsewhere
     val supported get() = version in setOf("3.1", "3.3", "3.4", "3.5", Wiz.VERSION, Hue.VERSION, Dirigera.VERSION)
 
     fun toJson(withKey: Boolean) = JSONObject().apply {
